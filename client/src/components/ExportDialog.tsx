@@ -26,7 +26,8 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { X, FileImage, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { exportToPNG, exportTimetableExcel } from "@/lib/exportUtils";
+import { exportTimetableExcel } from "@/lib/exportUtils";
+import { exportTimetablePNG, exportTimetablePDF } from "@/lib/timetableSvgExport";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -210,68 +211,55 @@ export function ExportDialog({ open, onClose }: Props) {
     return termLabel;
   }, [semesterMeta]);
 
-  // ── Export: PDF (multi-page via print) ──────────────────────
+  // ── Export: PDF (SVGベース、週ごとに1ページ) ────────────────────────────
   const handleExportPDF = useCallback(async () => {
-    if (!printRef.current || weeksToPrint.length === 0) return;
+    if (weeksToPrint.length === 0) return;
     setIsExporting(true);
     try {
-      const { jsPDF } = await import("jspdf");
-      const html2canvas = (await import("html2canvas")).default;
-
       const title = currentFile?.meta.title ?? "時間割";
-      const pdf = new jsPDF({
-        orientation,
-        unit: "mm",
-        format: "a4",
-      });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      // Render each week block separately
-      const weekBlocks = printRef.current.querySelectorAll<HTMLElement>(".week-block");
-      for (let i = 0; i < weekBlocks.length; i++) {
-        const block = weekBlocks[i];
-        const canvas = await html2canvas(block, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-        });
-
-        const imgData = canvas.toDataURL("image/jpeg", 0.95);
-        const imgWidth = canvas.width / 2;
-        const imgHeight = canvas.height / 2;
-        const ratio = Math.min(
-          (pageWidth - 20) / imgWidth,
-          (pageHeight - 20) / imgHeight
-        );
-        const w = imgWidth * ratio;
-        const h = imgHeight * ratio;
-        const x = (pageWidth - w) / 2;
-        const y = (pageHeight - h) / 2;
-
-        if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, "JPEG", x, y, w, h);
-      }
-
-      pdf.save(`${title}_時間割.pdf`);
+      await exportTimetablePDF(
+        {
+          effectiveEntries,
+          weekMondayStrs: weeksToPrint,
+          title,
+          filterClass: filterClass === "__all__" ? null : filterClass,
+          gradeColors,
+          showReason,
+          showEmptyCells,
+          holidays,
+          orientation,
+        },
+        `${title}_時間割.pdf`,
+      );
     } finally {
       setIsExporting(false);
     }
-  }, [printRef, weeksToPrint, currentFile, orientation]);
+  }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason, showEmptyCells, holidays, orientation]);
 
-  // ── Export: PNG ──────────────────────────────────────────────
+  // ── Export: PNG (SVGベース) ────────────────────────────────────────────
   const handleExportPNG = useCallback(async () => {
-    if (!printRef.current || weeksToPrint.length === 0) return;
+    if (weeksToPrint.length === 0) return;
     setIsExporting(true);
     try {
       const title = currentFile?.meta.title ?? "時間割";
-      await exportToPNG(printRef.current, `${title}_時間割.png`);
+      await exportTimetablePNG(
+        {
+          effectiveEntries,
+          weekMondayStrs: weeksToPrint,
+          title,
+          filterClass: filterClass === "__all__" ? null : filterClass,
+          gradeColors,
+          showReason,
+          showEmptyCells,
+          holidays,
+          orientation,
+        },
+        `${title}_時間割.png`,
+      );
     } finally {
       setIsExporting(false);
     }
-  }, [printRef, weeksToPrint, currentFile]);
+  }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason, showEmptyCells, holidays, orientation]);
 
   // ── Export: Excel ────────────────────────────────────────────
   const handleExportExcel = useCallback(async () => {

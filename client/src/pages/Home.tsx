@@ -8,10 +8,11 @@ import { WeekGrid } from "@/components/WeekGrid";
 import { Inspector } from "@/components/Inspector";
 import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Save, Menu } from "lucide-react";
+import { Printer, Download, Save, Menu, FileImage, FileText, FileSpreadsheet } from "lucide-react";
 import { SemesterTabs } from "@/components/SemesterTabs";
 import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
 import { AutoRestoreDialog } from "@/components/AutoRestoreDialog";
+import { ExportDialog } from "@/components/ExportDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +30,7 @@ export default function Home() {
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   // Update page title
   useEffect(() => {
@@ -40,6 +42,7 @@ export default function Home() {
     <div className="flex h-screen overflow-hidden bg-background">
       <AutoRestoreDialog />
       <PrintPreviewDialog open={showPrintPreview} onClose={() => setShowPrintPreview(false)} />
+      <ExportDialog open={showExportDialog} onClose={() => setShowExportDialog(false)} />
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div
@@ -118,8 +121,8 @@ export default function Home() {
                       <span className="hidden sm:inline">エクスポート</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuLabel className="text-xs">エクスポート形式</DropdownMenuLabel>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuLabel className="text-xs">データエクスポート</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={exportCSV} className="text-xs gap-2">
                       <span className="font-mono text-muted-foreground">.csv</span>
@@ -133,21 +136,40 @@ export default function Home() {
                       <span className="font-mono text-muted-foreground">.json</span>
                       変更履歴（JSON）
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs">画像・文書エクスポート</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setShowExportDialog(true)} className="text-xs gap-2">
+                      <FileSpreadsheet size={12} className="text-green-600" />
+                      Excel / PDF / PNGエクスポート…
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
 
               {/* Print button */}
               {activeTab === "grid" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowPrintPreview(true)}
-                  className="h-7 gap-1.5 text-xs print:hidden"
-                >
-                  <Printer size={12} />
-                  <span className="hidden sm:inline">印刷</span>
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowExportDialog(true)}
+                    className="h-7 gap-1.5 text-xs print:hidden"
+                    title="Excel / PDF / PNGエクスポート"
+                  >
+                    <FileSpreadsheet size={12} />
+                    <span className="hidden sm:inline">書き出し</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPrintPreview(true)}
+                    className="h-7 gap-1.5 text-xs print:hidden"
+                  >
+                    <Printer size={12} />
+                    <span className="hidden sm:inline">印刷</span>
+                  </Button>
+                </>
               )}
             </div>
           )}
