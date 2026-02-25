@@ -6,7 +6,7 @@ import { useState } from "react";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGradeColors } from "@/contexts/GradeColorContext";
-import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO, VALID_CLASSES } from "@/lib/timetable";
+import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
 import { getClassColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
 import { Filter, X, CalendarPlus } from "lucide-react";
@@ -40,8 +40,12 @@ export function WeekGrid() {
     weekendOverrides,
     toggleWeekendDay,
     customClasses,
+    classList,
     holidays,
   } = useTimetable();
+
+  // classListが空の場合はフォールバック
+  const effectiveClassList = classList.length > 0 ? classList : [];
   const { gradeColors } = useGradeColors();
 
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -176,28 +180,15 @@ export function WeekGrid() {
             <DropdownMenuItem onClick={() => setFilterClass(null)} className="text-xs">
               すべて表示
             </DropdownMenuItem>
-            {["1年", "2年", "3年", "4年", "5年", "6年"].map(grade => {
-              const gradeClasses = VALID_CLASSES.filter(c => c.startsWith(grade));
-              if (gradeClasses.length === 0) return null;
-              return gradeClasses.map(cls => (
-                <DropdownMenuItem
-                  key={cls}
-                  onClick={() => setFilterClass(cls)}
-                  className="text-xs"
-                >
-                  {cls}
-                </DropdownMenuItem>
-              ));
-            })}
-            {customClasses.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs">カスタム</DropdownMenuLabel>
-                {customClasses.map(cls => (
-                  <DropdownMenuItem key={cls} onClick={() => setFilterClass(cls)} className="text-xs">{cls}</DropdownMenuItem>
-                ))}
-              </>
-            )}
+            {effectiveClassList.map(cls => (
+              <DropdownMenuItem
+                key={cls}
+                onClick={() => setFilterClass(cls)}
+                className="text-xs"
+              >
+                {cls}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
         {filterClass && (

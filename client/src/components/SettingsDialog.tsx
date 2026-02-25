@@ -1,6 +1,5 @@
-// SettingsDialog.tsx
 // Design: Swiss Grid × Japanese Functional Design
-// Settings dialog: edit semester meta, base schedule, custom classes after creation
+// Settings dialog: edit semester meta, base schedule, class config after creation
 
 import { useState, useCallback, useEffect } from "react";
 import {
@@ -12,6 +11,7 @@ import {
   Calendar,
   Grid3X3,
   Plus,
+  Minus,
   X,
   AlertTriangle,
 } from "lucide-react";
@@ -28,7 +28,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { SemesterMeta, SemesterSystem } from "@/lib/timetableFile";
 import { useTimetable } from "@/contexts/TimetableContext";
-import { VALID_CLASSES } from "@/lib/timetable";
+import {
+  normalizeClassName,
+  classSort,
+  generateDefaultClasses,
+  SchoolType,
+} from "@/lib/timetable";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -46,15 +51,19 @@ const WEEKDAYS = [
 ];
 const PERIODS = [1, 2, 3, 4, 5, 6];
 
-// Compute default academic year from current date
+const SCHOOL_TYPES: { value: SchoolType; label: string; grades: number; defaultClasses: number }[] = [
+  { value: "elementary", label: "小学校（6年制）", grades: 6, defaultClasses: 3 },
+  { value: "junior", label: "中学校（3年制）", grades: 3, defaultClasses: 3 },
+  { value: "high", label: "高等学校（3年制）", grades: 3, defaultClasses: 3 },
+];
+
 function getDefaultAcademicYear(): number {
   const now = new Date();
-  const month = now.getMonth() + 1; // 1-12
+  const month = now.getMonth() + 1;
   const year = now.getFullYear();
   return month >= 4 ? year : year - 1;
 }
 
-// Generate year options: 2024 to current+30
 function getYearOptions(): number[] {
   const max = getDefaultAcademicYear() + 30;
   const years: number[] = [];
@@ -62,7 +71,6 @@ function getYearOptions(): number[] {
   return years;
 }
 
-// Semester defaults
 function getSemesterDefaults(year: number, semester: 1 | 2 | 3, system: SemesterSystem) {
   if (system === "semester") {
     switch (semester) {
@@ -71,7 +79,6 @@ function getSemesterDefaults(year: number, semester: 1 | 2 | 3, system: Semester
       default: return { start: `${year}-04-01`, end: `${year}-09-30` };
     }
   }
-  // trimester
   switch (semester) {
     case 1: return { start: `${year}-04-01`, end: `${year}-07-20` };
     case 2: return { start: `${year}-09-01`, end: `${year}-12-25` };
@@ -82,13 +89,13 @@ function getSemesterDefaults(year: number, semester: 1 | 2 | 3, system: Semester
 // Step indicator
 function StepIndicator({ current, total }: { current: number; total: number }) {
   const steps = [
-    { icon: <School size={14} />, label: "基本情報" },
-    { icon: <Calendar size={14} />, label: "授業日設定" },
-    { icon: <Grid3X3 size={14} />, label: "基本時間割" },
-    { icon: <Check size={14} />, label: "確認・適用" },
+    { icon: <School size={13} />, label: "学校情報" },
+    { icon: <Calendar size={13} />, label: "授業日設定" },
+    { icon: <Grid3X3 size={13} />, label: "基本時間割" },
+    { icon: <Check size={13} />, label: "確認・適用" },
   ];
   return (
-    <div className="flex items-center gap-0 mb-5">
+    <div className="flex items-center gap-0 mb-6">
       {steps.map((step, i) => {
         const stepNum = i + 1;
         const isActive = stepNum === current;
@@ -123,7 +130,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 
 export function SettingsDialog({ open, onClose }: Props) {
-  const { currentFile, semester, customClasses, updateSettings, isLoaded } = useTimetable();
+  const { currentFile, semester, updateSettings, isLoaded } = useTimetable();
   const [step, setStep] = useState(1);
 
   // ── Step 1: Basic info ──────────────────────────────────────
@@ -131,6 +138,13 @@ export function SettingsDialog({ open, onClose }: Props) {
   const [academicYear, setAcademicYear] = useState(getDefaultAcademicYear);
   const [semesterSystem, setSemesterSystem] = useState<SemesterSystem>("trimester");
   const [semesterNumber, setSemesterNumber] = useState<1 | 2 | 3>(1);
+
+  // ── Step 1: Class config ────────────────────────────────────
+  const [schoolType, setSchoolType] = useState<SchoolType>("elementary");
+  const [gradeClassCounts, setGradeClassCounts] = useState<number[]>([3, 3, 3, 3, 3, 3]);
+  const [extraClasses, setExtraClasses] = useState<string[]>([]);
+  const [customClassInput, setCustomClassInput] = useState("");
+  const [customClassError, setCustomClassError] = useState("");
 
   // ── Step 2: Date & weekend ──────────────────────────────────
   const [startDate, setStartDate] = useState("");
@@ -144,12 +158,18 @@ export function SettingsDialog({ open, onClose }: Props) {
     WEEKDAYS.forEach(d => { s[d.key] = {}; PERIODS.forEach(p => { s[d.key][p] = null; }); });
     return s;
   });
-  const [localCustomClasses, setLocalCustomClasses] = useState<string[]>([]);
-  const [newClassInput, setNewClassInput] = useState("");
 
   // ── Step 4: Apply mode ──────────────────────────────────────
   const [applyMode, setApplyMode] = useState<"all" | "from">("all");
   const [applyFromDate, setApplyFromDate] = useState("");
+
+  // Derived: current school type info
+  const schoolTypeInfo = SCHOOL_TYPES.find(s => s.value === schoolType) ?? SCHOOL_TYPES[0];
+  const grades = schoolTypeInfo.grades;
+
+  // Generated class list
+  const generatedClasses = generateDefaultClasses(schoolType, gradeClassCounts.slice(0, grades));
+  const allClasses = [...generatedClasses, ...extraClasses].sort(classSort);
 
   // Populate from current semester on open
   useEffect(() => {
@@ -169,6 +189,21 @@ export function SettingsDialog({ open, onClose }: Props) {
       setEndDate(semester.endDate);
       setHasSaturday(semester.hasSaturday);
       setHasSunday(semester.hasSunday);
+
+      // Restore school type & class counts
+      const st = (semester.schoolType as SchoolType) ?? "elementary";
+      setSchoolType(st);
+      const info = SCHOOL_TYPES.find(s => s.value === st) ?? SCHOOL_TYPES[0];
+      if (semester.gradeClassCounts && semester.gradeClassCounts.length > 0) {
+        const counts = [...semester.gradeClassCounts];
+        // Pad to info.grades if needed
+        while (counts.length < info.grades) counts.push(info.defaultClasses);
+        setGradeClassCounts(counts);
+      } else {
+        setGradeClassCounts(Array(info.grades).fill(info.defaultClasses));
+      }
+      setExtraClasses(semester.customClasses ?? []);
+
       // Populate base schedule
       const s: Record<string, Record<number, string | null>> = {};
       WEEKDAYS.forEach(d => {
@@ -176,12 +211,43 @@ export function SettingsDialog({ open, onClose }: Props) {
         PERIODS.forEach(p => { s[d.key][p] = semester.baseSchedule?.[d.key]?.[p] ?? null; });
       });
       setBaseSchedule(s);
-      setLocalCustomClasses(semester.customClasses ?? []);
       setStep(1);
       setApplyMode("all");
       setApplyFromDate(semester.startDate);
     }
   }, [open, semester, currentFile]);
+
+  const handleSchoolTypeChange = (type: SchoolType) => {
+    const info = SCHOOL_TYPES.find(s => s.value === type)!;
+    setSchoolType(type);
+    setGradeClassCounts(Array(info.grades).fill(info.defaultClasses));
+  };
+
+  const adjustGradeCount = (gradeIdx: number, delta: number) => {
+    setGradeClassCounts(prev => {
+      const next = [...prev];
+      next[gradeIdx] = Math.max(1, Math.min(10, (next[gradeIdx] ?? 3) + delta));
+      return next;
+    });
+  };
+
+  const setBulkCount = (count: number) => {
+    setGradeClassCounts(Array(grades).fill(count));
+  };
+
+  const addCustomClass = () => {
+    const raw = customClassInput.trim();
+    if (!raw) return;
+    const normalized = normalizeClassName(raw);
+    if (!normalized) return;
+    if (generatedClasses.includes(normalized) || extraClasses.includes(normalized)) {
+      setCustomClassError("すでに存在するクラス名です");
+      return;
+    }
+    setExtraClasses(prev => [...prev, normalized]);
+    setCustomClassInput("");
+    setCustomClassError("");
+  };
 
   const handleSemesterSystemChange = useCallback((sys: SemesterSystem) => {
     setSemesterSystem(sys);
@@ -211,23 +277,6 @@ export function SettingsDialog({ open, onClose }: Props) {
     setBaseSchedule(prev => ({ ...prev, [weekday]: { ...prev[weekday], [period]: cls } }));
   };
 
-  const handleAddCustomClass = () => {
-    const trimmed = newClassInput.trim();
-    if (!trimmed) return;
-    if (localCustomClasses.includes(trimmed) || VALID_CLASSES.includes(trimmed)) {
-      toast.error("同じクラス名が既に存在します");
-      return;
-    }
-    setLocalCustomClasses(prev => [...prev, trimmed]);
-    setNewClassInput("");
-  };
-
-  const handleRemoveCustomClass = (cls: string) => {
-    setLocalCustomClasses(prev => prev.filter(c => c !== cls));
-  };
-
-  const allClasses = [...VALID_CLASSES, ...localCustomClasses];
-
   const filledCells = Object.values(baseSchedule).reduce(
     (sum, day) => sum + Object.values(day).filter(c => c !== null).length, 0
   );
@@ -255,7 +304,10 @@ export function SettingsDialog({ open, onClose }: Props) {
       hasSaturday,
       hasSunday,
       baseSchedule,
-      customClasses: localCustomClasses.length > 0 ? localCustomClasses : undefined,
+      schoolType,
+      gradeClassCounts: gradeClassCounts.slice(0, grades),
+      classList: allClasses,
+      customClasses: extraClasses.length > 0 ? extraClasses : undefined,
     };
     const from = applyMode === "from" ? applyFromDate : undefined;
     updateSettings(newSemester, from);
@@ -284,11 +336,11 @@ export function SettingsDialog({ open, onClose }: Props) {
 
         <StepIndicator current={step} total={4} />
 
-        {/* ─── Step 1: Basic Info ──────────────────────────────── */}
+        {/* ─── Step 1: Basic Info + Class Config ──────────────── */}
         {step === 1 && (
           <div className="space-y-5">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
-              学校名・学期制・年度・学期番号を変更できます。
+              学校名・学期制・年度・学期番号・クラス構成を変更できます。
             </div>
 
             <div className="space-y-1.5">
@@ -341,38 +393,130 @@ export function SettingsDialog({ open, onClose }: Props) {
               </Select>
             </div>
 
-            {/* Custom classes */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">カスタムクラス <span className="text-muted-foreground font-normal text-xs">(標準クラス以外に追加)</span></Label>
-              <div className="flex gap-2">
-                <Input
-                  value={newClassInput}
-                  onChange={e => setNewClassInput(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleAddCustomClass()}
-                  placeholder="例: 特支1組、TF-A など"
-                  className="h-8 text-sm flex-1"
-                />
-                <Button size="sm" variant="outline" onClick={handleAddCustomClass} className="h-8 gap-1">
-                  <Plus size={13} />追加
-                </Button>
-              </div>
-              {localCustomClasses.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {localCustomClasses.map(cls => (
-                    <span key={cls} className="inline-flex items-center gap-1 bg-primary/10 text-primary rounded px-2 py-0.5 text-xs font-medium border border-primary/20">
-                      {cls}
-                      <button onClick={() => handleRemoveCustomClass(cls)} className="hover:text-destructive transition-colors">
-                        <X size={10} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Class Config */}
+            <div className="space-y-3 border-t border-border/50 pt-4">
+              <Label className="text-sm font-medium">クラス構成</Label>
 
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">変更後のタイトル</p>
-              <p className="text-sm font-semibold text-foreground">{title}</p>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">学校種別</Label>
+                <Select value={schoolType} onValueChange={v => handleSchoolTypeChange(v as SchoolType)}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SCHOOL_TYPES.map(st => (
+                      <SelectItem key={st.value} value={st.value}>{st.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">学年別クラス数</Label>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] text-muted-foreground">一括:</span>
+                    {[2, 3, 4, 5].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setBulkCount(n)}
+                        className="text-[10px] px-1.5 py-0.5 rounded border border-border hover:bg-muted transition-colors"
+                      >
+                        各{n}組
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="text-left px-3 py-1.5 text-xs font-medium text-muted-foreground">学年</th>
+                        <th className="text-center px-3 py-1.5 text-xs font-medium text-muted-foreground">クラス数</th>
+                        <th className="text-left px-3 py-1.5 text-xs font-medium text-muted-foreground">クラス一覧</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: grades }, (_, i) => {
+                        const gradeNum = i + 1;
+                        const count = gradeClassCounts[i] ?? 3;
+                        const classes = Array.from({ length: count }, (_, j) => `${gradeNum}年${j + 1}組`);
+                        return (
+                          <tr key={gradeNum} className="border-t border-border/50">
+                            <td className="px-3 py-1.5 font-medium text-sm">{gradeNum}年生</td>
+                            <td className="px-3 py-1.5">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => adjustGradeCount(i, -1)}
+                                  disabled={count <= 1}
+                                  className="w-5 h-5 rounded border border-border flex items-center justify-center hover:bg-muted disabled:opacity-30 transition-colors"
+                                >
+                                  <Minus size={9} />
+                                </button>
+                                <span className="w-5 text-center font-bold text-sm">{count}</span>
+                                <button
+                                  onClick={() => adjustGradeCount(i, 1)}
+                                  disabled={count >= 10}
+                                  className="w-5 h-5 rounded border border-border flex items-center justify-center hover:bg-muted disabled:opacity-30 transition-colors"
+                                >
+                                  <Plus size={9} />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-3 py-1.5">
+                              <div className="flex flex-wrap gap-1">
+                                {classes.map(c => (
+                                  <span key={c} className="text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5 font-medium">
+                                    {c}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Extra custom classes */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">追加クラス（自由記述）</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={customClassInput}
+                    onChange={e => { setCustomClassInput(e.target.value); setCustomClassError(""); }}
+                    onKeyDown={e => e.key === "Enter" && addCustomClass()}
+                    placeholder="例: 特別支援学級、英語グループA"
+                    className="h-8 text-sm flex-1"
+                  />
+                  <Button size="sm" variant="outline" className="gap-1 text-xs h-8" onClick={addCustomClass}>
+                    <Plus size={11} />追加
+                  </Button>
+                </div>
+                {customClassError && <p className="text-xs text-red-500">{customClassError}</p>}
+                {extraClasses.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {extraClasses.map(c => (
+                      <span
+                        key={c}
+                        className="flex items-center gap-1 text-[11px] bg-orange-100 text-orange-700 rounded px-2 py-0.5 cursor-pointer hover:bg-red-100 hover:text-red-600 transition-colors"
+                        onClick={() => setExtraClasses(prev => prev.filter(x => x !== c))}
+                        title="クリックで削除"
+                      >
+                        {c} ×
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-1">変更後のタイトル</p>
+                <p className="text-sm font-semibold text-foreground">{title}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  クラス合計: <span className="font-medium text-foreground">{allClasses.length}</span> クラス
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -421,20 +565,20 @@ export function SettingsDialog({ open, onClose }: Props) {
           </div>
         )}
 
-        {/* ─── Step 3: Base Schedule ───────────────────────────── */}
+        {/* ─── Step 3: Base Schedule Grid ──────────────────────── */}
         {step === 3 && (
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
-              基本時間割を変更します。変更の適用範囲は次のステップで選べます。
+              基本時間割を変更します。各コマに担当クラスを設定してください。
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr>
-                    <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
+                    <th className="w-12 text-xs text-muted-foreground font-medium py-2"></th>
                     {WEEKDAYS.map(d => (
-                      <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">{d.label}</th>
+                      <th key={d.key} className="text-center text-xs font-bold py-2 px-1 min-w-[90px]">{d.label}</th>
                     ))}
                   </tr>
                 </thead>
@@ -462,13 +606,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                                 <SelectItem value="__empty__">
                                   <span className="text-muted-foreground">— 空き —</span>
                                 </SelectItem>
-                                {["1年", "2年", "3年", "4年", "5年", "6年"].map(grade => {
-                                  const gradeClasses = allClasses.filter(c => c.startsWith(grade));
-                                  return gradeClasses.map(c => (
-                                    <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
-                                  ));
-                                })}
-                                {localCustomClasses.filter(c => !["1年", "2年", "3年", "4年", "5年", "6年"].some(g => c.startsWith(g))).map(c => (
+                                {allClasses.map(c => (
                                   <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
                                 ))}
                               </SelectContent>
@@ -509,16 +647,13 @@ export function SettingsDialog({ open, onClose }: Props) {
                 )}
               >
                 <div className={cn(
-                  "w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 flex items-center justify-center",
+                  "w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 transition-all",
                   applyMode === "all" ? "border-primary bg-primary" : "border-muted-foreground"
-                )}>
-                  {applyMode === "all" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                </div>
-                <div>
+                )} />
+                <div className="flex-1">
                   <p className="text-sm font-semibold">学期全体に適用</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {startDate} 〜 {endDate} の全期間のbaseデータを再生成します。
-                    既存の個別変更（ops）はそのまま保持されます。
+                    baseデータを全期間で再生成します。既存の個別変更（override）はそのまま保持されます。
                   </p>
                 </div>
               </div>
@@ -534,11 +669,9 @@ export function SettingsDialog({ open, onClose }: Props) {
                 )}
               >
                 <div className={cn(
-                  "w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 flex items-center justify-center",
+                  "w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 transition-all",
                   applyMode === "from" ? "border-primary bg-primary" : "border-muted-foreground"
-                )}>
-                  {applyMode === "from" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                </div>
+                )} />
                 <div className="flex-1">
                   <p className="text-sm font-semibold">指定日以降に適用</p>
                   <p className="text-xs text-muted-foreground mt-0.5">

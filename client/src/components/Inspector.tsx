@@ -34,7 +34,11 @@ export function Inspector() {
     selectedCell, setSelectedCell,
     effectiveEntries, applyOps,
     customClasses,
+    classList,
   } = useTimetable();
+
+  // classListが空の場合はVALID_CLASSESにフォールバック
+  const effectiveClassList = classList.length > 0 ? classList : [];
   const { gradeColors } = useGradeColors();
 
   const [opMode, setOpMode] = useState<OpMode>("delete");
@@ -348,17 +352,9 @@ export function Inspector() {
                     <SelectValue placeholder="クラスを選択..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {VALID_CLASSES.map(c => (
+                    {effectiveClassList.map(c => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
-                    {customClasses.length > 0 && (
-                      <>
-                        <div className="px-2 py-1 text-[10px] text-muted-foreground font-medium border-t mt-1 pt-1">カスタム</div>
-                        {customClasses.map(c => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </>
-                    )}
                   </SelectContent>
                 </Select>
               </div>

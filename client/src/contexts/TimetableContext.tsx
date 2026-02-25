@@ -14,11 +14,15 @@ import {
   buildEffectiveJSON,
   buildOverrideJSON,
   calcClassStats,
+  classSort,
   downloadFile,
   formatDate,
+  generateDefaultClasses,
   getMondayOfWeek,
+  SchoolType,
   toCSV,
   todayISO,
+  VALID_CLASSES,
 } from "@/lib/timetable";
 import {
   TimetableFile,
@@ -456,7 +460,19 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Custom classes & class list ───────────────────────────────────
   const customClasses = currentFile?.semester?.customClasses ?? [];
-  const classList = currentFile?.semester?.classList ?? [];
+  // classListが保存されていない旧ファイルの場合はschoolType・gradeClassCountsから生成
+  const classList = (() => {
+    const saved = currentFile?.semester?.classList;
+    if (saved && saved.length > 0) return saved;
+    // フォールバック: schoolType・gradeClassCountsから動的生成
+    const sem = currentFile?.semester;
+    if (!sem) return VALID_CLASSES;
+    const st = (sem.schoolType as SchoolType | undefined) ?? 'elementary';
+    const generated = generateDefaultClasses(st as SchoolType, sem.gradeClassCounts);
+    const extras = sem.customClasses ?? [];
+    const merged = [...generated, ...extras].sort(classSort);
+    return merged.length > 0 ? merged : VALID_CLASSES;
+  })();
   const holidays = currentFile?.semester?.holidays ?? [];
 
   // ─── Update holidays ──────────────────────────────────────────────────
