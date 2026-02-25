@@ -12,6 +12,8 @@ import {
   FileJson,
   FilePlus,
   FileSpreadsheet,
+  FileText,
+  FileImage,
   FolderOpen,
   History,
   Loader2,
@@ -30,6 +32,7 @@ import { ColorSettingsDialog } from "@/components/ColorSettingsDialog";
 import { NewFileWizard } from "@/components/NewFileWizard";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
+import { ExportDialog } from "@/components/ExportDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 
 export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
@@ -53,6 +56,7 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
   const [showHolidaySettings, setShowHolidaySettings] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   // Keyboard shortcut: Ctrl/Cmd+S to save
   useEffect(() => {
@@ -409,8 +413,20 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
               <FileSpreadsheet size={12} />
               CSV
             </button>
+            <button
+              onClick={() => setShowExportDialog(true)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]
+                         text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            >
+              <FileText size={12} />
+              PDF / PNG / Excel
+            </button>
           </div>
         </div>
+      )}
+
+      {showExportDialog && (
+        <ExportDialog open={showExportDialog} onClose={() => setShowExportDialog(false)} />
       )}
 
       {/* Settings */}

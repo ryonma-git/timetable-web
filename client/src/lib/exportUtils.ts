@@ -166,6 +166,7 @@ export async function exportTimetableExcel(
   title: string,
   filterClass: string | null,
   gradeColors: Record<string, import("./gradeColors").GradeColorDef>,
+  showReason = true,
 ): Promise<void> {
   const ExcelJS = await import("exceljs");
   const { getClassColor } = await import("./gradeColors");
@@ -186,14 +187,13 @@ export async function exportTimetableExcel(
 
     const weekDates = getWeekDates(monday, { includeSaturday: false, includeSunday: false });
 
-    // Header row: 時限 + 曜日
+    // Header row: 時限 + 曜日（クラス列 + 備考列）
     ws.columns = [
       { header: "時限", key: "period", width: 6 },
-      ...weekDates.map((date, i) => ({
-        header: formatDateJP(date),
-        key: `d${i}`,
-        width: 14,
-      })),
+      ...weekDates.flatMap((date, i) => [
+        { header: formatDateJP(date), key: `d${i}`, width: 14 },
+        ...(showReason ? [{ header: `${formatDateJP(date)}_備考`, key: `r${i}`, width: 12 }] : []),
+      ]),
     ];
 
     const headerRow = ws.getRow(1);
@@ -216,10 +216,13 @@ export async function exportTimetableExcel(
         const entry = entryByDate.get(date);
         const slot = entry?.periods.find(p => p.period === period);
         const cls = slot?.class ?? "";
+        const reason = (slot as any)?.reason ?? "";
         if (filterClass && cls !== filterClass) {
           rowData[`d${di}`] = "";
+          if (showReason) rowData[`r${di}`] = "";
         } else {
           rowData[`d${di}`] = cls;
+          if (showReason) rowData[`r${di}`] = reason;
         }
       }
       const row = ws.addRow(rowData);
@@ -248,6 +251,19 @@ export async function exportTimetableExcel(
           const fg = colors.text.replace("#", "FF").toUpperCase();
           cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
           cell.font = { bold: true, color: { argb: fg } };
+        }
+
+        // Style reason cell
+        if (showReason) {
+          const reasonCell = row.getCell(`r${di}`);
+          reasonCell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+          reasonCell.font = { size: 9, color: { argb: "FF666666" } };
+          reasonCell.border = {
+            top: { style: "thin", color: { argb: "FFE0E0E0" } },
+            bottom: { style: "thin", color: { argb: "FFE0E0E0" } },
+            left: { style: "thin", color: { argb: "FFE0E0E0" } },
+            right: { style: "thin", color: { argb: "FFE0E0E0" } },
+          };
         }
       }
 

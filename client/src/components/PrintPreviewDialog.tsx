@@ -26,9 +26,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Printer, X, Download, FileImage, FileSpreadsheet, FileText } from "lucide-react";
+import { Printer, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { exportToPNG, exportToPDF, exportTimetableExcel } from "@/lib/exportUtils";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -84,7 +83,6 @@ export function PrintPreviewDialog({ open, onClose }: Props) {
   const [showReason, setShowReason] = useState(true);
 
   const printRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = useState(false);
 
   // ── Derive semester date range ───────────────────────────────
   // Support both single-semester (currentFile.semester) and multi-semester
@@ -204,45 +202,6 @@ export function PrintPreviewDialog({ open, onClose }: Props) {
       : `${sem.semesterNumber}学期`;
     return termLabel;
   }, [semester]);
-
-  // ── Export handlers ─────────────────────────────────────────
-  const handleExportPNG = async () => {
-    if (!printRef.current) return;
-    setIsExporting(true);
-    try {
-      const title = currentFile?.meta.title ?? "時間割";
-      await exportToPNG(printRef.current, `${title}_時間割.png`);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleExportPDF = async () => {
-    if (!printRef.current) return;
-    setIsExporting(true);
-    try {
-      const title = currentFile?.meta.title ?? "時間割";
-      await exportToPDF(printRef.current, `${title}_時間割.pdf`, orientation);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleExportExcel = async () => {
-    setIsExporting(true);
-    try {
-      const title = currentFile?.meta.title ?? "時間割";
-      await exportTimetableExcel(
-        effectiveEntries,
-        weeksToPrint,
-        title,
-        filterClass === "__all__" ? null : filterClass,
-        gradeColors,
-      );
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   // ── Print handler ────────────────────────────────────────────
   const handlePrint = () => {
@@ -514,14 +473,13 @@ ${printContent.innerHTML}
                               時限
                             </th>
                             {weekDates.map(date => {
-                              const isToday = date === today;
                               const isHoliday = holidayDates.has(date);
                               return (
                                 <th
                                   key={date}
                                   className="border border-gray-300 py-1 px-1 text-center"
                                   style={{
-                                    backgroundColor: isHoliday ? "#fef2f2" : isToday ? "#fffbeb" : "#f0f0f0",
+                                    backgroundColor: isHoliday ? "#fef2f2" : "#f0f0f0",
                                   }}
                                 >
                                   <div className="flex flex-col items-center gap-0.5">
@@ -551,7 +509,6 @@ ${printContent.innerHTML}
                                   const entry = entryByDate.get(date);
                                   const slot = entry?.periods.find(p => p.period === period) ?? { period, class: null };
                                   const isHoliday = holidayDates.has(date);
-                                  const isToday = date === today;
 
                                   const isFiltered = filterClass !== "__all__" && slot.class !== filterClass;
                                   const displayClass = isFiltered ? null : slot.class;
@@ -566,9 +523,7 @@ ${printContent.innerHTML}
                                       style={{
                                         backgroundColor: isHoliday
                                           ? "#fef2f2"
-                                          : isToday
-                                            ? "#fffbeb"
-                                            : colors?.bg ?? undefined,
+                                          : colors?.bg ?? undefined,
                                         minHeight: "24px",
                                       }}
                                     >
@@ -613,35 +568,8 @@ ${printContent.innerHTML}
             <X size={13} />
             閉じる
           </Button>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{weeksToPrint.length}ページ</span>
-            <Button
-              variant="outline" size="sm"
-              onClick={handleExportPNG}
-              disabled={weeksToPrint.length === 0 || isExporting}
-              className="gap-1.5 text-xs"
-            >
-              <FileImage size={12} />
-              PNG
-            </Button>
-            <Button
-              variant="outline" size="sm"
-              onClick={handleExportPDF}
-              disabled={weeksToPrint.length === 0 || isExporting}
-              className="gap-1.5 text-xs"
-            >
-              <FileText size={12} />
-              PDF
-            </Button>
-            <Button
-              variant="outline" size="sm"
-              onClick={handleExportExcel}
-              disabled={weeksToPrint.length === 0 || isExporting}
-              className="gap-1.5 text-xs"
-            >
-              <FileSpreadsheet size={12} />
-              Excel
-            </Button>
             <Button size="sm" onClick={handlePrint} disabled={weeksToPrint.length === 0} className="gap-1.5">
               <Printer size={13} />
               印刷する
