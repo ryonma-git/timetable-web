@@ -1,23 +1,81 @@
 // StatsView.tsx
 // Design: Swiss Grid × Japanese Functional Design
 // Stats, history, and audit log views
+// 年間集計: 複数学期データを横断してクラス別累計授業数・残り時数を表示
 
+import { useMemo, useState } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
-import { ClassStats, todayISO } from "@/lib/timetable";
+import { ClassStats, todayISO, applyOverrides, calcClassStats, classSort } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, CheckCircle, Info } from "lucide-react";
+import { AlertTriangle, CheckCircle, Info, BarChart3, CalendarRange } from "lucide-react";
+import { useGradeColors } from "@/contexts/GradeColorContext";
+import { getClassColor } from "@/lib/gradeColors";
 
 // ─── Stats View ───────────────────────────────────────────────
 
 export function StatsView() {
-  const { classStats, asOfDate, setAsOfDate, isLoaded } = useTimetable();
+  const { classStats, asOfDate, setAsOfDate, isLoaded, currentFile } = useTimetable();
+  const [viewMode, setViewMode] = useState<"semester" | "annual">("semester");
 
   if (!isLoaded) {
-    return <EmptyState message="ZIPファイルを読み込むと集計が表示されます" />;
+    return <EmptyState message="ファイルを読み込むと集計が表示されます" />;
   }
 
+  return (
+    <div className="flex-1 overflow-auto p-4">
+      {/* View mode tabs */}
+      <div className="flex items-center gap-1 mb-4 border-b border-border">
+        <button
+          onClick={() => setViewMode("semester")}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px",
+            viewMode === "semester"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <BarChart3 size={13} />
+          学期別集計
+        </button>
+        {(currentFile?.semesters && currentFile.semesters.length > 1) && (
+          <button
+            onClick={() => setViewMode("annual")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px",
+              viewMode === "annual"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <CalendarRange size={13} />
+            年間集計
+          </button>
+        )}
+      </div>
+
+      {viewMode === "semester" && (
+        <SemesterStatsView classStats={classStats} asOfDate={asOfDate} setAsOfDate={setAsOfDate} />
+      )}
+      {viewMode === "annual" && (
+        <AnnualStatsView />
+      )}
+    </div>
+  );
+}
+
+// ─── Semester Stats (current semester) ───────────────────────
+
+function SemesterStatsView({
+  classStats,
+  asOfDate,
+  setAsOfDate,
+}: {
+  classStats: ClassStats[];
+  asOfDate: string;
+  setAsOfDate: (d: string) => void;
+}) {
   const gradeGroups: Record<string, ClassStats[]> = {};
   for (const s of classStats) {
     if (!gradeGroups[s.grade]) gradeGroups[s.grade] = [];
@@ -25,7 +83,7 @@ export function StatsView() {
   }
 
   return (
-    <div className="flex-1 overflow-auto p-4">
+    <>
       {/* as_of date picker */}
       <div className="flex items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
@@ -80,36 +138,244 @@ export function StatsView() {
 
       {/* Grade groups */}
       {Object.entries(gradeGroups).sort().map(([grade, stats]) => (
-        <div key={grade} className="mb-6">
-          <h3 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
-            <span className={cn(
-              "w-2 h-2 rounded-full",
-              grade === "4年" ? "bg-blue-400" :
-              grade === "5年" ? "bg-emerald-400" : "bg-violet-400"
-            )} />
-            {grade}
-          </h3>
-          <div className="space-y-2">
-            {stats.map(s => (
-              <ClassStatRow key={s.class} stat={s} />
-            ))}
-          </div>
-        </div>
+        <GradeGroup key={grade} grade={grade} stats={stats} />
       ))}
+    </>
+  );
+}
+
+// ─── Annual Stats (all semesters) ────────────────────────────
+
+function AnnualStatsView() {
+  const { currentFile, asOfDate } = useTimetable();
+  const { gradeColors } = useGradeColors();
+
+  // Collect all semesters
+  const semesters = useMemo(() => {
+    if (!currentFile) return [];
+    if (currentFile.semesters && currentFile.semesters.length > 0) {
+      return currentFile.semesters;
+    }
+    // Single semester fallback
+    if (currentFile.semester) {
+      return [{ semester: currentFile.semester, base: currentFile.base, ops: currentFile.ops }];
+    }
+    return [];
+  }, [currentFile]);
+
+  // Compute effective entries per semester and aggregate
+  const annualStats = useMemo(() => {
+    // Map: class -> { total, completed, byTerm }
+    const totalMap = new Map<string, number>();
+    const completedMap = new Map<string, number>();
+    const byTermMap = new Map<string, { term: string; total: number; completed: number }[]>();
+
+    for (const semData of semesters) {
+      const { effective } = applyOverrides(semData.base, semData.ops ?? []);
+      const stats = calcClassStats(effective, asOfDate);
+      const sem = semData.semester;
+      const termLabel = sem.semesterSystem === "semester"
+        ? (sem.semesterNumber === 1 ? "前期" : "後期")
+        : `${sem.semesterNumber}学期`;
+
+      for (const s of stats) {
+        totalMap.set(s.class, (totalMap.get(s.class) ?? 0) + s.totalPeriods);
+        completedMap.set(s.class, (completedMap.get(s.class) ?? 0) + s.completedPeriods);
+
+        const existing = byTermMap.get(s.class) ?? [];
+        byTermMap.set(s.class, [...existing, {
+          term: termLabel,
+          total: s.totalPeriods,
+          completed: s.completedPeriods,
+        }]);
+      }
+    }
+
+    // Build sorted result
+    const allClasses = Array.from(totalMap.keys()).sort(classSort);
+    return allClasses.map(cls => ({
+      class: cls,
+      grade: cls.match(/^(\d+年)/)?.[1] ?? cls,
+      total: totalMap.get(cls) ?? 0,
+      completed: completedMap.get(cls) ?? 0,
+      remaining: (totalMap.get(cls) ?? 0) - (completedMap.get(cls) ?? 0),
+      completionRate: (totalMap.get(cls) ?? 0) > 0
+        ? (completedMap.get(cls) ?? 0) / (totalMap.get(cls) ?? 0)
+        : 0,
+      byTerm: byTermMap.get(cls) ?? [],
+    }));
+  }, [semesters, asOfDate]);
+
+  // Group by grade
+  const gradeGroups = useMemo(() => {
+    const groups: Record<string, typeof annualStats> = {};
+    for (const s of annualStats) {
+      if (!groups[s.grade]) groups[s.grade] = [];
+      groups[s.grade].push(s);
+    }
+    return groups;
+  }, [annualStats]);
+
+  const termLabels = useMemo(() => {
+    const labels: string[] = [];
+    for (const semData of semesters) {
+      const sem = semData.semester;
+      const label = sem.semesterSystem === "semester"
+        ? (sem.semesterNumber === 1 ? "前期" : "後期")
+        : `${sem.semesterNumber}学期`;
+      if (!labels.includes(label)) labels.push(label);
+    }
+    return labels;
+  }, [semesters]);
+
+  const totalAll = annualStats.reduce((s, c) => s + c.total, 0);
+  const completedAll = annualStats.reduce((s, c) => s + c.completed, 0);
+  const remainingAll = annualStats.reduce((s, c) => s + c.remaining, 0);
+
+  return (
+    <>
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        {[
+          { label: "年間総コマ数", value: totalAll, color: "text-foreground", bg: "bg-muted/50" },
+          { label: "実施済み", value: completedAll, color: "text-emerald-700", bg: "bg-emerald-50" },
+          { label: "残り", value: remainingAll, color: "text-amber-700", bg: "bg-amber-50" },
+        ].map(card => (
+          <div key={card.label} className={cn("rounded-lg p-3 border border-border", card.bg)}>
+            <p className="text-xs text-muted-foreground">{card.label}</p>
+            <p className={cn("text-2xl font-bold tabular-nums", card.color)}>{card.value}</p>
+            <p className="text-[10px] text-muted-foreground">コマ（{semesters.length}学期合計）</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Per-grade tables */}
+      {Object.entries(gradeGroups).sort().map(([grade, stats]) => {
+        const colors = getClassColor(stats[0]?.class ?? null, gradeColors);
+        return (
+          <div key={grade} className="mb-6">
+            <h3 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: colors.border }}
+              />
+              {grade}
+            </h3>
+
+            {/* Table with term breakdown */}
+            <div className="rounded-lg border border-border overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-muted/50">
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">クラス</th>
+                    {termLabels.map(t => (
+                      <th key={t} className="text-center px-2 py-2 font-medium text-muted-foreground">{t}</th>
+                    ))}
+                    <th className="text-center px-2 py-2 font-medium text-foreground">合計</th>
+                    <th className="text-center px-2 py-2 font-medium text-emerald-700">済</th>
+                    <th className="text-center px-2 py-2 font-medium text-amber-700">残</th>
+                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">進捗</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.map((s, i) => {
+                    const pct = Math.round(s.completionRate * 100);
+                    const rowColors = getClassColor(s.class, gradeColors);
+                    return (
+                      <tr
+                        key={s.class}
+                        className={cn(
+                          "border-t border-border/50",
+                          i % 2 === 0 ? "bg-background" : "bg-muted/20"
+                        )}
+                      >
+                        <td className="px-3 py-2 font-medium" style={{ color: rowColors.text }}>
+                          {s.class}
+                        </td>
+                        {termLabels.map(t => {
+                          const termData = s.byTerm.find(bt => bt.term === t);
+                          return (
+                            <td key={t} className="text-center px-2 py-2 tabular-nums text-muted-foreground">
+                              {termData ? (
+                                <span>
+                                  <span className="text-foreground font-medium">{termData.total}</span>
+                                  <span className="text-[9px] text-muted-foreground/60">コマ</span>
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/30">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="text-center px-2 py-2 font-bold tabular-nums">{s.total}</td>
+                        <td className="text-center px-2 py-2 tabular-nums text-emerald-600 font-medium">{s.completed}</td>
+                        <td className="text-center px-2 py-2 tabular-nums text-amber-600 font-medium">{s.remaining}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2 justify-end">
+                            <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${pct}%`,
+                                  backgroundColor: rowColors.border,
+                                }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-muted-foreground tabular-nums w-7 text-right">{pct}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
+
+      {semesters.length === 0 && (
+        <div className="text-center py-8 text-sm text-muted-foreground">
+          複数学期のデータがありません
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── Grade Group (semester view) ─────────────────────────────
+
+function GradeGroup({ grade, stats }: { grade: string; stats: ClassStats[] }) {
+  const { gradeColors } = useGradeColors();
+  const colors = getClassColor(stats[0]?.class ?? null, gradeColors);
+
+  return (
+    <div className="mb-6">
+      <h3 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+        <div
+          className="w-2 h-2 rounded-full"
+          style={{ backgroundColor: colors.border }}
+        />
+        {grade}
+      </h3>
+      <div className="space-y-2">
+        {stats.map(s => (
+          <ClassStatRow key={s.class} stat={s} />
+        ))}
+      </div>
     </div>
   );
 }
 
 function ClassStatRow({ stat }: { stat: ClassStats }) {
+  const { gradeColors } = useGradeColors();
+  const colors = getClassColor(stat.class, gradeColors);
   const pct = Math.round(stat.completionRate * 100);
-  const gradeColor =
-    stat.grade === "4年" ? "bg-blue-400" :
-    stat.grade === "5年" ? "bg-emerald-400" : "bg-violet-400";
 
   return (
     <div className="bg-card border border-border rounded-lg px-4 py-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium">{stat.class}</span>
+        <span className="text-sm font-medium" style={{ color: colors.text }}>{stat.class}</span>
         <div className="flex items-center gap-3 text-xs tabular-nums">
           <span className="text-muted-foreground">計 <span className="font-bold text-foreground">{stat.totalPeriods}</span></span>
           <span className="text-emerald-600">済 <span className="font-bold">{stat.completedPeriods}</span></span>
@@ -120,8 +386,8 @@ function ClassStatRow({ stat }: { stat: ClassStats }) {
       {/* Progress bar */}
       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
         <div
-          className={cn("h-full rounded-full transition-all duration-500", gradeColor)}
-          style={{ width: `${pct}%` }}
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, backgroundColor: colors.border }}
         />
       </div>
     </div>
@@ -134,7 +400,7 @@ export function HistoryView() {
   const { undoStack, undo, isLoaded } = useTimetable();
 
   if (!isLoaded) {
-    return <EmptyState message="ZIPファイルを読み込むと変更履歴が表示されます" />;
+    return <EmptyState message="ファイルを読み込むと変更履歴が表示されます" />;
   }
 
   if (undoStack.length === 0) {
@@ -189,7 +455,7 @@ export function AuditView() {
   const { auditLog, isLoaded } = useTimetable();
 
   if (!isLoaded) {
-    return <EmptyState message="ZIPファイルを読み込むと適用ログが表示されます" />;
+    return <EmptyState message="ファイルを読み込むと適用ログが表示されます" />;
   }
 
   const warns = auditLog.filter(a => a.level === "warn").length;

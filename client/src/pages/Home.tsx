@@ -8,8 +8,9 @@ import { WeekGrid } from "@/components/WeekGrid";
 import { Inspector } from "@/components/Inspector";
 import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Save, Menu, X } from "lucide-react";
+import { Printer, Download, Save, Menu } from "lucide-react";
 import { SemesterTabs } from "@/components/SemesterTabs";
+import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
 import { AutoRestoreDialog } from "@/components/AutoRestoreDialog";
 import {
   DropdownMenu,
@@ -27,6 +28,7 @@ export default function Home() {
   } = useTimetable();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
 
   // Update page title
   useEffect(() => {
@@ -34,13 +36,10 @@ export default function Home() {
     document.title = isDirty ? `● ${title}` : title;
   }, [currentFile, isDirty]);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <AutoRestoreDialog />
+      <PrintPreviewDialog open={showPrintPreview} onClose={() => setShowPrintPreview(false)} />
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div
@@ -143,7 +142,7 @@ export default function Home() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handlePrint}
+                  onClick={() => setShowPrintPreview(true)}
                   className="h-7 gap-1.5 text-xs print:hidden"
                 >
                   <Printer size={12} />
