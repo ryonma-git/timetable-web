@@ -9,9 +9,11 @@ import { ClassStats, todayISO, applyOverrides, calcClassStats, classSort } from 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, CheckCircle, Info, BarChart3, CalendarRange } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, CheckCircle, Info, BarChart3, CalendarRange, Download } from "lucide-react";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 import { getClassColor } from "@/lib/gradeColors";
+import { exportAnnualStatsCSV, exportAnnualStatsExcel, type AnnualClassStat } from "@/lib/exportUtils";
 
 // ─── Stats View ───────────────────────────────────────────────
 
@@ -232,8 +234,36 @@ function AnnualStatsView() {
   const completedAll = annualStats.reduce((s, c) => s + c.completed, 0);
   const remainingAll = annualStats.reduce((s, c) => s + c.remaining, 0);
 
+  const handleExportCSV = () => {
+    exportAnnualStatsCSV(
+      annualStats as AnnualClassStat[],
+      termLabels,
+      currentFile?.meta.title ?? "時間割",
+    );
+  };
+
+  const handleExportExcel = async () => {
+    await exportAnnualStatsExcel(
+      annualStats as AnnualClassStat[],
+      termLabels,
+      currentFile?.meta.title ?? "時間割",
+    );
+  };
+
   return (
     <>
+      {/* Export buttons */}
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-1.5 text-xs h-7">
+          <Download size={12} />
+          CSV
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleExportExcel} className="gap-1.5 text-xs h-7">
+          <Download size={12} />
+          Excel
+        </Button>
+      </div>
+
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[
