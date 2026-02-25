@@ -8,11 +8,12 @@ import { WeekGrid } from "@/components/WeekGrid";
 import { Inspector } from "@/components/Inspector";
 import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Save, Menu, FileImage, FileText, FileSpreadsheet } from "lucide-react";
+import { Printer, Download, Save, Menu, FileImage, FileText, FileSpreadsheet, FileInput } from "lucide-react";
 import { SemesterTabs } from "@/components/SemesterTabs";
 import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
 import { AutoRestoreDialog } from "@/components/AutoRestoreDialog";
 import { ExportDialog } from "@/components/ExportDialog";
+import { PatchImportDialog } from "@/components/PatchImportDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +32,7 @@ export default function Home() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showPatchImport, setShowPatchImport] = useState(false);
 
   // Update page title
   useEffect(() => {
@@ -43,6 +45,7 @@ export default function Home() {
       <AutoRestoreDialog />
       <PrintPreviewDialog open={showPrintPreview} onClose={() => setShowPrintPreview(false)} />
       <ExportDialog open={showExportDialog} onClose={() => setShowExportDialog(false)} />
+      <PatchImportDialog open={showPatchImport} onClose={() => setShowPatchImport(false)} />
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div
@@ -148,6 +151,16 @@ export default function Home() {
               {/* Print button */}
               {activeTab === "grid" && (
                 <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPatchImport(true)}
+                    className="h-7 gap-1.5 text-xs print:hidden"
+                    title="パッチインポート"
+                  >
+                    <FileInput size={12} />
+                    <span className="hidden sm:inline">インポート</span>
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
