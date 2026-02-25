@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Upload, FileJson, AlertTriangle, CheckCircle2, X, Info } from "lucide-react";
+import { Upload, FileJson, AlertTriangle, CheckCircle2, X, Info, Download, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import type { OverrideOp } from "@/lib/timetable";
 
@@ -93,6 +93,130 @@ function parsePatchFile(json: string): ParseResult {
     opsCount: validOps.length,
     affectedDates,
   };
+}
+
+// ─── Template Data ───────────────────────────────────────────
+
+const PARTIAL_TEMPLATE_JSON = JSON.stringify({
+  format: "timetable-patch/v1",
+  mode: "partial",
+  description: "運動会練習期間 特別時間割（部分書き換えの例）",
+  notes: "このファイルはLLMなどで生成したパッチをインポートするためのテンプレートです。\n実際のクラス名・日付に合わせて編集してください。",
+  dateRange: { start: "2024-09-09", end: "2024-09-20" },
+  ops: [
+    { op: "set_period_class", date: "2024-09-09", period: 1, class: "1年1組", reason: "運動会練習" },
+    { op: "set_period_class", date: "2024-09-09", period: 2, class: "2年1組", reason: "運動会練習" },
+    { op: "set_period_class", date: "2024-09-10", period: 1, class: "3年1組", reason: "運動会練習" },
+    { op: "clear_period_class", date: "2024-09-10", period: 3 },
+    { op: "set_period_reason", date: "2024-09-11", period: 2, reason: "運動会全体練習（授業なし）" }
+  ]
+}, null, 2);
+
+const FULL_REPLACE_TEMPLATE_JSON = JSON.stringify({
+  format: "timetable-patch/v1",
+  mode: "full_replace",
+  description: "運動会練習期間 特別時間割（全書き換えの例）",
+  notes: "full_replaceモードでは、dateRange内の全コマがクリアされてからopsが適用されます。",
+  dateRange: { start: "2024-09-09", end: "2024-09-13" },
+  ops: [
+    { op: "set_period_class", date: "2024-09-09", period: 1, class: "1年1組", reason: "運動会練習" },
+    { op: "set_period_class", date: "2024-09-09", period: 2, class: "2年1組", reason: "運動会練習" },
+    { op: "set_period_class", date: "2024-09-10", period: 1, class: "3年1組", reason: "運動会練習" }
+  ]
+}, null, 2);
+
+const README_IMPORT_MD = `# timetable-patch/v1 インポート形式 仕様書
+
+## 概要
+
+\`timetable-patch/v1\` 形式のJSONファイルを使うと、時間割の一部または全体を外部から書き換えることができます。
+LLM（ChatGPT・Claude等）にこの仕様書とテンプレートを渡して、特別時間割のJSONを生成させることができます。
+
+---
+
+## ファイル構造
+
+\`\`\`json
+{
+  "format": "timetable-patch/v1",
+  "mode": "partial" または "full_replace",
+  "description": "説明文（省略可）",
+  "notes": "備考（省略可）",
+  "dateRange": { "start": "YYYY-MM-DD", "end": "YYYY-MM-DD" },
+  "ops": [ ... ]
+}
+\`\`\`
+
+---
+
+## mode の違い
+
+| mode | 動作 |
+|------|------|
+| \`partial\` | opsで指定したコマのみ上書き。他のコマは変更しない |
+| \`full_replace\` | dateRange内の全コマをクリアしてからopsを適用 |
+
+---
+
+## ops の種類
+
+| op | 必須フィールド | 動作 |
+|----|--------------|------|
+| \`set_period_class\` | date, period, class | 指定コマにクラスを割り当て |
+| \`clear_period_class\` | date, period | 指定コマを空きコマに |
+| \`set_period_reason\` | date, period, reason | 指定コマに備考のみ設定 |
+| \`set_day_reason\` | date, reason | 指定日に日付レベルの備考 |
+
+---
+
+## フィールド説明
+
+- \`date\`: 日付（YYYY-MM-DD形式、例: "2024-09-09"）
+- \`period\`: 時限番号（1〜6の整数）
+- \`class\`: クラス名（例: "1年1組", "3年2組"）または \`null\`（空きコマ）
+- \`reason\`: 備考テキスト（省略可）
+
+---
+
+## LLMへのプロンプト例
+
+以下のプロンプトをChatGPT・Claude等に貼り付けて使用してください：
+
+---
+
+以下の仕様に従って、timetable-patch/v1形式のJSONを生成してください。
+
+【仕様】
+- format: "timetable-patch/v1" （固定）
+- mode: "partial"（一部変更）または "full_replace"（期間全体を書き換え）
+- ops の op には set_period_class / clear_period_class / set_period_reason のいずれかを使用
+- date は YYYY-MM-DD 形式
+- period は 1〜6 の整数
+
+【生成したい時間割の内容】
+（ここに具体的な内容を記述してください）
+例：9月9日〜9月20日の運動会練習期間中、月・水・金の1〜3時限を以下のように変更してください。
+- 1時限: 1年1組
+- 2時限: 2年1組
+- 3時限: 3年1組
+
+---
+
+## 注意事項
+
+- インポート後は「変更履歴」タブから取り消しが可能です
+- full_replaceモードは元に戻す際も変更履歴から行ってください
+- クラス名は時間割アプリに登録されているクラス名と完全一致させてください
+`;
+
+function downloadText(filename: string, content: string, mimeType = "application/json") {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ─── Component ────────────────────────────────────────────────
@@ -208,6 +332,40 @@ export function PatchImportDialog({ open, onClose }: Props) {
             パッチインポート
           </DialogTitle>
         </DialogHeader>
+
+        {/* Download templates section */}
+        <div className="px-5 py-3 border-b border-border bg-muted/20">
+          <p className="text-xs text-muted-foreground mb-2 font-medium">テンプレート・仕様書のダウンロード</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-7 gap-1.5"
+              onClick={() => downloadText("partial_import_template.json", PARTIAL_TEMPLATE_JSON)}
+            >
+              <Download size={11} />
+              部分書き換えテンプレート
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-7 gap-1.5"
+              onClick={() => downloadText("full_replace_import_template.json", FULL_REPLACE_TEMPLATE_JSON)}
+            >
+              <Download size={11} />
+              全書き換えテンプレート
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-7 gap-1.5"
+              onClick={() => downloadText("README_import.md", README_IMPORT_MD, "text/markdown")}
+            >
+              <BookOpen size={11} />
+              仕様書 README.md
+            </Button>
+          </div>
+        </div>
 
         <div className="p-5 space-y-4">
           {/* Drop zone */}

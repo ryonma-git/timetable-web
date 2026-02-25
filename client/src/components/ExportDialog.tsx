@@ -1,6 +1,7 @@
 // ExportDialog.tsx
 // Design: Swiss Grid × Japanese Functional Design
-// エクスポートダイアログ: PDF（複数ページ）/ PNG / Excel（備考列付き）
+// エクスポートダイアログ: Excel / PDF（印刷ウィンドウ）/ PNG（印刷ウィンドウ）
+// PDF/PNGは新しいウィンドウで印刷ダイアログを開く方式（軽量・確実）
 
 import { useState, useMemo, useRef, useCallback } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
@@ -24,15 +25,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { X, FileImage, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
+import { X, FileImage, FileText, FileSpreadsheet, Loader2, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportTimetableExcel } from "@/lib/exportUtils";
-import { exportTimetablePNG, exportTimetablePDF } from "@/lib/timetableSvgExport";
 
 // ─── Types ────────────────────────────────────────────────────
 
 type RangeMode = "single" | "month" | "semester" | "from_today_n" | "from_today_all";
-type ExportFormat = "excel"; // PDF/PNG は一時的に無効化
+type ExportFormat = "excel" | "pdf" | "png";
 
 interface Props {
   open: boolean;
@@ -49,6 +49,158 @@ function addDays(date: Date, days: number): Date {
 
 function isoToDate(iso: string): Date {
   return new Date(iso + "T00:00:00");
+}
+
+// ─── Print HTML builder ──────────────────────────────────────
+
+interface PrintOptions {
+  weeksToPrint: string[];
+  effectiveEntries: ReturnType<typeof useTimetable>["effectiveEntries"];
+  holidays: ReturnType<typeof useTimetable>["holidays"];
+  gradeColors: ReturnType<typeof useGradeColors>["gradeColors"];
+  filterClass: string;
+  showReason: boolean;
+  showEmptyCells: boolean;
+  orientation: "landscape" | "portrait";
+  title: string;
+  semLabel: string;
+  schoolName: string;
+  includeSaturday: boolean;
+  includeSunday: boolean;
+  isPng: boolean;
+}
+
+function buildPrintHtml(opts: PrintOptions): string {
+  const {
+    weeksToPrint, effectiveEntries, holidays, gradeColors,
+    filterClass, showReason, showEmptyCells, orientation,
+    title, semLabel, schoolName, includeSaturday, includeSunday, isPng,
+  } = opts;
+
+  const holidayDates = new Set(holidays.map(h => h.date));
+  const holidayNameMap = new Map(holidays.map(h => [h.date, h.name ?? "休校"]));
+  const entryByDate = new Map(effectiveEntries.map(e => [e.date, e]));
+
+  const DAY_LABELS = ["月", "火", "水", "木", "金", "土", "日"];
+
+  const weeksHtml = weeksToPrint.map((mondayStr, wIdx) => {
+    const monday = isoToDate(mondayStr);
+    const fri = addDays(monday, 4);
+    const weekDates: string[] = [];
+    // build dates for this week
+    const days = includeSunday ? 7 : includeSaturday ? 6 : 5;
+    for (let i = 0; i < days; i++) {
+      const d = addDays(monday, i);
+      const iso = formatDate(d);
+      weekDates.push(iso);
+    }
+
+    const weekLabel = `${monday.getFullYear()}年 ${monday.getMonth() + 1}月${monday.getDate()}日（月）〜 ${fri.getMonth() + 1}月${fri.getDate()}日（金）`;
+
+    const headerCols = weekDates.map(date => {
+      const isHoliday = holidayDates.has(date);
+      const d = isoToDate(date);
+      const dayIdx = d.getDay() === 0 ? 6 : d.getDay() - 1;
+      const dayLabel = DAY_LABELS[dayIdx];
+      const month = d.getMonth() + 1;
+      const day = d.getDate();
+      const holidayName = holidayNameMap.get(date);
+      return `<th style="border:1px solid #ccc;padding:4px 2px;text-align:center;background:${isHoliday ? "#fef2f2" : "#f0f0f0"};font-size:10px;">
+        <div style="font-weight:bold;">${month}/${day}（${dayLabel}）</div>
+        ${isHoliday ? `<div style="font-size:7px;color:#dc2626;background:#fee2e2;border-radius:2px;padding:0 2px;margin-top:1px;">${holidayName}</div>` : ""}
+      </th>`;
+    }).join("");
+
+    const bodyRows = [1, 2, 3, 4, 5, 6].map(period => {
+      const cells = weekDates.map(date => {
+        const entry = entryByDate.get(date);
+        const slot = entry?.periods.find(p => p.period === period) ?? { period, class: null };
+        const isHoliday = holidayDates.has(date);
+        const isFiltered = filterClass !== "__all__" && slot.class !== filterClass;
+        const displayClass = isFiltered ? null : slot.class;
+        const displayReason = isFiltered ? null : (slot as unknown as Record<string, unknown>).reason as string | null;
+        const colors = displayClass ? getClassColor(displayClass, gradeColors) : null;
+
+        let cellContent = "";
+        if (displayClass) {
+          cellContent = `<div style="font-size:10px;font-weight:bold;color:${colors?.text ?? "#333"};line-height:1.2;">${displayClass}</div>`;
+          if (showReason && displayReason) {
+            cellContent += `<div style="font-size:7px;color:#666;margin-top:1px;">${displayReason}</div>`;
+          }
+        } else if (showEmptyCells && !isHoliday) {
+          cellContent = `<div style="font-size:9px;color:#ccc;text-align:center;">—</div>`;
+        }
+
+        return `<td style="border:1px solid #ccc;padding:3px 4px;background:${isHoliday ? "#fef2f2" : (colors?.bg ?? "white")};min-height:24px;vertical-align:top;">${cellContent}</td>`;
+      }).join("");
+
+      return `<tr>
+        <td style="border:1px solid #ccc;text-align:center;padding:2px;background:#f8f8f8;width:28px;">
+          <div style="font-size:10px;font-weight:bold;color:#555;">${period}</div>
+          <div style="font-size:7px;color:#aaa;">限</div>
+        </td>
+        ${cells}
+      </tr>`;
+    }).join("");
+
+    const pageBreak = wIdx < weeksToPrint.length - 1 ? "page-break-after:always;" : "";
+
+    return `<div style="${pageBreak}padding:8mm;">
+      <div style="border-bottom:2px solid #333;padding-bottom:4px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;">
+        <div>
+          <span style="font-size:12px;font-weight:bold;">${title}${filterClass !== "__all__" ? ` — ${filterClass}` : ""}</span>
+          <span style="font-size:9px;color:#666;margin-left:8px;">${semLabel ? semLabel + " / " : ""}${weekLabel}${schoolName ? " / " + schoolName : ""}</span>
+        </div>
+        <span style="font-size:8px;color:#bbb;">${wIdx + 1}/${weeksToPrint.length}ページ</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-family:sans-serif;">
+        <thead>
+          <tr>
+            <th style="border:1px solid #ccc;padding:4px;width:28px;background:#f0f0f0;font-size:9px;color:#888;">時限</th>
+            ${headerCols}
+          </tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
+  }).join("");
+
+  const pageSize = orientation === "landscape" ? "A4 landscape" : "A4 portrait";
+  const pngExtra = isPng ? `
+    body { background: white; }
+    @media print {
+      @page { size: ${pageSize}; margin: 0; }
+    }
+  ` : "";
+
+  return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>${title} 時間割</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif; background: white; }
+  @media print {
+    @page { size: ${pageSize}; margin: 0; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  ${pngExtra}
+</style>
+</head>
+<body>
+${weeksHtml}
+${isPng ? `<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() { window.print(); }, 300);
+  });
+</script>` : `<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() { window.print(); }, 300);
+  });
+</script>`}
+</body>
+</html>`;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -79,48 +231,22 @@ export function ExportDialog({ open, onClose }: Props) {
 
   // ── Semester date range ──────────────────────────────────────
   const semesterMeta = useMemo(() => {
-    if (semester) return semester;
     if (currentFile?.semester) return currentFile.semester;
-    if (currentFile?.semesters?.[0]?.semester) return currentFile.semesters[0].semester;
+    if (semester) return semester;
     return null;
-  }, [semester, currentFile]);
-
-  const semesterStart = useMemo(() => {
-    if (!semesterMeta) return null;
-    return isoToDate(semesterMeta.startDate);
-  }, [semesterMeta]);
-
-  const semesterEnd = useMemo(() => {
-    if (!semesterMeta) return null;
-    return isoToDate(semesterMeta.endDate);
-  }, [semesterMeta]);
+  }, [currentFile, semester]);
 
   // ── All weeks in semester ────────────────────────────────────
   const allWeeks = useMemo(() => {
-    if (!semesterStart || !semesterEnd) {
-      // Fallback: derive from effectiveEntries
-      if (effectiveEntries.length === 0) return [];
-      const dates = effectiveEntries.map(e => e.date).sort();
-      const first = getMondayOfWeek(isoToDate(dates[0]));
-      const last = getMondayOfWeek(isoToDate(dates[dates.length - 1]));
-      const weeks: string[] = [];
-      let cur = new Date(first);
-      while (formatDate(cur) <= formatDate(last)) {
-        weeks.push(formatDate(cur));
-        cur = addDays(cur, 7);
-      }
-      return weeks;
+    const weeks = new Set<string>();
+    for (const entry of effectiveEntries) {
+      const monday = getMondayOfWeek(isoToDate(entry.date));
+      weeks.add(formatDate(monday));
     }
-    const weeks: string[] = [];
-    let cur = getMondayOfWeek(semesterStart);
-    while (formatDate(cur) <= formatDate(semesterEnd)) {
-      weeks.push(formatDate(cur));
-      cur = addDays(cur, 7);
-    }
-    return weeks;
-  }, [semesterStart, semesterEnd, effectiveEntries]);
+    return Array.from(weeks).sort();
+  }, [effectiveEntries]);
 
-  // ── Week options for single select ───────────────────────────
+  // ── Week options for select ──────────────────────────────────
   const weekOptions = useMemo(() => {
     return allWeeks.map(w => {
       const d = isoToDate(w);
@@ -132,14 +258,13 @@ export function ExportDialog({ open, onClose }: Props) {
     });
   }, [allWeeks]);
 
-  // ── Initialize selected week ─────────────────────────────────
+  // ── Auto-select closest week ─────────────────────────────────
   useMemo(() => {
-    if (weekOptions.length > 0 && !selectedWeekMonday) {
-      const todayMonday = formatDate(getMondayOfWeek(isoToDate(today)));
-      const match = weekOptions.find(w => w.value === todayMonday);
-      setSelectedWeekMonday(match ? match.value : weekOptions[0].value);
-    }
-  }, [weekOptions, today, selectedWeekMonday]);
+    if (selectedWeekMonday || allWeeks.length === 0) return;
+    const todayMonday = formatDate(getMondayOfWeek(isoToDate(today)));
+    const closest = allWeeks.find(w => w >= todayMonday) ?? allWeeks[allWeeks.length - 1];
+    setSelectedWeekMonday(closest);
+  }, [allWeeks, today, selectedWeekMonday]);
 
   // ── Compute weeks to export ──────────────────────────────────
   const weeksToPrint = useMemo(() => {
@@ -211,55 +336,36 @@ export function ExportDialog({ open, onClose }: Props) {
     return termLabel;
   }, [semesterMeta]);
 
-  // ── Export: PDF (SVGベース、週ごとに1ページ) ────────────────────────────
-  const handleExportPDF = useCallback(async () => {
-    if (weeksToPrint.length === 0) return;
-    setIsExporting(true);
-    try {
-      const title = currentFile?.meta.title ?? "時間割";
-      await exportTimetablePDF(
-        {
-          effectiveEntries,
-          weekMondayStrs: weeksToPrint,
-          title,
-          filterClass: filterClass === "__all__" ? null : filterClass,
-          gradeColors,
-          showReason,
-          showEmptyCells,
-          holidays,
-          orientation,
-        },
-        `${title}_時間割.pdf`,
-      );
-    } finally {
-      setIsExporting(false);
-    }
-  }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason, showEmptyCells, holidays, orientation]);
+  const showSaturday = false;
+  const showSunday = false;
 
-  // ── Export: PNG (SVGベース) ────────────────────────────────────────────
-  const handleExportPNG = useCallback(async () => {
+  // ── Open print window ────────────────────────────────────────
+  const openPrintWindow = useCallback((isPng: boolean) => {
     if (weeksToPrint.length === 0) return;
-    setIsExporting(true);
-    try {
-      const title = currentFile?.meta.title ?? "時間割";
-      await exportTimetablePNG(
-        {
-          effectiveEntries,
-          weekMondayStrs: weeksToPrint,
-          title,
-          filterClass: filterClass === "__all__" ? null : filterClass,
-          gradeColors,
-          showReason,
-          showEmptyCells,
-          holidays,
-          orientation,
-        },
-        `${title}_時間割.png`,
-      );
-    } finally {
-      setIsExporting(false);
+    const html = buildPrintHtml({
+      weeksToPrint,
+      effectiveEntries,
+      holidays,
+      gradeColors,
+      filterClass,
+      showReason,
+      showEmptyCells,
+      orientation,
+      title: currentFile?.meta.title ?? "時間割",
+      semLabel,
+      schoolName: currentFile?.meta.school ?? "",
+      includeSaturday: showSaturday,
+      includeSunday: showSunday,
+      isPng,
+    });
+    const win = window.open("", "_blank");
+    if (!win) {
+      alert("ポップアップがブロックされています。ブラウザの設定でポップアップを許可してください。");
+      return;
     }
-  }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason, showEmptyCells, holidays, orientation]);
+    win.document.write(html);
+    win.document.close();
+  }, [weeksToPrint, effectiveEntries, holidays, gradeColors, filterClass, showReason, showEmptyCells, orientation, currentFile, semLabel]);
 
   // ── Export: Excel ────────────────────────────────────────────
   const handleExportExcel = useCallback(async () => {
@@ -280,13 +386,22 @@ export function ExportDialog({ open, onClose }: Props) {
     }
   }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason]);
 
-  // ── Dispatch export (Excelのみ有効) ────────────────────────────────────────
+  // ── Dispatch export ──────────────────────────────────────────
   const handleExport = useCallback(async () => {
-    await handleExportExcel();
-  }, [handleExportExcel]);
+    if (format === "excel") {
+      await handleExportExcel();
+    } else if (format === "pdf") {
+      openPrintWindow(false);
+    } else if (format === "png") {
+      openPrintWindow(true);
+    }
+  }, [format, handleExportExcel, openPrintWindow]);
 
-  const showSaturday = false;
-  const showSunday = false;
+  const formatButtons: { value: ExportFormat; label: string; icon: React.ReactNode; desc: string }[] = [
+    { value: "excel", label: "Excel", icon: <FileSpreadsheet size={12} />, desc: ".xlsx形式でダウンロード" },
+    { value: "pdf", label: "PDF", icon: <FileText size={12} />, desc: "印刷ダイアログ→「PDFとして保存」" },
+    { value: "png", label: "PNG", icon: <FileImage size={12} />, desc: "印刷ダイアログ→スクリーンショット" },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
@@ -303,12 +418,28 @@ export function ExportDialog({ open, onClose }: Props) {
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">形式</Label>
               <div className="flex gap-1">
-                {/* PDF/PNG は一時的に無効化 — Excel のみ */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border bg-primary text-primary-foreground border-primary">
-                  <FileSpreadsheet size={12} />
-                  Excel
-                </div>
+                {formatButtons.map(fb => (
+                  <button
+                    key={fb.value}
+                    onClick={() => setFormat(fb.value)}
+                    title={fb.desc}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border transition-colors",
+                      format === fb.value
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border hover:bg-muted"
+                    )}
+                  >
+                    {fb.icon}
+                    {fb.label}
+                  </button>
+                ))}
               </div>
+              {(format === "pdf" || format === "png") && (
+                <p className="text-[10px] text-amber-600 mt-1">
+                  ※ 新しいウィンドウで印刷ダイアログが開きます。PDF保存・スクリーンショット撮影はブラウザの機能をご利用ください。
+                </p>
+              )}
             </div>
 
             {/* Range mode */}
@@ -396,35 +527,36 @@ export function ExportDialog({ open, onClose }: Props) {
               </Select>
             </div>
 
-            {/* Orientation — disabled */}
-            {false && (
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">用紙向き</Label>
-                <div className="flex gap-1">
-                  {(["landscape", "portrait"] as const).map(o => (
-                    <button
-                      key={o}
-                      onClick={() => setOrientation(o)}
-                      className={cn(
-                        "px-3 py-1.5 text-xs rounded border transition-colors",
-                        orientation === o
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border hover:bg-muted"
-                      )}
-                    >
-                      {o === "landscape" ? "横（A4）" : "縦（A4）"}
-                    </button>
-                  ))}
-                </div>
+            {/* Orientation */}
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">用紙向き</Label>
+              <div className="flex gap-1">
+                {(["landscape", "portrait"] as const).map(o => (
+                  <button
+                    key={o}
+                    onClick={() => setOrientation(o)}
+                    className={cn(
+                      "px-3 py-1.5 text-xs rounded border transition-colors",
+                      orientation === o
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border hover:bg-muted"
+                    )}
+                  >
+                    {o === "landscape" ? "横（A4）" : "縦（A4）"}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
             {/* Options */}
             <div className="flex items-center gap-4">
-              {/* empty cells switch — disabled */}
               <div className="flex items-center gap-1.5">
                 <Switch id="exp-show-reason" checked={showReason} onCheckedChange={setShowReason} className="scale-75" />
                 <Label htmlFor="exp-show-reason" className="text-xs text-muted-foreground cursor-pointer">備考表示</Label>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Switch id="exp-show-empty" checked={showEmptyCells} onCheckedChange={setShowEmptyCells} className="scale-75" />
+                <Label htmlFor="exp-show-empty" className="text-xs text-muted-foreground cursor-pointer">空きコマ表示</Label>
               </div>
             </div>
 
@@ -522,7 +654,7 @@ export function ExportDialog({ open, onClose }: Props) {
 
                                   const isFiltered = filterClass !== "__all__" && slot.class !== filterClass;
                                   const displayClass = isFiltered ? null : slot.class;
-                                  const displayReason = isFiltered ? null : (slot as any).reason;
+                                  const displayReason = isFiltered ? null : (slot as unknown as Record<string, unknown>).reason as string | null;
 
                                   const colors = displayClass ? getClassColor(displayClass, gradeColors) : null;
 
@@ -584,15 +716,16 @@ export function ExportDialog({ open, onClose }: Props) {
               size="sm"
               onClick={handleExport}
               disabled={weeksToPrint.length === 0 || isExporting}
-              className="gap-1.5 min-w-[120px]"
+              className="gap-1.5 min-w-[140px]"
             >
               {isExporting ? (
                 <><Loader2 size={13} className="animate-spin" />処理中...</>
+              ) : format === "excel" ? (
+                <><FileSpreadsheet size={13} />Excelでダウンロード</>
+              ) : format === "pdf" ? (
+                <><Printer size={13} />PDF印刷ウィンドウを開く</>
               ) : (
-                <>
-                  <FileSpreadsheet size={13} />
-                  Excelでダウンロード
-                </>
+                <><Printer size={13} />PNG印刷ウィンドウを開く</>
               )}
             </Button>
           </div>
