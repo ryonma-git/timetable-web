@@ -19,6 +19,21 @@ export const TIMETABLE_FILE_VERSION = "1.0";
 export const TIMETABLE_FILE_MIME = "application/json";
 export const TIMETABLE_FILE_EXT = ".timetable";
 
+export interface SemesterMeta {
+  /** 学期番号 (1, 2, 3) */
+  semesterNumber: 1 | 2 | 3;
+  /** 始業式 */
+  startDate: string;  // YYYY-MM-DD
+  /** 終業式 */
+  endDate: string;    // YYYY-MM-DD
+  /** 土曜授業 */
+  hasSaturday: boolean;
+  /** 日曜授業 */
+  hasSunday: boolean;
+  /** 基本時間割 (曜日 -> 時限 -> クラス) */
+  baseSchedule?: Record<string, Record<number, string | null>>;
+}
+
 export interface TimetableFile {
   /** Format identifier */
   format: "timetable-app/v1";
@@ -31,6 +46,8 @@ export interface TimetableFile {
     createdAt: string;
     updatedAt: string;
   };
+  /** Semester metadata */
+  semester?: SemesterMeta;
   /** Base timetable entries (the "ground truth" before overrides) */
   base: TimetableEntry[];
   /** All override operations applied on top of base */
@@ -76,8 +93,14 @@ export function createNewTimetableFile(
 export function generateBaseEntries(
   startDate: string,
   endDate: string,
-  periodsPerDay = 6
+  options: {
+    periodsPerDay?: number;
+    hasSaturday?: boolean;
+    hasSunday?: boolean;
+    baseSchedule?: Record<string, Record<number, string | null>>;
+  } = {}
 ): TimetableEntry[] {
+  const { periodsPerDay = 6, hasSaturday = false, hasSunday = false, baseSchedule } = options;
   const entries: TimetableEntry[] = [];
   const start = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
@@ -85,12 +108,16 @@ export function generateBaseEntries(
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const dayOfWeek = d.getDay();
-    // Skip weekends
-    if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+    // Skip weekends unless enabled
+    if (dayOfWeek === 6 && !hasSaturday) continue;
+    if (dayOfWeek === 0 && !hasSunday) continue;
 
     const dateStr = formatDate(d);
     const weekday = weekdayNames[dayOfWeek];
     const weekday_jp = WEEKDAY_JP[weekday] ?? weekday;
+
+    // Apply base schedule if provided
+    const daySchedule = baseSchedule?.[weekday];
 
     entries.push({
       date: dateStr,
@@ -98,7 +125,7 @@ export function generateBaseEntries(
       weekday_jp,
       periods: Array.from({ length: periodsPerDay }, (_, i) => ({
         period: i + 1,
-        class: null,
+        class: daySchedule?.[i + 1] ?? null,
       })),
     });
   }

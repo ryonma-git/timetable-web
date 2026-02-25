@@ -41,7 +41,7 @@ export function NewFileDialog({ open, onClose }: Props) {
   const handleCreate = async () => {
     setLoading(true);
     try {
-      const base = generateBaseEntries(startDate, endDate);
+      const base = generateBaseEntries(startDate, endDate, {});
       const file = createNewTimetableFile(title, school || undefined, year || undefined);
       file.base = base;
       await loadTimetableFile(file);

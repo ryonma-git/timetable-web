@@ -1,6 +1,6 @@
 // ColorSettingsDialog.tsx
 // Design: Swiss Grid × Japanese Functional Design
-// Grade color swatch picker dialog
+// All grades share the same COLOR_PALETTE; duplicates are allowed.
 
 import { useState } from "react";
 import { Palette, RotateCcw } from "lucide-react";
@@ -13,16 +13,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  COLOR_PALETTE,
   DEFAULT_GRADE_COLORS,
-  GRADE_COLOR_SWATCHES,
   GradeColorDef,
   saveGradeColorsToStorage,
 } from "@/lib/gradeColors";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 
 const GRADE_LABELS: Record<string, string> = {
-  "1": "1年", "2": "2年", "3": "3年",
-  "4": "4年", "5": "5年", "6": "6年",
+  "1": "1年",
+  "2": "2年",
+  "3": "3年",
+  "4": "4年",
+  "5": "5年",
+  "6": "6年",
+  "special": "特別",
 };
 
 export function ColorSettingsDialog() {
@@ -39,8 +44,8 @@ export function ColorSettingsDialog() {
     setOpen(isOpen);
   };
 
-  const handleSelect = (grade: string, swatch: GradeColorDef) => {
-    setLocalColors(prev => ({ ...prev, [grade]: swatch }));
+  const handleSelect = (grade: string, color: GradeColorDef) => {
+    setLocalColors((prev) => ({ ...prev, [grade]: color }));
   };
 
   const handleApply = () => {
@@ -74,7 +79,7 @@ export function ColorSettingsDialog() {
 
       {/* Dialog — controlled externally */}
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Palette size={18} />
@@ -82,44 +87,79 @@ export function ColorSettingsDialog() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="space-y-5 py-2">
             <p className="text-xs text-muted-foreground">
-              各学年の表示色を選択してください。選択した色はこのブラウザに保存されます。
+              各学年の表示色を選択してください。同じ色を複数の学年に設定することもできます。選択した色はこのブラウザに保存されます。
             </p>
 
             {Object.entries(GRADE_LABELS).map(([grade, label]) => {
-              const swatches = GRADE_COLOR_SWATCHES[grade] ?? [];
-              const current = localColors[grade];
+              const current = localColors[grade] ?? DEFAULT_GRADE_COLORS[grade];
 
               return (
-                <div key={grade} className="space-y-1.5">
+                <div key={grade} className="space-y-2">
+                  {/* Grade label + current color preview */}
                   <div className="flex items-center gap-2">
-                    <div
-                      className="w-4 h-4 rounded border"
-                      style={{ backgroundColor: current.bg, borderColor: current.border }}
-                    />
-                    <span className="text-sm font-medium">{label}</span>
-                    <span className="text-xs text-muted-foreground">{current.label}</span>
+                    <span
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+                      style={{
+                        backgroundColor: current.bg,
+                        borderColor: current.border,
+                        color: current.text,
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      現在: {current.label}
+                    </span>
                   </div>
+
+                  {/* Color swatches — shared palette */}
                   <div className="flex flex-wrap gap-2">
-                    {swatches.map((swatch, i) => {
-                      const isSelected = current.bg === swatch.bg && current.border === swatch.border;
+                    {COLOR_PALETTE.map((color, i) => {
+                      const isSelected =
+                        current.bg === color.bg && current.border === color.border;
                       return (
                         <Tooltip key={i}>
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              onClick={() => handleSelect(grade, swatch)}
-                              className={`w-8 h-8 rounded-md border-2 transition-all duration-100
+                              onClick={() => handleSelect(grade, color)}
+                              className={`relative w-8 h-8 rounded-full border-2 transition-all duration-100 focus:outline-none
                                 ${isSelected
-                                  ? "border-primary ring-2 ring-primary/30 scale-110"
-                                  : "border-transparent hover:border-muted-foreground/40 hover:scale-105"
+                                  ? "ring-2 ring-offset-1 scale-110"
+                                  : "hover:scale-110"
                                 }`}
-                              style={{ backgroundColor: swatch.bg, borderColor: isSelected ? undefined : swatch.border }}
-                              aria-label={swatch.label}
-                            />
+                              style={{
+                                backgroundColor: color.bg,
+                                borderColor: isSelected ? color.text : color.border,
+                                // @ts-ignore
+                                "--tw-ring-color": color.text,
+                              }}
+                              aria-label={color.label}
+                            >
+                              {/* Inner dot */}
+                              <span
+                                className="absolute inset-1.5 rounded-full"
+                                style={{ backgroundColor: color.border }}
+                              />
+                              {/* Checkmark */}
+                              {isSelected && (
+                                <span className="absolute inset-0 flex items-center justify-center z-10">
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                    <path
+                                      d="M2 6L5 9L10 3"
+                                      stroke={color.text}
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                </span>
+                              )}
+                            </button>
                           </TooltipTrigger>
-                          <TooltipContent>{swatch.label}</TooltipContent>
+                          <TooltipContent>{color.label}</TooltipContent>
                         </Tooltip>
                       );
                     })}
@@ -130,11 +170,11 @@ export function ColorSettingsDialog() {
           </div>
 
           {/* Preview */}
-          <div className="border rounded-md p-3 bg-muted/30">
+          <div className="border rounded-md p-3 bg-muted/30 mt-2">
             <p className="text-xs text-muted-foreground mb-2">プレビュー</p>
             <div className="flex flex-wrap gap-1.5">
               {Object.entries(GRADE_LABELS).map(([grade, label]) => {
-                const c = localColors[grade];
+                const c = localColors[grade] ?? DEFAULT_GRADE_COLORS[grade];
                 return (
                   <div
                     key={grade}

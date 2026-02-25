@@ -25,7 +25,7 @@ import { useTimetable, type ActiveTab } from "@/contexts/TimetableContext";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ColorSettingsDialog } from "@/components/ColorSettingsDialog";
-import { NewFileDialog } from "@/components/NewFileDialog";
+import { NewFileWizard } from "@/components/NewFileWizard";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 
 export function Sidebar() {
@@ -366,8 +366,8 @@ export function Sidebar() {
         <ColorSettingsDialog />
       </div>
 
-      {/* New File Dialog */}
-      <NewFileDialog open={showNewDialog} onClose={() => setShowNewDialog(false)} />
+      {/* New File Wizard */}
+      <NewFileWizard open={showNewDialog} onClose={() => setShowNewDialog(false)} />
     </aside>
   );
 }

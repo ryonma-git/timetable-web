@@ -67,7 +67,7 @@ export function Inspector() {
 
   if (!selectedCell) {
     return (
-      <div className="w-[260px] shrink-0 border-l border-border flex flex-col">
+      <div className="hidden lg:flex w-[260px] shrink-0 border-l border-border flex-col">
         <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
           <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground">
@@ -263,7 +263,7 @@ export function Inspector() {
 
   return (
     <>
-      <div className="w-[260px] shrink-0 border-l border-border flex flex-col bg-card">
+      <div className="w-[260px] shrink-0 border-l border-border flex flex-col bg-card animate-in slide-in-from-right duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div>

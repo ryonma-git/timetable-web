@@ -22,6 +22,7 @@ import {
 } from "@/lib/timetable";
 import {
   TimetableFile,
+  SemesterMeta,
   LoadResult,
   ZipImportResult,
   deserializeTimetableFile,
@@ -56,6 +57,9 @@ interface TimetableContextValue {
   currentFile: TimetableFile | null;
   loadedFileName: string;
 
+  // Semester
+  semester: SemesterMeta | null;
+
   // UI State
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
@@ -67,6 +71,9 @@ interface TimetableContextValue {
   asOfDate: string;
   setAsOfDate: (date: string) => void;
   classStats: ClassStats[];
+  // Per-week Saturday/Sunday overrides (for temporary weekend classes)
+  weekendOverrides: Record<string, { saturday?: boolean; sunday?: boolean }>;
+  toggleWeekendDay: (weekMonday: string, day: 'saturday' | 'sunday') => void;
 
   // Undo/Redo
   undoStack: HistoryEntry[];
@@ -115,6 +122,17 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
 
   const [undoStack, setUndoStack] = useState<HistoryEntry[]>([]);
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
+
+  // Per-week weekend overrides (temporary Saturday/Sunday classes)
+  const [weekendOverrides, setWeekendOverrides] = useState<Record<string, { saturday?: boolean; sunday?: boolean }>>({});
+
+  const toggleWeekendDay = useCallback((weekMonday: string, day: 'saturday' | 'sunday') => {
+    setWeekendOverrides(prev => {
+      const current = prev[weekMonday] ?? {};
+      const key = day === 'saturday' ? 'saturday' : 'sunday';
+      return { ...prev, [weekMonday]: { ...current, [key]: !current[key] } };
+    });
+  }, []);
 
   // ─── Stats ──────────────────────────────────────────────────
   const classStats = calcClassStats(effectiveEntries, asOfDate);
@@ -293,10 +311,12 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     <TimetableContext.Provider value={{
       baseEntries, effectiveEntries, pendingOps, allOps, auditLog, overrideMeta,
       isLoaded, isDirty, currentFile, loadedFileName,
+      semester: currentFile?.semester ?? null,
       activeTab, setActiveTab,
       currentWeekMonday, navigateWeek, goToToday,
       selectedCell, setSelectedCell,
       asOfDate, setAsOfDate, classStats,
+      weekendOverrides, toggleWeekendDay,
       undoStack, redoStack,
       canUndo: undoStack.length > 0,
       canRedo: redoStack.length > 0,

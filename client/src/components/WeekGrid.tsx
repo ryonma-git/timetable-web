@@ -5,11 +5,12 @@
 import { useState } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGradeColors } from "@/contexts/GradeColorContext";
-import { buildSwapOps, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO, VALID_CLASSES } from "@/lib/timetable";
+import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO, VALID_CLASSES } from "@/lib/timetable";
 import { getClassColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
-import { Filter, X } from "lucide-react";
+import { Filter, X, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +35,9 @@ export function WeekGrid() {
     selectedCell, setSelectedCell,
     applyOps,
     isLoaded,
+    semester,
+    weekendOverrides,
+    toggleWeekendDay,
   } = useTimetable();
   const { gradeColors } = useGradeColors();
 
@@ -42,7 +46,16 @@ export function WeekGrid() {
   const [filterClass, setFilterClass] = useState<string | null>(null);
   const today = todayISO();
 
-  const weekDates = getWeekDates(currentWeekMonday);
+  // Determine if this week shows Saturday/Sunday
+  const weekMondayStr = formatDate(currentWeekMonday);
+  const weekOverride = weekendOverrides[weekMondayStr] ?? {};
+  const showSaturday = semester?.hasSaturday || weekOverride.saturday || false;
+  const showSunday = semester?.hasSunday || weekOverride.sunday || false;
+
+  const weekDates = getWeekDates(currentWeekMonday, {
+    includeSaturday: showSaturday,
+    includeSunday: showSunday,
+  });
 
   // Build lookup: date -> entry
   const entryByDate = new Map<string, TimetableEntry>();
@@ -124,7 +137,7 @@ export function WeekGrid() {
       <TodayBanner entries={effectiveEntries} today={today} gradeColors={gradeColors} />
 
       {/* Filter bar */}
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex items-center gap-2 flex-wrap">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
@@ -161,6 +174,54 @@ export function WeekGrid() {
             <X size={11} />
             フィルター解除
           </button>
+        )}
+
+        {/* Weekend temporary class buttons */}
+        {isLoaded && (
+          <div className="flex items-center gap-1.5 ml-auto">
+            {!semester?.hasSaturday && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={weekOverride.saturday ? "default" : "outline"}
+                    size="sm"
+                    className={cn(
+                      "h-7 gap-1 text-xs",
+                      weekOverride.saturday && "bg-orange-500 hover:bg-orange-600 border-orange-500 text-white"
+                    )}
+                    onClick={() => toggleWeekendDay(weekMondayStr, 'saturday')}
+                  >
+                    <CalendarPlus size={11} />
+                    土曜授業
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  この週のみ土曜日を授業日として表示
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {!semester?.hasSunday && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={weekOverride.sunday ? "default" : "outline"}
+                    size="sm"
+                    className={cn(
+                      "h-7 gap-1 text-xs",
+                      weekOverride.sunday && "bg-purple-500 hover:bg-purple-600 border-purple-500 text-white"
+                    )}
+                    onClick={() => toggleWeekendDay(weekMondayStr, 'sunday')}
+                  >
+                    <CalendarPlus size={11} />
+                    日曜授業
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  この週のみ日曜日を授業日として表示
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         )}
       </div>
 

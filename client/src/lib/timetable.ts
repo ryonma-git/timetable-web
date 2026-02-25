@@ -86,7 +86,7 @@ export const WEEKDAY_JP: Record<string, string> = {
 
 export const VALID_CLASSES: string[] = (() => {
   const classes: string[] = [];
-  for (let grade = 4; grade <= 6; grade++) {
+  for (let grade = 1; grade <= 6; grade++) {
     for (let group = 1; group <= 3; group++) {
       classes.push(`${grade}年${group}組`);
     }
@@ -306,12 +306,31 @@ export function getMondayOfWeek(date: Date): Date {
   return d;
 }
 
-export function getWeekDates(monday: Date): string[] {
-  return Array.from({ length: 5 }, (_, i) => {
+export function getWeekDates(
+  monday: Date,
+  options: { includeSaturday?: boolean; includeSunday?: boolean } = {}
+): string[] {
+  const { includeSaturday = false, includeSunday = false } = options;
+  const dates: string[] = [];
+  // Mon-Fri (0-4)
+  for (let i = 0; i < 5; i++) {
     const d = new Date(monday);
     d.setDate(d.getDate() + i);
-    return formatDate(d);
-  });
+    dates.push(formatDate(d));
+  }
+  // Saturday (+5)
+  if (includeSaturday) {
+    const sat = new Date(monday);
+    sat.setDate(sat.getDate() + 5);
+    dates.push(formatDate(sat));
+  }
+  // Sunday (+6)
+  if (includeSunday) {
+    const sun = new Date(monday);
+    sun.setDate(sun.getDate() + 6);
+    dates.push(formatDate(sun));
+  }
+  return dates;
 }
 
 export function formatDate(date: Date): string {
