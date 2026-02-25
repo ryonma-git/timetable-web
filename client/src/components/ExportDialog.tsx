@@ -32,7 +32,7 @@ import { exportTimetablePNG, exportTimetablePDF } from "@/lib/timetableSvgExport
 // ─── Types ────────────────────────────────────────────────────
 
 type RangeMode = "single" | "month" | "semester" | "from_today_n" | "from_today_all";
-type ExportFormat = "pdf" | "png" | "excel";
+type ExportFormat = "excel"; // PDF/PNG は一時的に無効化
 
 interface Props {
   open: boolean;
@@ -64,7 +64,7 @@ export function ExportDialog({ open, onClose }: Props) {
   } = useTimetable();
   const { gradeColors } = useGradeColors();
 
-  const [format, setFormat] = useState<ExportFormat>("pdf");
+  const [format, setFormat] = useState<ExportFormat>("excel");
   const [orientation, setOrientation] = useState<"landscape" | "portrait">("landscape");
   const [filterClass, setFilterClass] = useState<string>("__all__");
   const [rangeMode, setRangeMode] = useState<RangeMode>("single");
@@ -280,12 +280,10 @@ export function ExportDialog({ open, onClose }: Props) {
     }
   }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason]);
 
-  // ── Dispatch export ──────────────────────────────────────────
+  // ── Dispatch export (Excelのみ有効) ────────────────────────────────────────
   const handleExport = useCallback(async () => {
-    if (format === "pdf") await handleExportPDF();
-    else if (format === "png") await handleExportPNG();
-    else await handleExportExcel();
-  }, [format, handleExportPDF, handleExportPNG, handleExportExcel]);
+    await handleExportExcel();
+  }, [handleExportExcel]);
 
   const showSaturday = false;
   const showSunday = false;
@@ -305,25 +303,11 @@ export function ExportDialog({ open, onClose }: Props) {
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">形式</Label>
               <div className="flex gap-1">
-                {([
-                  { value: "pdf", label: "PDF", icon: <FileText size={12} /> },
-                  { value: "png", label: "PNG", icon: <FileImage size={12} /> },
-                  { value: "excel", label: "Excel", icon: <FileSpreadsheet size={12} /> },
-                ] as const).map(f => (
-                  <button
-                    key={f.value}
-                    onClick={() => setFormat(f.value)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border transition-colors",
-                      format === f.value
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background border-border hover:bg-muted"
-                    )}
-                  >
-                    {f.icon}
-                    {f.label}
-                  </button>
-                ))}
+                {/* PDF/PNG は一時的に無効化 — Excel のみ */}
+                <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded border bg-primary text-primary-foreground border-primary">
+                  <FileSpreadsheet size={12} />
+                  Excel
+                </div>
               </div>
             </div>
 
@@ -412,8 +396,8 @@ export function ExportDialog({ open, onClose }: Props) {
               </Select>
             </div>
 
-            {/* Orientation (PDF/PNG only) */}
-            {format !== "excel" && (
+            {/* Orientation — disabled */}
+            {false && (
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">用紙向き</Label>
                 <div className="flex gap-1">
@@ -437,12 +421,7 @@ export function ExportDialog({ open, onClose }: Props) {
 
             {/* Options */}
             <div className="flex items-center gap-4">
-              {format !== "excel" && (
-                <div className="flex items-center gap-1.5">
-                  <Switch id="exp-show-empty" checked={showEmptyCells} onCheckedChange={setShowEmptyCells} className="scale-75" />
-                  <Label htmlFor="exp-show-empty" className="text-xs text-muted-foreground cursor-pointer">空きコマ表示</Label>
-                </div>
-              )}
+              {/* empty cells switch — disabled */}
               <div className="flex items-center gap-1.5">
                 <Switch id="exp-show-reason" checked={showReason} onCheckedChange={setShowReason} className="scale-75" />
                 <Label htmlFor="exp-show-reason" className="text-xs text-muted-foreground cursor-pointer">備考表示</Label>
@@ -611,10 +590,8 @@ export function ExportDialog({ open, onClose }: Props) {
                 <><Loader2 size={13} className="animate-spin" />処理中...</>
               ) : (
                 <>
-                  {format === "pdf" && <FileText size={13} />}
-                  {format === "png" && <FileImage size={13} />}
-                  {format === "excel" && <FileSpreadsheet size={13} />}
-                  {format.toUpperCase()}でダウンロード
+                  <FileSpreadsheet size={13} />
+                  Excelでダウンロード
                 </>
               )}
             </Button>

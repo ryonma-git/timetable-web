@@ -24,8 +24,9 @@ export interface SvgExportOptions {
 // ─── Layout constants ─────────────────────────────────────────
 
 // A4 at 96dpi: landscape=1122x794, portrait=794x1122
-// We use 2x scale for crispness
+// PNG export uses 1x scale to avoid memory issues (still crisp enough for screen)
 const SCALE = 2;
+const PNG_SCALE = 1; // PNG用: 1x (メモリ節約)、PDFは2x
 const A4_L_W = 1122;
 const A4_L_H = 794;
 const A4_P_W = 794;
@@ -209,7 +210,34 @@ async function svgToCanvas(svgStr: string, w: number, h: number): Promise<HTMLCa
   });
 }
 
+// ─── SVG → Canvas (PNG_SCALE版) ─────────────────────────────
+
+async function svgToCanvasPNG(svgStr: string, w: number, h: number): Promise<HTMLCanvasElement> {
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = w * PNG_SCALE;
+      canvas.height = h * PNG_SCALE;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas);
+    };
+    img.onerror = (e) => {
+      URL.revokeObjectURL(url);
+      reject(e);
+    };
+    img.src = url;
+  });
+}
+
 // ─── Public: Export PNG ──────────────────────────────────────
+// 週ごとに個別PNGファイルをダウンロード（巨大Canvas回避）
 
 export async function exportTimetablePNG(
   options: SvgExportOptions,
@@ -221,32 +249,28 @@ export async function exportTimetablePNG(
 
   if (options.weekMondayStrs.length === 0) return;
 
-  // For PNG: combine all weeks vertically
-  const svgs = options.weekMondayStrs.map(w => buildWeekSvg(w, options, pageW, pageH));
+  const baseName = filename.replace(/\.png$/i, "");
+  const isSingle = options.weekMondayStrs.length === 1;
 
-  // Create a tall canvas
-  const totalH = pageH * SCALE * svgs.length;
-  const totalW = pageW * SCALE;
-  const finalCanvas = document.createElement("canvas");
-  finalCanvas.width = totalW;
-  finalCanvas.height = totalH;
-  const ctx = finalCanvas.getContext("2d")!;
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, totalW, totalH);
+  for (let i = 0; i < options.weekMondayStrs.length; i++) {
+    const mondayStr = options.weekMondayStrs[i];
+    const svgStr = buildWeekSvg(mondayStr, options, pageW, pageH);
+    const canvas = await svgToCanvasPNG(svgStr, pageW, pageH);
 
-  for (let i = 0; i < svgs.length; i++) {
-    const canvas = await svgToCanvas(svgs[i], pageW, pageH);
-    ctx.drawImage(canvas, 0, i * pageH * SCALE);
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    // 複数週の場合は連番付き
+    a.download = isSingle ? `${baseName}.png` : `${baseName}_${String(i + 1).padStart(2, "0")}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // ブラウザのダウンロードキューが詰まらないよう少し待つ
+    if (i < options.weekMondayStrs.length - 1) {
+      await new Promise(r => setTimeout(r, 300));
+    }
   }
-
-  const url = finalCanvas.toDataURL("image/png");
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 // ─── Public: Export PDF ──────────────────────────────────────

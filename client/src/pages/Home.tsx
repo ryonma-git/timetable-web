@@ -137,11 +137,9 @@ export default function Home() {
                       変更履歴（JSON）
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-xs">画像・文書エクスポート</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setShowExportDialog(true)} className="text-xs gap-2">
                       <FileSpreadsheet size={12} className="text-green-600" />
-                      Excel / PDF / PNGエクスポート…
+                      Excelエクスポート…
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -155,7 +153,7 @@ export default function Home() {
                     size="sm"
                     onClick={() => setShowExportDialog(true)}
                     className="h-7 gap-1.5 text-xs print:hidden"
-                    title="Excel / PDF / PNGエクスポート"
+                    title="Excelエクスポート"
                   >
                     <FileSpreadsheet size={12} />
                     <span className="hidden sm:inline">書き出し</span>
