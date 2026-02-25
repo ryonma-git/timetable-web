@@ -25,14 +25,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { X, FileImage, FileText, FileSpreadsheet, Loader2, Printer } from "lucide-react";
+import { X, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportTimetableExcel } from "@/lib/exportUtils";
+import { exportTimetablePdf } from "@/lib/timetablePdfExport";
 
 // ─── Types ────────────────────────────────────────────────────
 
 type RangeMode = "single" | "month" | "semester" | "from_today_n" | "from_today_all";
-type ExportFormat = "excel" | "pdf" | "png";
+type ExportFormat = "excel" | "pdf";
 
 interface Props {
   open: boolean;
@@ -339,32 +340,29 @@ export function ExportDialog({ open, onClose }: Props) {
   const showSaturday = false;
   const showSunday = false;
 
-  // ── Open print window ────────────────────────────────────────
-  const openPrintWindow = useCallback((isPng: boolean) => {
+  // ── Export: PDF (jsPDF直接描画) ──────────────────────────────
+  const handleExportPdf = useCallback(async () => {
     if (weeksToPrint.length === 0) return;
-    const html = buildPrintHtml({
-      weeksToPrint,
-      effectiveEntries,
-      holidays,
-      gradeColors,
-      filterClass,
-      showReason,
-      showEmptyCells,
-      orientation,
-      title: currentFile?.meta.title ?? "時間割",
-      semLabel,
-      schoolName: currentFile?.meta.school ?? "",
-      includeSaturday: showSaturday,
-      includeSunday: showSunday,
-      isPng,
-    });
-    const win = window.open("", "_blank");
-    if (!win) {
-      alert("ポップアップがブロックされています。ブラウザの設定でポップアップを許可してください。");
-      return;
+    setIsExporting(true);
+    try {
+      await exportTimetablePdf({
+        weeksToPrint,
+        effectiveEntries,
+        holidays,
+        gradeColors,
+        filterClass,
+        showReason,
+        showEmptyCells,
+        orientation,
+        title: currentFile?.meta.title ?? "時間割",
+        semLabel,
+        schoolName: currentFile?.meta.school ?? "",
+        filename: currentFile?.meta.title ?? "時間割",
+        outputType: "pdf",
+      });
+    } finally {
+      setIsExporting(false);
     }
-    win.document.write(html);
-    win.document.close();
   }, [weeksToPrint, effectiveEntries, holidays, gradeColors, filterClass, showReason, showEmptyCells, orientation, currentFile, semLabel]);
 
   // ── Export: Excel ────────────────────────────────────────────
@@ -388,19 +386,13 @@ export function ExportDialog({ open, onClose }: Props) {
 
   // ── Dispatch export ──────────────────────────────────────────
   const handleExport = useCallback(async () => {
-    if (format === "excel") {
-      await handleExportExcel();
-    } else if (format === "pdf") {
-      openPrintWindow(false);
-    } else if (format === "png") {
-      openPrintWindow(true);
-    }
-  }, [format, handleExportExcel, openPrintWindow]);
+    if (format === "excel") await handleExportExcel();
+    else if (format === "pdf") await handleExportPdf();
+  }, [format, handleExportExcel, handleExportPdf]);
 
   const formatButtons: { value: ExportFormat; label: string; icon: React.ReactNode; desc: string }[] = [
     { value: "excel", label: "Excel", icon: <FileSpreadsheet size={12} />, desc: ".xlsx形式でダウンロード" },
-    { value: "pdf", label: "PDF", icon: <FileText size={12} />, desc: "印刷ダイアログ→「PDFとして保存」" },
-    { value: "png", label: "PNG", icon: <FileImage size={12} />, desc: "印刷ダイアログ→スクリーンショット" },
+    { value: "pdf", label: "PDF", icon: <FileText size={12} />, desc: ".pdf形式でダウンロード（日本語フォント埋め込み）" },
   ];
 
   return (
@@ -435,9 +427,9 @@ export function ExportDialog({ open, onClose }: Props) {
                   </button>
                 ))}
               </div>
-              {(format === "pdf" || format === "png") && (
-                <p className="text-[10px] text-amber-600 mt-1">
-                  ※ 新しいウィンドウで印刷ダイアログが開きます。PDF保存・スクリーンショット撮影はブラウザの機能をご利用ください。
+              {format === "pdf" && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  ※ 初回のみフォント読み込みのため数秒かかる場合があります。
                 </p>
               )}
             </div>
@@ -722,10 +714,8 @@ export function ExportDialog({ open, onClose }: Props) {
                 <><Loader2 size={13} className="animate-spin" />処理中...</>
               ) : format === "excel" ? (
                 <><FileSpreadsheet size={13} />Excelでダウンロード</>
-              ) : format === "pdf" ? (
-                <><Printer size={13} />PDF印刷ウィンドウを開く</>
               ) : (
-                <><Printer size={13} />PNG印刷ウィンドウを開く</>
+                <><FileText size={13} />PDFでダウンロード</>
               )}
             </Button>
           </div>
