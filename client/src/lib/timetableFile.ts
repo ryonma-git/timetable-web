@@ -19,9 +19,13 @@ export const TIMETABLE_FILE_VERSION = "1.0";
 export const TIMETABLE_FILE_MIME = "application/json";
 export const TIMETABLE_FILE_EXT = ".timetable";
 
+export type SemesterSystem = "trimester" | "semester"; // 3学期制 / 2学期制
+
 export interface SemesterMeta {
-  /** 学期番号 (1, 2, 3) */
+  /** 学期番号 (3学期制: 1,2,3 / 2学期制: 1,2) */
   semesterNumber: 1 | 2 | 3;
+  /** 学期制 */
+  semesterSystem?: SemesterSystem;
   /** 始業式 */
   startDate: string;  // YYYY-MM-DD
   /** 終業式 */
@@ -32,6 +36,8 @@ export interface SemesterMeta {
   hasSunday: boolean;
   /** 基本時間割 (曜日 -> 時限 -> クラス) */
   baseSchedule?: Record<string, Record<number, string | null>>;
+  /** カスタムクラスラベル（標準クラス以外に追加したもの） */
+  customClasses?: string[];
 }
 
 export interface TimetableFile {

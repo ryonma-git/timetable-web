@@ -29,6 +29,7 @@ import {
   serializeTimetableFile,
   downloadTimetableFile,
   importFromZip,
+  generateBaseEntries,
   TIMETABLE_FILE_EXT,
 } from "@/lib/timetableFile";
 
@@ -66,6 +67,7 @@ interface TimetableContextValue {
   currentWeekMonday: Date;
   navigateWeek: (delta: number) => void;
   goToToday: () => void;
+  goToDate: (date: Date) => void;
   selectedCell: { date: string; period: number } | null;
   setSelectedCell: (cell: { date: string; period: number } | null) => void;
   asOfDate: string;
@@ -97,6 +99,12 @@ interface TimetableContextValue {
   exportEffective: () => void;
   exportOverride: () => void;
   exportCSV: () => void;
+
+  // Settings
+  updateSettings: (newSemester: SemesterMeta, applyFrom?: string) => void;
+
+  // Custom classes
+  customClasses: string[];
 }
 
 // ─── Context ─────────────────────────────────────────────────
@@ -148,6 +156,10 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
 
   const goToToday = useCallback(() => {
     setCurrentWeekMonday(getMondayOfWeek(new Date()));
+  }, []);
+
+  const goToDate = useCallback((date: Date) => {
+    setCurrentWeekMonday(getMondayOfWeek(date));
   }, []);
 
   // ─── Internal: set loaded state ─────────────────────────────
@@ -307,13 +319,64 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     downloadFile(csv, `timetable_${ts}.csv`, "text/csv;charset=utf-8;");
   }, [effectiveEntries]);
 
+  // ─── Update Settings (base rebuild) ─────────────────────────
+  const updateSettings = useCallback((newSemester: SemesterMeta, applyFrom?: string) => {
+    if (!currentFile) return;
+
+    let newBase: TimetableEntry[];
+    let newOps: OverrideOp[];
+
+    if (!applyFrom) {
+      // Apply to all: regenerate entire base
+      newBase = generateBaseEntries(newSemester.startDate, newSemester.endDate, {
+        hasSaturday: newSemester.hasSaturday,
+        hasSunday: newSemester.hasSunday,
+        baseSchedule: newSemester.baseSchedule,
+      });
+      newOps = allOps; // keep existing ops
+    } else {
+      // Apply from date: rebuild entries from applyFrom onwards
+      const beforeEntries = baseEntries.filter(e => e.date < applyFrom);
+      const newEntries = generateBaseEntries(applyFrom, newSemester.endDate, {
+        hasSaturday: newSemester.hasSaturday,
+        hasSunday: newSemester.hasSunday,
+        baseSchedule: newSemester.baseSchedule,
+      });
+      newBase = [...beforeEntries, ...newEntries];
+      // Remove ops that are on or after applyFrom
+      newOps = allOps.filter(op => op.date < applyFrom);
+    }
+
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      semester: newSemester,
+      base: newBase,
+      ops: newOps,
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+
+    const { effective, audit } = applyOverrides(newBase, newOps);
+    setCurrentFile(updatedFile);
+    setBaseEntries(newBase);
+    setEffectiveEntries(effective);
+    setAllOps(newOps);
+    setPendingOps([]);
+    setAuditLog(audit);
+    setUndoStack([]);
+    setRedoStack([]);
+    setIsDirty(true);
+  }, [currentFile, baseEntries, allOps]);
+
+  // ─── Custom classes ──────────────────────────────────────────
+  const customClasses = currentFile?.semester?.customClasses ?? [];
+
   return (
     <TimetableContext.Provider value={{
       baseEntries, effectiveEntries, pendingOps, allOps, auditLog, overrideMeta,
       isLoaded, isDirty, currentFile, loadedFileName,
       semester: currentFile?.semester ?? null,
       activeTab, setActiveTab,
-      currentWeekMonday, navigateWeek, goToToday,
+      currentWeekMonday, navigateWeek, goToToday, goToDate,
       selectedCell, setSelectedCell,
       asOfDate, setAsOfDate, classStats,
       weekendOverrides, toggleWeekendDay,
@@ -325,6 +388,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       saveFile, saveFileAs,
       applyOps,
       exportEffective, exportOverride, exportCSV,
+      updateSettings,
+      customClasses,
     }}>
       {children}
     </TimetableContext.Provider>

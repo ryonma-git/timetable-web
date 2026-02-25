@@ -1,15 +1,14 @@
-// Home.tsx
 // Design: Swiss Grid × Japanese Functional Design
-// Main layout: 3-pane (sidebar | grid | inspector)
+// Main layout: 3-pane (sidebar | grid | inspector) with mobile hamburger menu
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { Sidebar } from "@/components/Sidebar";
 import { WeekGrid } from "@/components/WeekGrid";
 import { Inspector } from "@/components/Inspector";
 import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Save } from "lucide-react";
+import { Printer, Download, Save, Menu, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +24,8 @@ export default function Home() {
     saveFile, exportCSV, exportEffective, exportOverride,
   } = useTimetable();
 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   // Update page title
   useEffect(() => {
     const title = currentFile?.meta.title ?? "時間割管理";
@@ -37,14 +38,36 @@ export default function Home() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
-      <Sidebar />
+      {/* Mobile sidebar overlay */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar: desktop always visible, mobile slide-in */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 lg:static lg:z-auto
+        transition-transform duration-300 ease-in-out
+        ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `}>
+        <Sidebar onClose={() => setMobileSidebarOpen(false)} />
+      </div>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Top bar */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-background/95 backdrop-blur-sm shrink-0">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background/95 backdrop-blur-sm shrink-0">
           <div className="flex items-center gap-2 min-w-0">
+            {/* Hamburger button (mobile only) */}
+            <button
+              className="lg:hidden p-1.5 rounded hover:bg-muted transition-colors shrink-0"
+              onClick={() => setMobileSidebarOpen(true)}
+            >
+              <Menu size={18} />
+            </button>
+
             <h1 className="text-sm font-bold text-foreground truncate">
               {currentFile?.meta.title ?? "時間割管理"}
             </h1>
@@ -129,7 +152,7 @@ export default function Home() {
         </div>
 
         {/* Content area */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden relative">
           {activeTab === "grid" && (
             <>
               <WeekGrid />

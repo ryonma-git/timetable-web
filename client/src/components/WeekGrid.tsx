@@ -38,6 +38,7 @@ export function WeekGrid() {
     semester,
     weekendOverrides,
     toggleWeekendDay,
+    customClasses,
   } = useTimetable();
   const { gradeColors } = useGradeColors();
 
@@ -133,6 +134,27 @@ export function WeekGrid() {
 
   return (
     <div className="flex-1 overflow-auto p-4">
+      {/* Year/Academic year header */}
+      {semester && (() => {
+        const mon = currentWeekMonday;
+        const year = mon.getFullYear();
+        const month = mon.getMonth() + 1;
+        const academicYear = month >= 4 ? year : year - 1;
+        const semLabel = semester.semesterSystem === "semester"
+          ? (semester.semesterNumber === 1 ? "前期" : "後期")
+          : `第${semester.semesterNumber}学期`;
+        return (
+          <div className="flex items-baseline gap-3 mb-2">
+            <span className="text-base font-bold text-foreground">{academicYear}年度</span>
+            <span className="text-sm text-muted-foreground">{year}年</span>
+            <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">{semLabel}</span>
+            {semester.customClasses && semester.customClasses.length > 0 && (
+              <span className="text-xs text-muted-foreground/60">カスタム: {semester.customClasses.join(", ")}</span>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Today banner */}
       <TodayBanner entries={effectiveEntries} today={today} gradeColors={gradeColors} />
 
@@ -164,6 +186,15 @@ export function WeekGrid() {
                 </DropdownMenuItem>
               ));
             })}
+            {customClasses.length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs">カスタム</DropdownMenuLabel>
+                {customClasses.map(cls => (
+                  <DropdownMenuItem key={cls} onClick={() => setFilterClass(cls)} className="text-xs">{cls}</DropdownMenuItem>
+                ))}
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         {filterClass && (

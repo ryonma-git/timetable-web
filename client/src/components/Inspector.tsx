@@ -33,6 +33,7 @@ export function Inspector() {
   const {
     selectedCell, setSelectedCell,
     effectiveEntries, applyOps,
+    customClasses,
   } = useTimetable();
   const { gradeColors } = useGradeColors();
 
@@ -66,23 +67,8 @@ export function Inspector() {
   }, [selectedCell]);
 
   if (!selectedCell) {
-    return (
-      <div className="hidden lg:flex w-[260px] shrink-0 border-l border-border flex-col">
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
-          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-muted-foreground">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-              <polyline points="10 17 15 12 10 7" />
-              <line x1="15" y1="12" x2="3" y2="12" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground/60">コマを選択してください</p>
-            <p className="text-xs text-muted-foreground mt-1">グリッドのセルをクリックすると<br />操作パネルが表示されます</p>
-          </div>
-        </div>
-      </div>
-    );
+    // コマ未選択時は非表示（デスクトップ・スマホ共通）
+    return null;
   }
 
   const { date, period } = selectedCell;
@@ -263,7 +249,26 @@ export function Inspector() {
 
   return (
     <>
-      <div className="w-[260px] shrink-0 border-l border-border flex flex-col bg-card animate-in slide-in-from-right duration-200">
+      {/* Mobile: bottom sheet overlay */}
+      <div
+        className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+        onClick={() => setSelectedCell(null)}
+      />
+
+      {/* Panel: desktop = right side, mobile = bottom sheet */}
+      <div className="
+        fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl
+        lg:static lg:w-[260px] lg:shrink-0 lg:rounded-none lg:shadow-none lg:z-auto
+        border-t lg:border-t-0 lg:border-l border-border
+        flex flex-col bg-card
+        animate-in slide-in-from-bottom lg:slide-in-from-right duration-200
+        max-h-[80vh] lg:max-h-none
+      ">
+        {/* Mobile drag handle */}
+        <div className="flex justify-center pt-2 pb-1 lg:hidden">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div>
@@ -346,6 +351,14 @@ export function Inspector() {
                     {VALID_CLASSES.map(c => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
+                    {customClasses.length > 0 && (
+                      <>
+                        <div className="px-2 py-1 text-[10px] text-muted-foreground font-medium border-t mt-1 pt-1">カスタム</div>
+                        {customClasses.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

@@ -18,7 +18,9 @@ import {
   RotateCcw,
   RotateCw,
   Save,
+  Settings,
   TableProperties,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTimetable, type ActiveTab } from "@/contexts/TimetableContext";
@@ -26,24 +28,29 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ColorSettingsDialog } from "@/components/ColorSettingsDialog";
 import { NewFileWizard } from "@/components/NewFileWizard";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 
-export function Sidebar() {
+export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
   const {
     isLoaded, isDirty, loadedFileName, currentFile,
     loadFromNativeFile, loadFromZip,
     saveFile,
     activeTab, setActiveTab,
-    currentWeekMonday, navigateWeek, goToToday,
+    currentWeekMonday, navigateWeek, goToToday, goToDate,
     canUndo, canRedo, undo, redo,
     undoStack,
     exportEffective, exportOverride, exportCSV,
     pendingOps,
+    semester,
   } = useTimetable();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerValue, setDatePickerValue] = useState("");
 
   // Keyboard shortcut: Ctrl/Cmd+S to save
   useEffect(() => {
@@ -158,10 +165,18 @@ export function Sidebar() {
           <div className="w-7 h-7 rounded bg-sidebar-primary flex items-center justify-center shrink-0">
             <CalendarDays size={14} className="text-sidebar-primary-foreground" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-bold leading-tight text-sidebar-foreground">時間割管理</p>
             <p className="text-[10px] text-sidebar-foreground/50 leading-tight">Timetable Manager</p>
           </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1 rounded hover:bg-sidebar-accent transition-colors shrink-0"
+            >
+              <X size={16} className="text-sidebar-foreground/60" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -281,6 +296,41 @@ export function Sidebar() {
             </button>
           </div>
           <p className="text-[11px] text-sidebar-foreground/60 text-center mt-1">{weekLabel}</p>
+
+          {/* Date picker for jump-to-week */}
+          <div className="mt-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowDatePicker(v => !v)}
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded text-[10px]
+                           text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent
+                           border border-sidebar-border transition-colors"
+              >
+                <CalendarDays size={11} />
+                日付で移動
+              </button>
+              {showDatePicker && (
+                <div className="absolute bottom-full mb-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-lg p-2 z-50">
+                  <p className="text-[10px] text-muted-foreground mb-1">移動先の日付を選択</p>
+                  <input
+                    type="date"
+                    value={datePickerValue}
+                    min={semester?.startDate}
+                    max={semester?.endDate}
+                    onChange={e => {
+                      setDatePickerValue(e.target.value);
+                      if (e.target.value) {
+                        goToDate(new Date(e.target.value + "T00:00:00"));
+                        setShowDatePicker(false);
+                        setDatePickerValue("");
+                      }
+                    }}
+                    className="w-full text-[11px] bg-background border border-border rounded px-2 py-1 text-foreground"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -362,12 +412,24 @@ export function Sidebar() {
       )}
 
       {/* Settings */}
-      <div className="px-3 py-3 border-t border-sidebar-border">
+      <div className="px-3 py-3 border-t border-sidebar-border space-y-1">
+        {isLoaded && (
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]
+                       text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          >
+            <Settings size={12} />
+            学期設定を変更
+          </button>
+        )}
         <ColorSettingsDialog />
       </div>
 
       {/* New File Wizard */}
       <NewFileWizard open={showNewDialog} onClose={() => setShowNewDialog(false)} />
+      {/* Settings Dialog */}
+      <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
     </aside>
   );
 }

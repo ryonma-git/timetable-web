@@ -49,8 +49,33 @@ const WEEKDAYS = [
 
 const PERIODS = [1, 2, 3, 4, 5, 6];
 
+// Compute default academic year from current date
+function getDefaultAcademicYear(): number {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  return month >= 4 ? year : year - 1;
+}
+
+// Generate year options: 2024 to current+30
+function getYearOptions(): number[] {
+  const max = getDefaultAcademicYear() + 30;
+  const years: number[] = [];
+  for (let y = 2024; y <= max; y++) years.push(y);
+  return years;
+}
+
+export type SemesterSystem = "trimester" | "semester";
+
 // Semester default date ranges
-function getSemesterDefaults(year: number, semester: 1 | 2 | 3) {
+function getSemesterDefaults(year: number, semester: 1 | 2 | 3, system: SemesterSystem = "trimester") {
+  if (system === "semester") {
+    switch (semester) {
+      case 1: return { start: `${year}-04-01`, end: `${year}-09-30` };
+      case 2: return { start: `${year}-10-01`, end: `${year + 1}-03-31` };
+      default: return { start: `${year}-04-01`, end: `${year}-09-30` };
+    }
+  }
   switch (semester) {
     case 1: return { start: `${year}-04-01`, end: `${year}-07-20` };
     case 2: return { start: `${year}-09-01`, end: `${year}-12-25` };
@@ -112,11 +137,9 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
 
   // Step 1: Metadata
-  const currentYear = new Date().getFullYear();
   const [school, setSchool] = useState("");
-  const [academicYear, setAcademicYear] = useState(
-    new Date().getMonth() >= 3 ? currentYear : currentYear - 1
-  );
+  const [academicYear, setAcademicYear] = useState(getDefaultAcademicYear);
+  const [semesterSystem, setSemesterSystem] = useState<SemesterSystem>("trimester");
   const [semesterNumber, setSemesterNumber] = useState<1 | 2 | 3>(1);
 
   // Step 2: Date range & weekend settings
@@ -137,19 +160,29 @@ export function NewFileWizard({ open, onClose }: Props) {
   });
 
   // Update dates when semester changes
-  const handleSemesterChange = useCallback((sem: 1 | 2 | 3) => {
-    setSemesterNumber(sem);
-    const defaults = getSemesterDefaults(academicYear, sem);
+  const handleSemesterSystemChange = useCallback((sys: SemesterSystem) => {
+    setSemesterSystem(sys);
+    const maxSem = sys === "semester" ? 2 : 3;
+    const newSem = semesterNumber > maxSem ? 1 : semesterNumber;
+    setSemesterNumber(newSem as 1 | 2 | 3);
+    const defaults = getSemesterDefaults(academicYear, newSem as 1 | 2 | 3, sys);
     setStartDate(defaults.start);
     setEndDate(defaults.end);
-  }, [academicYear]);
+  }, [academicYear, semesterNumber]);
+
+  const handleSemesterChange = useCallback((sem: 1 | 2 | 3) => {
+    setSemesterNumber(sem);
+    const defaults = getSemesterDefaults(academicYear, sem, semesterSystem);
+    setStartDate(defaults.start);
+    setEndDate(defaults.end);
+  }, [academicYear, semesterSystem]);
 
   const handleAcademicYearChange = useCallback((year: number) => {
     setAcademicYear(year);
-    const defaults = getSemesterDefaults(year, semesterNumber);
+    const defaults = getSemesterDefaults(year, semesterNumber, semesterSystem);
     setStartDate(defaults.start);
     setEndDate(defaults.end);
-  }, [semesterNumber]);
+  }, [semesterNumber, semesterSystem]);
 
   const handleClassChange = (weekday: string, period: number, cls: string | null) => {
     setBaseSchedule(prev => ({
@@ -164,7 +197,10 @@ export function NewFileWizard({ open, onClose }: Props) {
   );
 
   // Title derived from inputs
-  const title = `${academicYear}年度 第${semesterNumber}学期${school ? ` (${school})` : ""}`;
+  const semesterLabel = semesterSystem === "semester"
+    ? (semesterNumber === 1 ? "前期" : "後期")
+    : `第${semesterNumber}学期`;
+  const title = `${academicYear}年度 ${semesterLabel}${school ? ` (${school})` : ""}`;
 
   const handleCreate = async () => {
     setLoading(true);
@@ -180,6 +216,7 @@ export function NewFileWizard({ open, onClose }: Props) {
 
       const semester: SemesterMeta = {
         semesterNumber,
+        semesterSystem,
         startDate,
         endDate,
         hasSaturday,
@@ -237,6 +274,17 @@ export function NewFileWizard({ open, onClose }: Props) {
               />
             </div>
 
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">学期制 <span className="text-destructive">*</span></Label>
+              <Select value={semesterSystem} onValueChange={v => handleSemesterSystemChange(v as SemesterSystem)}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="trimester">3学期制（前期・中期・後期）</SelectItem>
+                  <SelectItem value="semester">2学期制（前期・後期）</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">年度 <span className="text-destructive">*</span></Label>
@@ -244,11 +292,9 @@ export function NewFileWizard({ open, onClose }: Props) {
                   value={String(academicYear)}
                   onValueChange={v => handleAcademicYearChange(Number(v))}
                 >
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[currentYear - 1, currentYear, currentYear + 1].map(y => (
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent className="max-h-60 overflow-y-auto">
+                    {getYearOptions().map(y => (
                       <SelectItem key={y} value={String(y)}>{y}年度</SelectItem>
                     ))}
                   </SelectContent>
@@ -261,13 +307,20 @@ export function NewFileWizard({ open, onClose }: Props) {
                   value={String(semesterNumber)}
                   onValueChange={v => handleSemesterChange(Number(v) as 1 | 2 | 3)}
                 >
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">第1学期（4月〜7月）</SelectItem>
-                    <SelectItem value="2">第2学期（9月〜12月）</SelectItem>
-                    <SelectItem value="3">第3学期（1月〜3月）</SelectItem>
+                    {semesterSystem === "trimester" ? (
+                      <>
+                        <SelectItem value="1">第1学期（4月〜7月）</SelectItem>
+                        <SelectItem value="2">第2学期（9月〜12月）</SelectItem>
+                        <SelectItem value="3">第3学期（1月〜3月）</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="1">前期（4月〜9月）</SelectItem>
+                        <SelectItem value="2">後期（10月〜3月）</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
