@@ -1,9 +1,11 @@
 // Sidebar.tsx
 // Design: Swiss Grid × Japanese Functional Design
 // Left sidebar: new/open/save, navigation, undo/redo, export, color settings
+// Phase 4: 教科管理ダイアログ・モードバッジを追加
 
 import { useRef, useState, useEffect } from "react";
 import {
+  BookOpen,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -33,6 +35,7 @@ import { NewFileWizard } from "@/components/NewFileWizard";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { ExportDialog } from "@/components/ExportDialog";
+import { SubjectSettingsDialog } from "@/components/SubjectSettingsDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 
 export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
@@ -47,6 +50,7 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
     exportEffective, exportOverride, exportCSV,
     pendingOps,
     semester,
+    mode,
   } = useTimetable();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,6 +61,7 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showSubjectSettings, setShowSubjectSettings] = useState(false);
 
   // Keyboard shortcut: Ctrl/Cmd+S to save
   useEffect(() => {
@@ -244,11 +249,24 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
           </Tooltip>
         )}
 
-        {/* File info */}
+        {/* File info + mode badge */}
         {loadedFileName && (
-          <p className="text-[10px] text-sidebar-foreground/40 truncate px-1" title={loadedFileName}>
-            {currentFile?.meta.title ?? loadedFileName}
-          </p>
+          <div className="px-1">
+            <p className="text-[10px] text-sidebar-foreground/40 truncate" title={loadedFileName}>
+              {currentFile?.meta.title ?? loadedFileName}
+            </p>
+            {mode && mode !== 'single_subject' && (
+              <span className={`inline-flex items-center gap-1 text-[9px] font-medium rounded px-1.5 py-0.5 mt-0.5 ${
+                mode === 'homeroom'
+                  ? 'bg-amber-500/20 text-amber-400'
+                  : 'bg-blue-500/20 text-blue-400'
+              }`}>
+                <BookOpen size={9} />
+                {mode === 'homeroom' && `担任: ${semester?.homeroomClass ?? '未設定'}`}
+                {mode === 'multi_subject' && '複数教科'}
+              </span>
+            )}
+          </div>
         )}
 
         {/* Sample data */}
@@ -449,6 +467,16 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
               <CalendarDays size={12} />
               祝日・休校日の設定
             </button>
+            {(mode === 'homeroom' || mode === 'multi_subject') && (
+              <button
+                onClick={() => setShowSubjectSettings(true)}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]
+                           text-amber-400/80 hover:text-amber-400 hover:bg-sidebar-accent transition-colors"
+              >
+                <BookOpen size={12} />
+                教科の管理
+              </button>
+            )}
           </>
         )}
         <ColorSettingsDialog />
@@ -460,6 +488,8 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
       <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
       {/* Holiday Settings Dialog */}
       <HolidaySettingsDialog open={showHolidaySettings} onOpenChange={setShowHolidaySettings} />
+      {/* Subject Settings Dialog */}
+      <SubjectSettingsDialog open={showSubjectSettings} onClose={() => setShowSubjectSettings(false)} />
     </aside>
   );
 }

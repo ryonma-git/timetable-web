@@ -2,6 +2,7 @@
 // Design: Swiss Grid × Japanese Functional Design
 // Global state management for timetable app
 // Supports: .timetable (native), ZIP (legacy), new file creation
+// Phase 2: 教科管理・モード管理を追加
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
@@ -26,8 +27,10 @@ import {
 } from "@/lib/timetable";
 import {
   TimetableFile,
+  TimetableMode,
   SemesterMeta,
   SemesterData,
+  SubjectDef,
   LoadResult,
   ZipImportResult,
   deserializeTimetableFile,
@@ -65,6 +68,18 @@ interface TimetableContextValue {
 
   // Semester
   semester: SemesterMeta | null;
+
+  // Mode
+  /** 現在のアプリモード（後方互換: 省略時は 'single_subject'） */
+  mode: TimetableMode;
+  setMode: (mode: TimetableMode) => void;
+
+  // Subjects
+  subjects: SubjectDef[];
+  addSubject: (subject: SubjectDef) => void;
+  updateSubject: (name: string, updated: SubjectDef) => void;
+  removeSubject: (name: string) => void;
+  reorderSubjects: (subjects: SubjectDef[]) => void;
 
   // UI State
   activeTab: ActiveTab;
@@ -341,7 +356,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     const rawHolidays = currentFile?.semester?.holidays ?? [];
     const holidayEntries = rawHolidays.map(h => typeof h === 'string' ? { date: h } : h);
     const holidayMap = new Map(holidayEntries.map(h => [h.date, h.name ?? '祝日']));
-    const csv = toCSV(effectiveEntries, { holidayMap });
+    const includeSubject = (currentFile?.meta.mode ?? 'single_subject') !== 'single_subject';
+    const csv = toCSV(effectiveEntries, { holidayMap, includeSubject });
     const ts = formatDate(new Date()).replace(/-/g, "");
     downloadFile(csv, `timetable_${ts}.csv`, "text/csv;charset=utf-8;");
   }, [effectiveEntries, currentFile]);
@@ -393,6 +409,71 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setRedoStack([]);
     setIsDirty(true);
   }, [currentFile, baseEntries, allOps]);
+
+  // ─── Mode management ────────────────────────────────────────
+  const mode: TimetableMode = currentFile?.meta.mode ?? 'single_subject';
+
+  const setMode = useCallback((newMode: TimetableMode) => {
+    if (!currentFile) return;
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      meta: { ...currentFile.meta, mode: newMode, updatedAt: new Date().toISOString() },
+    };
+    setCurrentFile(updatedFile);
+    setIsDirty(true);
+  }, [currentFile]);
+
+  // ─── Subject management ──────────────────────────────────────
+  const subjects: SubjectDef[] = currentFile?.subjects ?? [];
+
+  const addSubject = useCallback((subject: SubjectDef) => {
+    if (!currentFile) return;
+    const existing = currentFile.subjects ?? [];
+    if (existing.some(s => s.name === subject.name)) return;
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      subjects: [...existing, subject],
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    setCurrentFile(updatedFile);
+    setIsDirty(true);
+  }, [currentFile]);
+
+  const updateSubject = useCallback((name: string, updated: SubjectDef) => {
+    if (!currentFile) return;
+    const existing = currentFile.subjects ?? [];
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      subjects: existing.map(s => s.name === name ? updated : s),
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    setCurrentFile(updatedFile);
+    setIsDirty(true);
+  }, [currentFile]);
+
+  const removeSubject = useCallback((name: string) => {
+    if (!currentFile) return;
+    const existing = currentFile.subjects ?? [];
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      subjects: existing.filter(s => s.name !== name),
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    setCurrentFile(updatedFile);
+    setIsDirty(true);
+  }, [currentFile]);
+
+  const reorderSubjects = useCallback((newSubjects: SubjectDef[]) => {
+    if (!currentFile) return;
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      subjects: newSubjects,
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    setCurrentFile(updatedFile);
+    setIsDirty(true);
+  }, [currentFile]);
+
   // ─── Multi-semester management ───────────────────────────────────
   const semesterCount = currentFile?.semesters?.length ?? (currentFile ? 1 : 0);
 
@@ -537,6 +618,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       baseEntries, effectiveEntries, pendingOps, allOps, auditLog, overrideMeta,
       isLoaded, isDirty, currentFile, loadedFileName,
       semester: currentFile?.semester ?? null,
+      mode, setMode,
+      subjects, addSubject, updateSubject, removeSubject, reorderSubjects,
       activeTab, setActiveTab,
       currentWeekMonday, navigateWeek, goToToday, goToDate,
       selectedCell, setSelectedCell,

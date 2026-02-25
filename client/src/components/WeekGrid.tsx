@@ -1,13 +1,14 @@
 // WeekGrid.tsx
 // Design: Swiss Grid × Japanese Functional Design
 // Week grid with drag-and-drop, today highlight, class color coding (1-6 grades)
+// Phase 3: 教科表示対応（single_subject/homeroom/multi_subjectモード）
 
 import { useState } from "react";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
-import { getClassColor } from "@/lib/gradeColors";
+import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
 import { Filter, X, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface DragState {
   srcDate: string;
   srcPeriod: number;
   srcClass: string | null;
+  srcSubject?: string | null;
 }
 
 export function WeekGrid() {
@@ -42,17 +44,26 @@ export function WeekGrid() {
     customClasses,
     classList,
     holidays,
+    mode,
+    subjects,
   } = useTimetable();
 
   // classListが空の場合はフォールバック
   const effectiveClassList = classList.length > 0 ? classList : [];
-  const { gradeColors } = useGradeColors();
+  const { gradeColors, subjectColors } = useGradeColors();
 
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [dragOver, setDragOver] = useState<{ date: string; period: number } | null>(null);
   const [filterClass, setFilterClass] = useState<string | null>(null);
+  const [filterSubject, setFilterSubject] = useState<string | null>(null);
   const [showHolidayDialog, setShowHolidayDialog] = useState(false);
   const today = todayISO();
+
+  // homeroomモードでは担任クラスを固定
+  const homeroomClass = semester?.homeroomClass ?? null;
+  const isHomeroomMode = mode === 'homeroom';
+  const isMultiSubjectMode = mode === 'multi_subject';
+  const showSubject = isHomeroomMode || isMultiSubjectMode || (mode === 'single_subject' && subjects.length > 0);
 
   // holidays: HolidayEntry[] → 日付のSetとname mapに変換
   const holidayDates = new Set(holidays.map(h => h.date));
@@ -80,8 +91,8 @@ export function WeekGrid() {
   };
 
   // ─── Drag Handlers ────────────────────────────────────────────
-  const handleDragStart = (date: string, period: number, cls: string | null) => {
-    setDragState({ srcDate: date, srcPeriod: period, srcClass: cls });
+  const handleDragStart = (date: string, period: number, cls: string | null, subj?: string | null) => {
+    setDragState({ srcDate: date, srcPeriod: period, srcClass: cls, srcSubject: subj });
   };
 
   const handleDragOver = (e: React.DragEvent, date: string, period: number) => {
@@ -92,7 +103,7 @@ export function WeekGrid() {
   const handleDrop = (e: React.DragEvent, dstDate: string, dstPeriod: number) => {
     e.preventDefault();
     if (!dragState) return;
-    const { srcDate, srcPeriod, srcClass } = dragState;
+    const { srcDate, srcPeriod, srcClass, srcSubject } = dragState;
     if (srcDate === dstDate && srcPeriod === dstPeriod) {
       setDragState(null);
       setDragOver(null);
@@ -100,7 +111,8 @@ export function WeekGrid() {
     }
     const dstSlot = getSlot(dstDate, dstPeriod);
     const dstClass = dstSlot.class;
-    const ops = buildSwapOps(srcDate, srcPeriod, srcClass, dstDate, dstPeriod, dstClass);
+    const dstSubject = dstSlot.subject;
+    const ops = buildSwapOps(srcDate, srcPeriod, srcClass, dstDate, dstPeriod, dstClass, undefined, srcSubject, dstSubject);
     applyOps(ops, `交換: ${srcDate} ${srcPeriod}限 ↔ ${dstDate} ${dstPeriod}限`);
     setDragState(null);
     setDragOver(null);
@@ -143,6 +155,14 @@ export function WeekGrid() {
   }));
   const legendGrades = Array.from(gradesInData).sort();
 
+  // Subject legend (for homeroom/multi_subject modes)
+  const subjectsInData = new Set<string>();
+  if (showSubject) {
+    effectiveEntries.forEach(e => e.periods.forEach(p => {
+      if (p.subject) subjectsInData.add(p.subject);
+    }));
+  }
+
   return (
     <div className="flex-1 overflow-auto p-4">
       {/* Year/Academic year header */}
@@ -159,6 +179,11 @@ export function WeekGrid() {
             <span className="text-base font-bold text-foreground">{academicYear}年度</span>
             <span className="text-sm text-muted-foreground">{year}年</span>
             <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">{semLabel}</span>
+            {isHomeroomMode && homeroomClass && (
+              <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 font-medium">
+                担任: {homeroomClass}
+              </span>
+            )}
             {semester.customClasses && semester.customClasses.length > 0 && (
               <span className="text-xs text-muted-foreground/60">カスタム: {semester.customClasses.join(", ")}</span>
             )}
@@ -167,34 +192,44 @@ export function WeekGrid() {
       })()}
 
       {/* Today banner */}
-      <TodayBanner entries={effectiveEntries} today={today} gradeColors={gradeColors} />
+      <TodayBanner
+        entries={effectiveEntries}
+        today={today}
+        gradeColors={gradeColors}
+        subjectColors={subjectColors}
+        showSubject={showSubject}
+        isHomeroomMode={isHomeroomMode}
+      />
 
       {/* Filter bar */}
       <div className="mt-3 flex items-center gap-2 flex-wrap">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
-              <Filter size={12} />
-              {filterClass ? filterClass : "クラスで絞り込み"}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-44 max-h-72 overflow-y-auto">
-            <DropdownMenuLabel className="text-xs">クラスフィルター</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setFilterClass(null)} className="text-xs">
-              すべて表示
-            </DropdownMenuItem>
-            {effectiveClassList.map(cls => (
-              <DropdownMenuItem
-                key={cls}
-                onClick={() => setFilterClass(cls)}
-                className="text-xs"
-              >
-                {cls}
+        {/* Class filter (not shown in homeroom mode) */}
+        {!isHomeroomMode && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+                <Filter size={12} />
+                {filterClass ? filterClass : "クラスで絞り込み"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44 max-h-72 overflow-y-auto">
+              <DropdownMenuLabel className="text-xs">クラスフィルター</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setFilterClass(null)} className="text-xs">
+                すべて表示
               </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {effectiveClassList.map(cls => (
+                <DropdownMenuItem
+                  key={cls}
+                  onClick={() => setFilterClass(cls)}
+                  className="text-xs"
+                >
+                  {cls}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         {filterClass && (
           <button
             onClick={() => setFilterClass(null)}
@@ -202,6 +237,43 @@ export function WeekGrid() {
           >
             <X size={11} />
             フィルター解除
+          </button>
+        )}
+
+        {/* Subject filter (shown when subjects are available) */}
+        {showSubject && subjects.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+                <Filter size={12} />
+                {filterSubject ? filterSubject : "教科で絞り込み"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44 max-h-72 overflow-y-auto">
+              <DropdownMenuLabel className="text-xs">教科フィルター</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setFilterSubject(null)} className="text-xs">
+                すべて表示
+              </DropdownMenuItem>
+              {subjects.map(s => (
+                <DropdownMenuItem
+                  key={s.name}
+                  onClick={() => setFilterSubject(s.name)}
+                  className="text-xs"
+                >
+                  {s.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {filterSubject && (
+          <button
+            onClick={() => setFilterSubject(null)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X size={11} />
+            教科フィルター解除
           </button>
         )}
 
@@ -312,8 +384,19 @@ export function WeekGrid() {
                   const isDragOver = dragOver?.date === date && dragOver?.period === period;
 
                   // Filter: dim non-matching cells
-                  const isFiltered = filterClass !== null && slot.class !== filterClass;
-                  const colors = getClassColor(slot.class, gradeColors);
+                  const isFilteredByClass = filterClass !== null && slot.class !== filterClass;
+                  const isFilteredBySubject = filterSubject !== null && slot.subject !== filterSubject;
+                  const isFiltered = isFilteredByClass || isFilteredBySubject;
+
+                  // Color logic: homeroom/multi_subject → subject color, single_subject → class color
+                  const cellColors = (() => {
+                    if (isHomeroomMode || isMultiSubjectMode) {
+                      if (slot.subject) return getSubjectColor(slot.subject, subjectColors);
+                      if (slot.class) return getClassColor(slot.class, gradeColors);
+                    }
+                    if (slot.class) return getClassColor(slot.class, gradeColors);
+                    return null;
+                  })();
 
                   return (
                     <td
@@ -326,44 +409,94 @@ export function WeekGrid() {
                       <div
                         draggable
                         onClick={() => setSelectedCell(isSelected ? null : { date, period })}
-                        onDragStart={() => handleDragStart(date, period, slot.class)}
+                        onDragStart={() => handleDragStart(date, period, slot.class, slot.subject)}
                         onDragOver={e => handleDragOver(e, date, period)}
                         onDrop={e => handleDrop(e, date, period)}
                         onDragEnd={handleDragEnd}
-                      className={cn(
-                        "period-cell h-[52px] rounded border cursor-pointer px-2 py-1 flex flex-col justify-between",
-                        isSelected && "ring-2 ring-primary ring-inset",
-                        isDragSrc && "opacity-40",
-                        isDragOver && "ring-2 ring-green-500 ring-inset",
-                        !slot.class && "hover:bg-muted/50",
-                        slot.class && "hover:brightness-95",
-                        isFiltered && "opacity-20",
-                        holidayDates.has(date) && "opacity-40 cursor-not-allowed"
-                      )}
+                        className={cn(
+                          "period-cell rounded border cursor-pointer px-2 py-1 flex flex-col justify-between",
+                          showSubject ? "h-[60px]" : "h-[52px]",
+                          isSelected && "ring-2 ring-primary ring-inset",
+                          isDragSrc && "opacity-40",
+                          isDragOver && "ring-2 ring-green-500 ring-inset",
+                          !cellColors && "hover:bg-muted/50",
+                          cellColors && "hover:brightness-95",
+                          isFiltered && "opacity-20",
+                          holidayDates.has(date) && "opacity-40 cursor-not-allowed"
+                        )}
                         style={isDragOver
                           ? { backgroundColor: '#f0fdf4', borderColor: '#22c55e' }
-                          : slot.class
-                            ? { backgroundColor: colors.bg, borderColor: colors.border }
+                          : cellColors
+                            ? { backgroundColor: cellColors.bg, borderColor: cellColors.border }
                             : undefined
                         }
                       >
-                        {slot.class ? (
-                          <>
-                            <span className="text-xs font-bold leading-tight" style={{ color: colors.text }}>
+                        {/* Cell content */}
+                        {isHomeroomMode ? (
+                          // Homeroom mode: show subject only (class is fixed)
+                          slot.subject ? (
+                            <>
+                              <span className="text-xs font-bold leading-tight" style={{ color: cellColors?.text }}>
+                                {slot.subject}
+                              </span>
+                              {slot.reason && (
+                                <span className="text-[9px] bg-white/60 rounded px-1 text-muted-foreground truncate">
+                                  {slot.reason}
+                                </span>
+                              )}
+                            </>
+                          ) : slot.class ? (
+                            <span className="text-xs font-bold leading-tight" style={{ color: cellColors?.text }}>
                               {slot.class}
                             </span>
-                            {slot.reason && (
-                              <span className="text-[9px] bg-white/60 rounded px-1 text-muted-foreground truncate">
-                                {slot.reason}
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground/30 self-center">—</span>
+                          )
+                        ) : showSubject ? (
+                          // single_subject/multi_subject with subjects: show class + subject
+                          slot.class ? (
+                            <>
+                              <span className="text-xs font-bold leading-tight" style={{ color: cellColors?.text }}>
+                                {slot.class}
                               </span>
-                            )}
-                          </>
+                              {slot.subject && (
+                                <span className="text-[10px] leading-tight" style={{ color: cellColors?.text, opacity: 0.75 }}>
+                                  {slot.subject}
+                                </span>
+                              )}
+                              {slot.reason && (
+                                <span className="text-[9px] bg-white/60 rounded px-1 text-muted-foreground truncate">
+                                  {slot.reason}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground/30 self-center">
+                              {slot.reason ? (
+                                <span className="text-[9px] text-muted-foreground/50">{slot.reason}</span>
+                              ) : "—"}
+                            </span>
+                          )
                         ) : (
-                          <span className="text-[10px] text-muted-foreground/30 self-center">
-                            {slot.reason ? (
-                              <span className="text-[9px] text-muted-foreground/50">{slot.reason}</span>
-                            ) : "—"}
-                          </span>
+                          // Original single_subject mode (no subjects)
+                          slot.class ? (
+                            <>
+                              <span className="text-xs font-bold leading-tight" style={{ color: cellColors?.text }}>
+                                {slot.class}
+                              </span>
+                              {slot.reason && (
+                                <span className="text-[9px] bg-white/60 rounded px-1 text-muted-foreground truncate">
+                                  {slot.reason}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground/30 self-center">
+                              {slot.reason ? (
+                                <span className="text-[9px] text-muted-foreground/50">{slot.reason}</span>
+                              ) : "—"}
+                            </span>
+                          )
                         )}
                       </div>
                     </td>
@@ -378,7 +511,8 @@ export function WeekGrid() {
       {/* Dynamic Legend */}
       <div className="mt-3 flex items-center flex-wrap gap-3 text-[10px] text-muted-foreground">
         <span className="font-medium">凡例:</span>
-        {legendGrades.map(grade => {
+        {/* Class-based legend (not shown in homeroom mode) */}
+        {!isHomeroomMode && legendGrades.map(grade => {
           const c = gradeColors[grade];
           if (!c) return null;
           return (
@@ -388,6 +522,19 @@ export function WeekGrid() {
                 style={{ backgroundColor: c.bg, borderColor: c.border }}
               />
               <span style={{ color: c.text }}>{grade}年</span>
+            </div>
+          );
+        })}
+        {/* Subject-based legend */}
+        {showSubject && Array.from(subjectsInData).sort().map(subj => {
+          const c = getSubjectColor(subj, subjectColors);
+          return (
+            <div key={subj} className="flex items-center gap-1">
+              <div
+                className="w-3 h-3 rounded border"
+                style={{ backgroundColor: c.bg, borderColor: c.border }}
+              />
+              <span style={{ color: c.text }}>{subj}</span>
             </div>
           );
         })}
@@ -406,18 +553,22 @@ export function WeekGrid() {
 // ─── Today Banner ─────────────────────────────────────────────
 
 function TodayBanner({
-  entries, today, gradeColors
+  entries, today, gradeColors, subjectColors, showSubject, isHomeroomMode
 }: {
   entries: TimetableEntry[];
   today: string;
   gradeColors: Record<string, import("@/lib/gradeColors").GradeColorDef>;
+  subjectColors: Record<string, import("@/lib/gradeColors").GradeColorDef>;
+  showSubject: boolean;
+  isHomeroomMode: boolean;
 }) {
   const todayEntry = entries.find(e => e.date === today);
   if (!todayEntry) return null;
 
-  const classes = todayEntry.periods.filter(p => p.class).map(p => ({
+  const classes = todayEntry.periods.filter(p => p.class || p.subject).map(p => ({
     period: p.period,
-    class: p.class!,
+    class: p.class,
+    subject: p.subject,
     reason: p.reason,
   }));
 
@@ -432,7 +583,14 @@ function TodayBanner({
       ) : (
         <div className="flex flex-wrap gap-2">
           {classes.map(c => {
-            const color = getClassColor(c.class, gradeColors);
+            const color = isHomeroomMode && c.subject
+              ? getSubjectColor(c.subject, subjectColors)
+              : getClassColor(c.class, gradeColors);
+            const displayLabel = isHomeroomMode
+              ? (c.subject ?? c.class ?? "")
+              : showSubject && c.subject
+                ? `${c.class} / ${c.subject}`
+                : (c.class ?? "");
             return (
               <div
                 key={c.period}
@@ -440,7 +598,7 @@ function TodayBanner({
                 style={{ backgroundColor: color.bg, borderColor: color.border }}
               >
                 <span className="text-[10px] text-amber-600 font-bold">{c.period}限</span>
-                <span className="text-xs font-medium" style={{ color: color.text }}>{c.class}</span>
+                <span className="text-xs font-medium" style={{ color: color.text }}>{displayLabel}</span>
                 {c.reason && (
                   <span className="text-[9px] text-muted-foreground bg-white/60 rounded px-1">{c.reason}</span>
                 )}

@@ -184,7 +184,8 @@ export async function exportTimetablePdf(opts: PdfExportOptions): Promise<void> 
     const weekDates = getWeekDates(monday, { includeSaturday: false, includeSunday: false });
 
     const weekLabel = `${monday.getFullYear()}年 ${monday.getMonth() + 1}月${monday.getDate()}日（月）〜 ${fri.getMonth() + 1}月${fri.getDate()}日（金）`;
-    const fullTitle = `${title}${filterClass !== "__all__" ? ` — ${filterClass}` : ""}`;
+    const filterSuffix = filterClass !== "__all__" ? " — " + filterClass : "";
+    const fullTitle = title + filterSuffix;
 
     // ── Header ──────────────────────────────────────────────
     // タイトル（左上）

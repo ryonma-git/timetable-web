@@ -23,12 +23,30 @@ export type SemesterSystem = "trimester" | "semester"; // 3学期制 / 2学期�
 
 export type SchoolType = 'elementary' | 'junior' | 'high' | 'custom';
 
+/**
+ * アプリのモード
+ * - single_subject: 従来モード（クラス名のみ表示、教科は任意）
+ * - homeroom: 担任モード（担任クラス固定、コマには教科名のみ表示）
+ * - multi_subject: 複数教科モード（クラス×教科の組み合わせ表示）
+ */
+export type TimetableMode = 'single_subject' | 'homeroom' | 'multi_subject';
+
 /** 休校日・祝日エントリ */
 export interface HolidayEntry {
   /** YYYY-MM-DD */
   date: string;
   /** 祝日名または休校日名（省略可） */
   name?: string;
+}
+
+/** 教科定義 */
+export interface SubjectDef {
+  /** 教科名（一意のキー） */
+  name: string;
+  /** 略称（省略可） */
+  short?: string;
+  /** 教科色（省略時はデフォルト色） */
+  color?: string;
 }
 
 export interface SemesterMeta {
@@ -56,6 +74,8 @@ export interface SemesterMeta {
   classList?: string[];
   /** 祝日・休校日リスト */
   holidays?: HolidayEntry[];
+  /** 担任クラス（homeroomモード用） */
+  homeroomClass?: string;
 }
 
 /** 複数学期の1学期分のデータ */
@@ -79,6 +99,13 @@ export interface TimetableFile {
     year?: string;
     createdAt: string;
     updatedAt: string;
+    /**
+     * アプリモード（後方互換: 省略時は 'single_subject'）
+     * - single_subject: 従来モード
+     * - homeroom: 担任モード
+     * - multi_subject: 複数教科モード
+     */
+    mode?: TimetableMode;
   };
   /** Semester metadata (legacy single-semester support) */
   semester?: SemesterMeta;
@@ -95,6 +122,8 @@ export interface TimetableFile {
   semesters?: SemesterData[];
   /** Currently active semester index (for multi-semester files) */
   activeSemesterIndex?: number;
+  /** 教科リスト（全モードで使用可能） */
+  subjects?: SubjectDef[];
 }
 
 export interface LoadResult {
@@ -108,7 +137,8 @@ export interface LoadResult {
 export function createNewTimetableFile(
   title: string,
   school?: string,
-  year?: string
+  year?: string,
+  mode?: TimetableMode
 ): TimetableFile {
   const now = new Date().toISOString();
   return {
@@ -120,9 +150,11 @@ export function createNewTimetableFile(
       year,
       createdAt: now,
       updatedAt: now,
+      mode: mode ?? 'single_subject',
     },
     base: [],
     ops: [],
+    subjects: [],
   };
 }
 
@@ -201,6 +233,16 @@ export function deserializeTimetableFile(json: string): LoadResult {
 
   if (!Array.isArray(file.base)) {
     throw new Error("baseデータが見つかりません。ファイルが破損している可能性があります。");
+  }
+
+  // 後方互換: modeが未設定の場合は 'single_subject' にフォールバック
+  if (!file.meta.mode) {
+    file.meta.mode = 'single_subject';
+  }
+
+  // 後方互換: subjectsが未設定の場合は空配列
+  if (!file.subjects) {
+    file.subjects = [];
   }
 
   // Apply ops to get effective
@@ -305,12 +347,14 @@ export async function importFromZip(zipFile: File): Promise<ZipImportResult> {
       title: zipFile.name.replace(/\.zip$/i, ""),
       createdAt: now,
       updatedAt: now,
+      mode: 'single_subject',
     },
     base,
     ops: overrideBundle?.ops ?? [],
     overrideMeta: overrideBundle
       ? { notes: overrideBundle.notes, baseRef: overrideBundle.base }
       : undefined,
+    subjects: [],
   };
 
   return {

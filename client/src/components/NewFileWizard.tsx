@@ -1,10 +1,10 @@
-// NewFileWizard.tsx
 // Design: Swiss Grid × Japanese Functional Design
 // 4-step wizard for creating a new timetable (semester unit)
-// Step 1: School/year/semester metadata + school type + class setup
+// Step 1: School/year/semester metadata + school type + class setup + mode selection
 // Step 2: Saturday/Sunday class settings
 // Step 3: Base schedule grid (weekday × period → class)
 // Step 4: Confirmation and creation
+// Phase 4: モード選択・担任クラス設定を追加
 
 import { useState, useCallback } from "react";
 import {
@@ -18,6 +18,7 @@ import {
   Grid3X3,
   Plus,
   Minus,
+  BookOpen,
 } from "lucide-react";
 import {
   Dialog,
@@ -30,7 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { generateBaseEntries, createNewTimetableFile, SemesterMeta } from "@/lib/timetableFile";
+import { generateBaseEntries, createNewTimetableFile, SemesterMeta, TimetableMode, SemesterSystem } from "@/lib/timetableFile";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { normalizeClassName, classSort, generateDefaultClasses, SchoolType } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
@@ -73,8 +74,6 @@ function getYearOptions(): number[] {
   for (let y = 2024; y <= max; y++) years.push(y);
   return years;
 }
-
-export type SemesterSystem = "trimester" | "semester";
 
 // Semester default date ranges
 function getSemesterDefaults(year: number, semester: 1 | 2 | 3, system: SemesterSystem = "trimester") {
@@ -158,6 +157,10 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [customClassError, setCustomClassError] = useState("");
   const [extraClasses, setExtraClasses] = useState<string[]>([]);
 
+  // Step 1: Mode selection
+  const [selectedMode, setSelectedMode] = useState<TimetableMode>('single_subject');
+  const [homeroomClass, setHomeroomClass] = useState("");
+
   // Step 2: Date range & weekend settings
   const [startDate, setStartDate] = useState(() => getSemesterDefaults(academicYear, 1).start);
   const [endDate, setEndDate] = useState(() => getSemesterDefaults(academicYear, 1).end);
@@ -183,6 +186,7 @@ export function NewFileWizard({ open, onClose }: Props) {
     const info = SCHOOL_TYPES.find(s => s.value === type)!;
     setSchoolType(type);
     setGradeClassCounts(Array(info.grades).fill(info.defaultClasses));
+    setHomeroomClass(""); // reset homeroom class
   };
 
   // Adjust class count for a grade
@@ -257,20 +261,34 @@ export function NewFileWizard({ open, onClose }: Props) {
 
   // Title derived from inputs
   const semesterLabel = semesterSystem === "semester"
-    ? (semesterNumber === 1 ? "前期" : "後期") // 2学期制は前期/後期のまま
+    ? (semesterNumber === 1 ? "前期" : "後期")
     : `${semesterNumber}学期`;
   const title = `${academicYear}年度 ${semesterLabel}${school ? ` (${school})` : ""}`;
 
   const handleCreate = async () => {
     setLoading(true);
     try {
+      // For homeroom mode: fill base schedule with homeroomClass
+      let effectiveBaseSchedule = baseSchedule;
+      if (selectedMode === 'homeroom' && homeroomClass) {
+        const schedule: Record<string, Record<number, string | null>> = {};
+        WEEKDAYS.forEach(d => {
+          schedule[d.key] = {};
+          PERIODS.forEach(p => { schedule[d.key][p] = homeroomClass; });
+        });
+        effectiveBaseSchedule = schedule;
+      }
+
       const base = generateBaseEntries(startDate, endDate, {
         hasSaturday,
         hasSunday,
-        baseSchedule,
+        baseSchedule: effectiveBaseSchedule,
       });
 
       const file = createNewTimetableFile(title, school || undefined, `${academicYear}年度`);
+
+      // Set mode on meta
+      file.meta.mode = selectedMode;
 
       const semester: SemesterMeta = {
         semesterNumber,
@@ -279,11 +297,12 @@ export function NewFileWizard({ open, onClose }: Props) {
         endDate,
         hasSaturday,
         hasSunday,
-        baseSchedule,
+        baseSchedule: effectiveBaseSchedule,
         schoolType,
         gradeClassCounts: gradeClassCounts.slice(0, grades),
         classList: allClasses,
         customClasses: extraClasses,
+        homeroomClass: selectedMode === 'homeroom' ? (homeroomClass || undefined) : undefined,
       };
       file.semester = semester;
       file.base = base;
@@ -301,7 +320,11 @@ export function NewFileWizard({ open, onClose }: Props) {
   };
 
   const canGoNext = () => {
-    if (step === 1) return true;
+    if (step === 1) {
+      // homeroom mode requires a class to be selected
+      if (selectedMode === 'homeroom' && !homeroomClass) return false;
+      return true;
+    }
     if (step === 2) return startDate && endDate && startDate <= endDate;
     if (step === 3) return true;
     return true;
@@ -319,11 +342,11 @@ export function NewFileWizard({ open, onClose }: Props) {
 
         <StepIndicator current={step} total={4} />
 
-        {/* ─── Step 1: School Info + Class Setup ─────────────────── */}
+        {/* ─── Step 1: School Info + Class Setup + Mode ──────────── */}
         {step === 1 && (
           <div className="space-y-5">
             <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-              学校名・年度・学期・クラス構成を設定します。これらは後から変更できます。
+              学校名・年度・学期・クラス構成・使用モードを設定します。これらは後から変更できます。
             </div>
 
             <div className="space-y-1.5">
@@ -400,8 +423,73 @@ export function NewFileWizard({ open, onClose }: Props) {
               </div>
             </div>
 
+            {/* ── Mode Selection ──────────────────────────────── */}
+            <div className="space-y-3 border-t border-border/50 pt-4">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <BookOpen size={14} />
+                使用モード <span className="text-destructive">*</span>
+              </Label>
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  {
+                    value: 'single_subject' as TimetableMode,
+                    label: '教科担任モード（従来）',
+                    desc: '各コマにクラスを割り当てる。複数クラスを担当する教科担任向け。',
+                  },
+                  {
+                    value: 'homeroom' as TimetableMode,
+                    label: '担任モード',
+                    desc: '担任クラスを固定し、各コマに教科名を表示する。学級担任向け。',
+                  },
+                ].map(m => (
+                  <div
+                    key={m.value}
+                    onClick={() => setSelectedMode(m.value)}
+                    className={cn(
+                      "flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                      selectedMode === m.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/40"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 transition-all",
+                      selectedMode === m.value ? "border-primary bg-primary" : "border-muted-foreground"
+                    )} />
+                    <div>
+                      <p className="text-sm font-semibold">{m.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{m.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Homeroom class selection */}
+              {selectedMode === 'homeroom' && (
+                <div className="space-y-1.5 pl-1 pt-1">
+                  <Label className="text-xs text-muted-foreground">担任クラス <span className="text-destructive">*</span></Label>
+                  <Select value={homeroomClass || "__none__"} onValueChange={v => setHomeroomClass(v === "__none__" ? "" : v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="担任クラスを選択..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      <SelectItem value="__none__">
+                        <span className="text-muted-foreground">— 選択してください —</span>
+                      </SelectItem>
+                      {allClasses.map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!homeroomClass && (
+                    <p className="text-xs text-amber-600">担任クラスを選択してください（次へ進むために必要）</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Class Setup */}
-            <div className="space-y-3">
+            <div className="space-y-3 border-t border-border/50 pt-4">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">クラス構成</Label>
                 <div className="flex items-center gap-1.5">
@@ -457,8 +545,17 @@ export function NewFileWizard({ open, onClose }: Props) {
                           <td className="px-3 py-2">
                             <div className="flex flex-wrap gap-1">
                               {classes.map(c => (
-                                <span key={c} className="text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5 font-medium">
+                                <span
+                                  key={c}
+                                  className={cn(
+                                    "text-[10px] rounded px-1.5 py-0.5 font-medium",
+                                    selectedMode === 'homeroom' && c === homeroomClass
+                                      ? "bg-amber-100 text-amber-700 ring-1 ring-amber-400"
+                                      : "bg-primary/10 text-primary"
+                                  )}
+                                >
                                   {c}
+                                  {selectedMode === 'homeroom' && c === homeroomClass && " ★"}
                                 </span>
                               ))}
                             </div>
@@ -511,6 +608,9 @@ export function NewFileWizard({ open, onClose }: Props) {
                 <p className="text-sm font-semibold text-foreground">{title}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   クラス合計: <span className="font-medium text-foreground">{allClasses.length}</span> クラス
+                  {selectedMode === 'homeroom' && homeroomClass && (
+                    <span className="ml-2 text-amber-600">/ 担任: <span className="font-medium">{homeroomClass}</span></span>
+                  )}
                 </p>
               </div>
             </div>
@@ -594,66 +694,111 @@ export function NewFileWizard({ open, onClose }: Props) {
         {/* ─── Step 3: Base Schedule Grid ─────────────────────── */}
         {step === 3 && (
           <div className="space-y-4">
-            <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-              基本時間割を入力します。ここで設定した内容が学期期間の各週に自動展開されます。
-              <span className="block mt-1 text-xs">空欄のままでも作成できます（後から週間グリッドで編集可能）</span>
-            </div>
+            {selectedMode === 'homeroom' ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
+                <p className="font-semibold mb-1">担任モード — {homeroomClass}</p>
+                <p className="text-xs">
+                  担任モードでは、基本時間割のすべてのコマに担任クラス（{homeroomClass}）が自動設定されます。
+                  教科は週間グリッドの各コマから個別に設定できます。
+                </p>
+              </div>
+            ) : (
+              <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
+                基本時間割を入力します。ここで設定した内容が学期期間の各週に自動展開されます。
+                <span className="block mt-1 text-xs">空欄のままでも作成できます（後から週間グリッドで編集可能）</span>
+              </div>
+            )}
 
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr>
-                    <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
-                    {WEEKDAYS.map(d => (
-                      <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
-                        {d.label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {PERIODS.map(period => (
-                    <tr key={period}>
-                      <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
-                        {period}限
-                      </td>
-                      {WEEKDAYS.map(d => {
-                        const cls = baseSchedule[d.key]?.[period] ?? null;
-                        return (
-                          <td key={d.key} className="p-0.5 border-b border-r border-border/30">
-                            <Select
-                              value={cls ?? "__empty__"}
-                              onValueChange={v => handleClassChange(d.key, period, v === "__empty__" ? null : v)}
-                            >
-                              <SelectTrigger className={cn(
-                                "h-8 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0",
-                                cls ? "font-medium" : "text-muted-foreground/50"
-                              )}>
-                                <SelectValue>
-                                  <span className={cls ? "font-medium" : "text-muted-foreground/40"}>
-                                    {cls ?? "—"}
-                                  </span>
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent className="max-h-48">
-                                <SelectItem value="__empty__">
-                                  <span className="text-muted-foreground">— 空き —</span>
-                                </SelectItem>
-                                {allClasses.map(c => (
-                                  <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                        );
-                      })}
+            {selectedMode !== 'homeroom' && (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr>
+                      <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
+                      {WEEKDAYS.map(d => (
+                        <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
+                          {d.label}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {PERIODS.map(period => (
+                      <tr key={period}>
+                        <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
+                          {period}限
+                        </td>
+                        {WEEKDAYS.map(d => {
+                          const cls = baseSchedule[d.key]?.[period] ?? null;
+                          return (
+                            <td key={d.key} className="p-0.5 border-b border-r border-border/30">
+                              <Select
+                                value={cls ?? "__empty__"}
+                                onValueChange={v => handleClassChange(d.key, period, v === "__empty__" ? null : v)}
+                              >
+                                <SelectTrigger className={cn(
+                                  "h-8 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0",
+                                  cls ? "font-medium" : "text-muted-foreground/50"
+                                )}>
+                                  <SelectValue>
+                                    <span className={cls ? "font-medium" : "text-muted-foreground/40"}>
+                                      {cls ?? "—"}
+                                    </span>
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent className="max-h-48">
+                                  <SelectItem value="__empty__">
+                                    <span className="text-muted-foreground">— 空き —</span>
+                                  </SelectItem>
+                                  {allClasses.map(c => (
+                                    <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-            {filledCells > 0 && (
+            {selectedMode === 'homeroom' && (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm">
+                  <thead>
+                    <tr>
+                      <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
+                      {WEEKDAYS.map(d => (
+                        <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
+                          {d.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {PERIODS.map(period => (
+                      <tr key={period}>
+                        <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
+                          {period}限
+                        </td>
+                        {WEEKDAYS.map(d => (
+                          <td key={d.key} className="p-0.5 border-b border-r border-border/30">
+                            <div className="h-8 text-xs px-2 flex items-center rounded bg-amber-50 text-amber-700 font-medium">
+                              {homeroomClass}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {selectedMode !== 'homeroom' && filledCells > 0 && (
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
                 <span className="font-medium text-primary">{filledCells}</span> コマの授業が設定されています
                 （週あたり {filledCells} コマ × 学期期間の週数 で自動展開されます）
@@ -679,6 +824,16 @@ export function NewFileWizard({ open, onClose }: Props) {
                   <p className="text-xs text-muted-foreground mb-1">学校名</p>
                   <p className="text-sm font-semibold">{school || "（未設定）"}</p>
                 </div>
+              </div>
+
+              {/* Mode summary */}
+              <div className="bg-card border border-border rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-1">使用モード</p>
+                <p className="text-sm font-semibold">
+                  {selectedMode === 'single_subject' && '教科担任モード（従来）'}
+                  {selectedMode === 'homeroom' && `担任モード${homeroomClass ? ` — 担任クラス: ${homeroomClass}` : ''}`}
+                  {selectedMode === 'multi_subject' && '複数教科モード'}
+                </p>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
@@ -707,58 +862,71 @@ export function NewFileWizard({ open, onClose }: Props) {
                 </p>
                 <div className="flex flex-wrap gap-1">
                   {allClasses.map(c => (
-                    <span key={c} className="text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5 font-medium">
+                    <span
+                      key={c}
+                      className={cn(
+                        "text-[10px] rounded px-1.5 py-0.5 font-medium",
+                        selectedMode === 'homeroom' && c === homeroomClass
+                          ? "bg-amber-100 text-amber-700 ring-1 ring-amber-400"
+                          : "bg-primary/10 text-primary"
+                      )}
+                    >
                       {c}
+                      {selectedMode === 'homeroom' && c === homeroomClass && " ★"}
                     </span>
                   ))}
                 </div>
               </div>
 
-              <div className="bg-card border border-border rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-2">基本時間割</p>
-                {filledCells > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="text-xs border-collapse">
-                      <thead>
-                        <tr>
-                          <th className="w-8 text-muted-foreground font-normal border-b border-border pb-1" />
-                          {WEEKDAYS.map(d => (
-                            <th key={d.key} className="text-center font-bold px-2 pb-1 border-b border-border">{d.label}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {PERIODS.map(p => (
-                          <tr key={p}>
-                            <td className="text-muted-foreground text-center py-0.5 pr-1">{p}</td>
-                            {WEEKDAYS.map(d => {
-                              const cls = baseSchedule[d.key]?.[p];
-                              return (
-                                <td key={d.key} className="text-center px-2 py-0.5">
-                                  {cls ? (
-                                    <span className="font-medium text-foreground">{cls}</span>
-                                  ) : (
-                                    <span className="text-muted-foreground/30">—</span>
-                                  )}
-                                </td>
-                              );
-                            })}
+              {selectedMode !== 'homeroom' && (
+                <div className="bg-card border border-border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-2">基本時間割</p>
+                  {filledCells > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="text-xs border-collapse">
+                        <thead>
+                          <tr>
+                            <th className="w-8 text-muted-foreground font-normal border-b border-border pb-1" />
+                            {WEEKDAYS.map(d => (
+                              <th key={d.key} className="text-center font-bold px-2 pb-1 border-b border-border">{d.label}</th>
+                            ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground/60">基本時間割は設定されていません（空きコマで作成）</p>
-                )}
-              </div>
+                        </thead>
+                        <tbody>
+                          {PERIODS.map(p => (
+                            <tr key={p}>
+                              <td className="text-muted-foreground text-center py-0.5 pr-1">{p}</td>
+                              {WEEKDAYS.map(d => {
+                                const cls = baseSchedule[d.key]?.[p];
+                                return (
+                                  <td key={d.key} className="text-center px-2 py-0.5">
+                                    {cls ? (
+                                      <span className="font-medium text-foreground">{cls}</span>
+                                    ) : (
+                                      <span className="text-muted-foreground/30">—</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground/60">基本時間割は設定されていません（空きコマで作成）</p>
+                  )}
+                </div>
+              )}
 
               {startDate && endDate && startDate <= endDate && (() => {
                 const start = new Date(startDate + "T00:00:00");
                 const end = new Date(endDate + "T00:00:00");
                 const days = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
                 const weekdays = Math.floor(days * 5 / 7);
-                const totalPeriods = filledCells * Math.floor(days / 7);
+                const totalPeriods = selectedMode === 'homeroom'
+                  ? PERIODS.length * WEEKDAYS.length * Math.floor(days / 7)
+                  : filledCells * Math.floor(days / 7);
                 return (
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
                     <span className="font-medium text-foreground">{days}</span>日間 /

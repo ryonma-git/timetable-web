@@ -1,6 +1,7 @@
 // gradeColors.ts
 // Design: Swiss Grid × Japanese Functional Design
 // Grade color system — 1〜6年 default palette + shared color swatches (any grade can pick any color)
+// Subject color system — 教科ごとの色設定（homeroom/multi_subjectモード用）
 
 export interface GradeColorDef {
   bg: string;       // background color for grid cells
@@ -47,6 +48,34 @@ export const DEFAULT_GRADE_COLORS: Record<string, GradeColorDef> = {
 };
 
 // ─────────────────────────────────────────────
+// Default subject colors — 教科ごとのデフォルト色
+// ─────────────────────────────────────────────
+export const DEFAULT_SUBJECT_COLORS: Record<string, GradeColorDef> = {
+  "国語":   { bg: "#fef2f2", border: "#fca5a5", text: "#991b1b", label: "国語" },
+  "算数":   { bg: "#eff6ff", border: "#93c5fd", text: "#1e40af", label: "算数" },
+  "数学":   { bg: "#eff6ff", border: "#93c5fd", text: "#1e40af", label: "数学" },
+  "理科":   { bg: "#f0fdfa", border: "#5eead4", text: "#115e59", label: "理科" },
+  "社会":   { bg: "#fff7ed", border: "#fdba74", text: "#c2410c", label: "社会" },
+  "英語":   { bg: "#f0f9ff", border: "#7dd3fc", text: "#0c4a6e", label: "英語" },
+  "体育":   { bg: "#ecfdf5", border: "#6ee7b7", text: "#065f46", label: "体育" },
+  "音楽":   { bg: "#fdf2f8", border: "#f0abcb", text: "#9d174d", label: "音楽" },
+  "図工":   { bg: "#fefce8", border: "#fef08a", text: "#713f12", label: "図工" },
+  "美術":   { bg: "#fefce8", border: "#fef08a", text: "#713f12", label: "美術" },
+  "家庭":   { bg: "#f7fee7", border: "#bef264", text: "#3f6212", label: "家庭" },
+  "技術":   { bg: "#eef2ff", border: "#a5b4fc", text: "#3730a3", label: "技術" },
+  "道徳":   { bg: "#fdf4ff", border: "#f0abfc", text: "#701a75", label: "道徳" },
+  "総合":   { bg: "#faf5ff", border: "#d8b4fe", text: "#6b21a8", label: "総合" },
+  "学活":   { bg: "#ecfeff", border: "#67e8f9", text: "#164e63", label: "学活" },
+  "特活":   { bg: "#ecfeff", border: "#67e8f9", text: "#164e63", label: "特活" },
+  "生活":   { bg: "#f7fee7", border: "#bef264", text: "#3f6212", label: "生活" },
+  "外国語": { bg: "#f0f9ff", border: "#7dd3fc", text: "#0c4a6e", label: "外国語" },
+  "情報":   { bg: "#eef2ff", border: "#a5b4fc", text: "#3730a3", label: "情報" },
+  "保健":   { bg: "#ecfdf5", border: "#6ee7b7", text: "#065f46", label: "保健" },
+};
+
+export const SUBJECT_COLORS_STORAGE_KEY = "timetable_subject_colors_v1";
+
+// ─────────────────────────────────────────────
 // Extract grade key from class string
 // e.g. "4年1組" → "4", "特別授業" → "special"
 // ─────────────────────────────────────────────
@@ -70,6 +99,33 @@ export function getClassColor(
   // 学年キーで学年色
   const key = getGradeKey(className);
   return gradeColors[key] ?? gradeColors["special"] ?? COLOR_PALETTE[4];
+}
+
+/**
+ * 教科名から色を取得する
+ * 優先順位: subjectColors[subject] > DEFAULT_SUBJECT_COLORS[subject] > fallback gray
+ */
+export function getSubjectColor(
+  subject: string | null,
+  subjectColors: Record<string, GradeColorDef>
+): GradeColorDef {
+  if (!subject) return { bg: "#f3f4f6", border: "#d1d5db", text: "#6b7280", label: "" };
+  // カスタム設定を優先
+  if (subjectColors[subject]) return subjectColors[subject];
+  // デフォルト設定
+  if (DEFAULT_SUBJECT_COLORS[subject]) return DEFAULT_SUBJECT_COLORS[subject];
+  // フォールバック: パレットから循環して割り当て
+  const idx = Math.abs(hashString(subject)) % COLOR_PALETTE.length;
+  return { ...COLOR_PALETTE[idx], label: subject };
+}
+
+/** 文字列の簡易ハッシュ（色の循環割り当て用） */
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  }
+  return h;
 }
 
 // ─────────────────────────────────────────────
@@ -104,6 +160,31 @@ export function loadGradeColorsFromStorage(): Record<string, GradeColorDef> {
 export function saveGradeColorsToStorage(colors: Record<string, GradeColorDef>): void {
   try {
     localStorage.setItem(GRADE_COLORS_STORAGE_KEY, JSON.stringify(colors));
+  } catch {
+    // ignore
+  }
+}
+
+export function loadSubjectColorsFromStorage(): Record<string, GradeColorDef> {
+  try {
+    const raw = localStorage.getItem(SUBJECT_COLORS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    const result: Record<string, GradeColorDef> = {};
+    for (const key of Object.keys(parsed)) {
+      if (parsed[key]?.bg && parsed[key]?.border) {
+        result[key] = parsed[key];
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+export function saveSubjectColorsToStorage(colors: Record<string, GradeColorDef>): void {
+  try {
+    localStorage.setItem(SUBJECT_COLORS_STORAGE_KEY, JSON.stringify(colors));
   } catch {
     // ignore
   }

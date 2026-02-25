@@ -4,9 +4,11 @@
 
 // ─── Data Models ───────────────────────────────────────────────
 
+/** 1コマ分のデータ。subject は教科名（null = 教科なし / 未設定） */
 export interface PeriodSlot {
   period: number;       // 1-6
   class: string | null; // null = no class
+  subject?: string | null; // 教科名（Phase 2〜4で使用）
   reason?: string;
 }
 
@@ -34,6 +36,7 @@ export interface OverrideOp {
   date: string;
   period?: number;
   class?: string | null;
+  subject?: string | null;   // 教科名（Phase 2〜4で使用）
   target_class?: string | null;
   reason?: string;
   replace?: boolean;
@@ -52,6 +55,16 @@ export interface OverrideBundle {
 export interface ClassStats {
   class: string;
   grade: string;
+  totalPeriods: number;
+  completedPeriods: number;
+  remainingPeriods: number;
+  completionRate: number;
+  asOfDate: string;
+}
+
+/** 教科別集計 */
+export interface SubjectStats {
+  subject: string;
   totalPeriods: number;
   completedPeriods: number;
   remainingPeriods: number;
@@ -201,6 +214,7 @@ export function applyOverrides(
           });
         }
         entries[idx].periods[slotIdx].class = null;
+        entries[idx].periods[slotIdx].subject = null;
         if (op.reason) entries[idx].periods[slotIdx].reason = op.reason;
         audit.push({
           id: nanoid(), level: "info", message: "clear_period_class",
@@ -222,6 +236,10 @@ export function applyOverrides(
           });
         }
         entries[idx].periods[slotIdx].class = op.class ?? null;
+        // 教科も同時に更新（op.subjectが指定されている場合）
+        if (op.subject !== undefined) {
+          entries[idx].periods[slotIdx].subject = op.subject;
+        }
         if (op.reason) entries[idx].periods[slotIdx].reason = op.reason;
         audit.push({
           id: nanoid(), level: "info", message: "set_period_class",
@@ -249,6 +267,7 @@ export function applyOverrides(
         if (op.clear_all_classes) {
           entries[idx].periods.forEach(p => {
             p.class = null;
+            p.subject = null;
             p.reason = op.reason;
           });
         }
@@ -279,35 +298,50 @@ export function buildDeleteOp(
 }
 
 export function buildAddOp(
-  date: string, period: number, newClass: string, reason?: string
+  date: string, period: number, newClass: string, reason?: string, subject?: string | null
 ): OverrideOp {
   return {
     id: nanoid(),
     op: "set_period_class", date, period,
     class: newClass,
+    subject: subject ?? undefined,
     reason: reason || undefined,
+  };
+}
+
+export function buildSetSubjectOp(
+  date: string, period: number, currentClass: string | null, subject: string | null
+): OverrideOp {
+  return {
+    id: nanoid(),
+    op: "set_period_class", date, period,
+    class: currentClass,
+    subject,
   };
 }
 
 export function buildMoveOps(
   srcDate: string, srcPeriod: number, srcClass: string | null,
   dstDate: string, dstPeriod: number, dstClass: string | null,
-  reason?: string
+  reason?: string,
+  srcSubject?: string | null,
 ): OverrideOp[] {
   return [
     { id: nanoid(), op: "clear_period_class", date: srcDate, period: srcPeriod, target_class: srcClass, reason: reason || undefined },
-    { id: nanoid(), op: "set_period_class", date: dstDate, period: dstPeriod, class: srcClass, target_class: dstClass, reason: reason || undefined },
+    { id: nanoid(), op: "set_period_class", date: dstDate, period: dstPeriod, class: srcClass, subject: srcSubject ?? undefined, target_class: dstClass, reason: reason || undefined },
   ];
 }
 
 export function buildSwapOps(
   aDate: string, aPeriod: number, aClass: string | null,
   bDate: string, bPeriod: number, bClass: string | null,
-  reason?: string
+  reason?: string,
+  aSubject?: string | null,
+  bSubject?: string | null,
 ): OverrideOp[] {
   return [
-    { id: nanoid(), op: "set_period_class", date: aDate, period: aPeriod, class: bClass, target_class: aClass, reason: reason || undefined },
-    { id: nanoid(), op: "set_period_class", date: bDate, period: bPeriod, class: aClass, target_class: bClass, reason: reason || undefined },
+    { id: nanoid(), op: "set_period_class", date: aDate, period: aPeriod, class: bClass, subject: bSubject ?? undefined, target_class: aClass, reason: reason || undefined },
+    { id: nanoid(), op: "set_period_class", date: bDate, period: bPeriod, class: aClass, subject: aSubject ?? undefined, target_class: bClass, reason: reason || undefined },
   ];
 }
 
@@ -341,6 +375,38 @@ export function calcClassStats(
     return {
       class: cls,
       grade: cls.slice(0, 2),
+      totalPeriods: total,
+      completedPeriods: completed,
+      remainingPeriods: total - completed,
+      completionRate: total > 0 ? completed / total : 0,
+      asOfDate: asOf,
+    };
+  });
+}
+
+/** 教科別集計（homeroomモード・multi_subjectモード用） */
+export function calcSubjectStats(
+  entries: TimetableEntry[], asOf: string
+): SubjectStats[] {
+  const totalMap = new Map<string, number>();
+  const completedMap = new Map<string, number>();
+
+  for (const entry of entries) {
+    for (const slot of entry.periods) {
+      const subj = slot.subject ?? null;
+      if (!subj) continue;
+      totalMap.set(subj, (totalMap.get(subj) ?? 0) + 1);
+      if (entry.date <= asOf) {
+        completedMap.set(subj, (completedMap.get(subj) ?? 0) + 1);
+      }
+    }
+  }
+
+  return Array.from(totalMap.keys()).sort().map(subj => {
+    const total = totalMap.get(subj) ?? 0;
+    const completed = completedMap.get(subj) ?? 0;
+    return {
+      subject: subj,
       totalPeriods: total,
       completedPeriods: completed,
       remainingPeriods: total - completed,
@@ -453,10 +519,13 @@ export function buildOverrideJSON(
 
 export function toCSV(
   entries: TimetableEntry[],
-  options?: { holidayMap?: Map<string, string> }
+  options?: { holidayMap?: Map<string, string>; includeSubject?: boolean }
 ): string {
-  const { holidayMap } = options ?? {};
-  const lines = ["date,weekday,weekday_jp,period,class,reason"];
+  const { holidayMap, includeSubject = false } = options ?? {};
+  const header = includeSubject
+    ? "date,weekday,weekday_jp,period,class,subject,reason"
+    : "date,weekday,weekday_jp,period,class,reason";
+  const lines = [header];
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
   for (const entry of sorted) {
     const holidayName = holidayMap?.get(entry.date);
@@ -466,9 +535,15 @@ export function toCSV(
       if (holidayName) {
         reason = reason ? `${reason}; ${holidayName}` : holidayName;
       }
-      lines.push(
-        `${entry.date},${entry.weekday},${entry.weekday_jp},${slot.period},${slot.class ?? ""},${reason}`
-      );
+      if (includeSubject) {
+        lines.push(
+          `${entry.date},${entry.weekday},${entry.weekday_jp},${slot.period},${slot.class ?? ""},${slot.subject ?? ""},${reason}`
+        );
+      } else {
+        lines.push(
+          `${entry.date},${entry.weekday},${entry.weekday_jp},${slot.period},${slot.class ?? ""},${reason}`
+        );
+      }
     }
   }
   return lines.join("\n");

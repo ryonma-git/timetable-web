@@ -1,5 +1,5 @@
-// Design: Swiss Grid × Japanese Functional Design
 // Settings dialog: edit semester meta, base schedule, class config after creation
+// Phase 4: homeroomClass設定・モード選択を追加
 
 import { useState, useCallback, useEffect } from "react";
 import {
@@ -14,6 +14,7 @@ import {
   Minus,
   X,
   AlertTriangle,
+  BookOpen,
 } from "lucide-react";
 import {
   Dialog,
@@ -26,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { SemesterMeta, SemesterSystem } from "@/lib/timetableFile";
+import { SemesterMeta, SemesterSystem, TimetableMode } from "@/lib/timetableFile";
 import { useTimetable } from "@/contexts/TimetableContext";
 import {
   normalizeClassName,
@@ -130,7 +131,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 
 export function SettingsDialog({ open, onClose }: Props) {
-  const { currentFile, semester, updateSettings, isLoaded } = useTimetable();
+  const { currentFile, semester, updateSettings, isLoaded, mode, setMode, classList } = useTimetable();
   const [step, setStep] = useState(1);
 
   // ── Step 1: Basic info ──────────────────────────────────────
@@ -145,6 +146,10 @@ export function SettingsDialog({ open, onClose }: Props) {
   const [extraClasses, setExtraClasses] = useState<string[]>([]);
   const [customClassInput, setCustomClassInput] = useState("");
   const [customClassError, setCustomClassError] = useState("");
+
+  // ── Step 1: Mode & homeroom ─────────────────────────────────
+  const [selectedMode, setSelectedMode] = useState<TimetableMode>('single_subject');
+  const [homeroomClass, setHomeroomClass] = useState("");
 
   // ── Step 2: Date & weekend ──────────────────────────────────
   const [startDate, setStartDate] = useState("");
@@ -171,6 +176,9 @@ export function SettingsDialog({ open, onClose }: Props) {
   const generatedClasses = generateDefaultClasses(schoolType, gradeClassCounts.slice(0, grades));
   const allClasses = [...generatedClasses, ...extraClasses].sort(classSort);
 
+  // Effective class list for homeroom selection (use current classList if available)
+  const effectiveClassList = classList.length > 0 ? classList : allClasses;
+
   // Populate from current semester on open
   useEffect(() => {
     if (open && semester) {
@@ -196,13 +204,16 @@ export function SettingsDialog({ open, onClose }: Props) {
       const info = SCHOOL_TYPES.find(s => s.value === st) ?? SCHOOL_TYPES[0];
       if (semester.gradeClassCounts && semester.gradeClassCounts.length > 0) {
         const counts = [...semester.gradeClassCounts];
-        // Pad to info.grades if needed
         while (counts.length < info.grades) counts.push(info.defaultClasses);
         setGradeClassCounts(counts);
       } else {
         setGradeClassCounts(Array(info.grades).fill(info.defaultClasses));
       }
       setExtraClasses(semester.customClasses ?? []);
+
+      // Restore mode & homeroomClass
+      setSelectedMode(currentFile?.meta.mode ?? 'single_subject');
+      setHomeroomClass(semester.homeroomClass ?? "");
 
       // Populate base schedule
       const s: Record<string, Record<number, string | null>> = {};
@@ -308,9 +319,14 @@ export function SettingsDialog({ open, onClose }: Props) {
       gradeClassCounts: gradeClassCounts.slice(0, grades),
       classList: allClasses,
       customClasses: extraClasses.length > 0 ? extraClasses : undefined,
+      homeroomClass: selectedMode === 'homeroom' ? (homeroomClass || undefined) : undefined,
     };
     const from = applyMode === "from" ? applyFromDate : undefined;
     updateSettings(newSemester, from);
+    // モードが変わっていれば更新
+    if (selectedMode !== mode) {
+      setMode(selectedMode);
+    }
     toast.success("設定を適用しました");
     onClose();
   };
@@ -393,6 +409,71 @@ export function SettingsDialog({ open, onClose }: Props) {
               </Select>
             </div>
 
+            {/* ── Mode Selection ──────────────────────────────── */}
+            <div className="space-y-3 border-t border-border/50 pt-4">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <BookOpen size={14} />
+                使用モード
+              </Label>
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  {
+                    value: 'single_subject' as TimetableMode,
+                    label: '教科担任モード（従来）',
+                    desc: '各コマにクラスを割り当てる。複数クラスを担当する教科担任向け。',
+                  },
+                  {
+                    value: 'homeroom' as TimetableMode,
+                    label: '担任モード',
+                    desc: '担任クラスを固定し、各コマに教科名を表示する。学級担任向け。',
+                  },
+                ].map(m => (
+                  <div
+                    key={m.value}
+                    onClick={() => setSelectedMode(m.value)}
+                    className={cn(
+                      "flex items-start gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all",
+                      selectedMode === m.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/40"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 transition-all",
+                      selectedMode === m.value ? "border-primary bg-primary" : "border-muted-foreground"
+                    )} />
+                    <div>
+                      <p className="text-sm font-semibold">{m.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{m.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Homeroom class selection */}
+              {selectedMode === 'homeroom' && (
+                <div className="space-y-1.5 pl-1">
+                  <Label className="text-xs text-muted-foreground">担任クラス <span className="text-destructive">*</span></Label>
+                  <Select value={homeroomClass || "__none__"} onValueChange={v => setHomeroomClass(v === "__none__" ? "" : v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="担任クラスを選択..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      <SelectItem value="__none__">
+                        <span className="text-muted-foreground">— 選択してください —</span>
+                      </SelectItem>
+                      {effectiveClassList.map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedMode === 'homeroom' && !homeroomClass && (
+                    <p className="text-xs text-amber-600">担任クラスを設定してください</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Class Config */}
             <div className="space-y-3 border-t border-border/50 pt-4">
               <Label className="text-sm font-medium">クラス構成</Label>
@@ -438,54 +519,37 @@ export function SettingsDialog({ open, onClose }: Props) {
                       {Array.from({ length: grades }, (_, i) => {
                         const gradeNum = i + 1;
                         const count = gradeClassCounts[i] ?? 3;
-                        const excluded = count === 0;
-                        const classes = excluded ? [] : Array.from({ length: count }, (_, j) => `${gradeNum}年${j + 1}組`);
+                        const classes = Array.from({ length: count }, (_, j) => `${gradeNum}年${j + 1}組`);
                         return (
-                          <tr key={gradeNum} className={cn("border-t border-border/50", excluded && "opacity-40")}>
-                            <td className="px-3 py-1.5 font-medium text-sm">{gradeNum}年生</td>
-                            <td className="px-3 py-1.5">
-                              <div className="flex items-center justify-center gap-1">
+                          <tr key={gradeNum} className="border-t border-border/50">
+                            <td className="px-3 py-2 font-medium text-sm">{gradeNum}年生</td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center justify-center gap-1.5">
                                 <button
                                   onClick={() => adjustGradeCount(i, -1)}
-                                  disabled={count <= 0}
-                                  className="w-5 h-5 rounded border border-border flex items-center justify-center hover:bg-muted disabled:opacity-30 transition-colors"
+                                  disabled={count <= 1}
+                                  className="w-6 h-6 rounded border border-border flex items-center justify-center hover:bg-muted disabled:opacity-30 transition-colors"
                                 >
-                                  <Minus size={9} />
+                                  <Minus size={10} />
                                 </button>
-                                <span className="w-5 text-center font-bold text-sm">{excluded ? '−' : count}</span>
+                                <span className="w-6 text-center font-bold text-sm">{count}</span>
                                 <button
                                   onClick={() => adjustGradeCount(i, 1)}
                                   disabled={count >= 10}
-                                  className="w-5 h-5 rounded border border-border flex items-center justify-center hover:bg-muted disabled:opacity-30 transition-colors"
+                                  className="w-6 h-6 rounded border border-border flex items-center justify-center hover:bg-muted disabled:opacity-30 transition-colors"
                                 >
-                                  <Plus size={9} />
+                                  <Plus size={10} />
                                 </button>
                               </div>
                             </td>
-                            <td className="px-3 py-1.5">
+                            <td className="px-3 py-2">
                               <div className="flex flex-wrap gap-1">
-                                {excluded ? (
-                                  <span className="text-[10px] text-muted-foreground italic">除外中</span>
-                                ) : classes.map(c => (
+                                {classes.map(c => (
                                   <span key={c} className="text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5 font-medium">
                                     {c}
                                   </span>
                                 ))}
                               </div>
-                            </td>
-                            <td className="px-2 py-1.5">
-                              <button
-                                onClick={() => setGradeClassCounts(prev => { const next = [...prev]; next[i] = excluded ? (schoolTypeInfo.defaultClasses) : 0; return next; })}
-                                className={cn(
-                                  "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
-                                  excluded
-                                    ? "border-primary/40 text-primary hover:bg-primary/10"
-                                    : "border-border text-muted-foreground hover:border-red-300 hover:text-red-500"
-                                )}
-                                title={excluded ? "この学年を復元" : "この学年を除外"}
-                              >
-                                {excluded ? "復元" : "除外"}
-                              </button>
                             </td>
                           </tr>
                         );
@@ -495,9 +559,9 @@ export function SettingsDialog({ open, onClose }: Props) {
                 </div>
               </div>
 
-              {/* Extra custom classes */}
+              {/* Custom classes */}
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">追加クラス（自由記述）</Label>
+                <p className="text-xs text-muted-foreground font-medium">追加クラス（自由記述）</p>
                 <div className="flex gap-2">
                   <Input
                     value={customClassInput}
@@ -586,7 +650,10 @@ export function SettingsDialog({ open, onClose }: Props) {
         {step === 3 && (
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
-              基本時間割を変更します。各コマに担当クラスを設定してください。
+              {selectedMode === 'homeroom'
+                ? `担任モード: 担任クラス（${homeroomClass || "未設定"}）の基本時間割を設定します。各コマに教科を設定できます（後から変更可能）。`
+                : "基本時間割を変更します。各コマに担当クラスを設定してください。"
+              }
             </div>
 
             <div className="overflow-x-auto">
@@ -607,27 +674,37 @@ export function SettingsDialog({ open, onClose }: Props) {
                         const cls = baseSchedule[d.key]?.[period] ?? null;
                         return (
                           <td key={d.key} className="p-0.5 border-b border-r border-border/30">
-                            <Select
-                              value={cls ?? "__empty__"}
-                              onValueChange={v => handleClassChange(d.key, period, v === "__empty__" ? null : v)}
-                            >
-                              <SelectTrigger className={cn(
-                                "h-8 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0",
-                                cls ? "font-medium" : "text-muted-foreground/50"
+                            {selectedMode === 'homeroom' ? (
+                              // Homeroom mode: show fixed class label, no selector needed
+                              <div className={cn(
+                                "h-8 text-xs px-2 flex items-center rounded",
+                                homeroomClass ? "bg-amber-50 text-amber-700 font-medium" : "bg-muted/30 text-muted-foreground/50"
                               )}>
-                                <SelectValue>
-                                  <span className={cls ? "font-medium" : "text-muted-foreground/40"}>{cls ?? "—"}</span>
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent className="max-h-48">
-                                <SelectItem value="__empty__">
-                                  <span className="text-muted-foreground">— 空き —</span>
-                                </SelectItem>
-                                {allClasses.map(c => (
-                                  <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                                {homeroomClass || "—"}
+                              </div>
+                            ) : (
+                              <Select
+                                value={cls ?? "__empty__"}
+                                onValueChange={v => handleClassChange(d.key, period, v === "__empty__" ? null : v)}
+                              >
+                                <SelectTrigger className={cn(
+                                  "h-8 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0",
+                                  cls ? "font-medium" : "text-muted-foreground/50"
+                                )}>
+                                  <SelectValue>
+                                    <span className={cls ? "font-medium" : "text-muted-foreground/40"}>{cls ?? "—"}</span>
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent className="max-h-48">
+                                  <SelectItem value="__empty__">
+                                    <span className="text-muted-foreground">— 空き —</span>
+                                  </SelectItem>
+                                  {allClasses.map(c => (
+                                    <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
                           </td>
                         );
                       })}
@@ -637,7 +714,14 @@ export function SettingsDialog({ open, onClose }: Props) {
               </table>
             </div>
 
-            {filledCells > 0 && (
+            {selectedMode === 'homeroom' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+                担任モードでは、基本時間割のクラスは自動的に担任クラス（{homeroomClass || "未設定"}）に設定されます。
+                教科は週間グリッドの各コマから個別に設定できます。
+              </div>
+            )}
+
+            {selectedMode !== 'homeroom' && filledCells > 0 && (
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
                 <span className="font-medium text-primary">{filledCells}</span> コマの授業が設定されています
               </div>
@@ -650,6 +734,16 @@ export function SettingsDialog({ open, onClose }: Props) {
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
               変更の適用範囲を選択してください。
+            </div>
+
+            {/* Mode summary */}
+            <div className="bg-card border border-border rounded-lg p-3 text-xs">
+              <p className="text-muted-foreground mb-1">適用されるモード</p>
+              <p className="font-semibold">
+                {selectedMode === 'single_subject' && '教科担任モード（従来）'}
+                {selectedMode === 'homeroom' && `担任モード${homeroomClass ? ` — ${homeroomClass}` : ''}`}
+                {selectedMode === 'multi_subject' && '複数教科モード'}
+              </p>
             </div>
 
             <div className="space-y-3">

@@ -1,6 +1,7 @@
 // Inspector.tsx
 // Design: Swiss Grid × Japanese Functional Design
 // Right inspector panel: cell details + operation form with confirm dialog
+// Phase 3: 教科入力対応（single_subject/homeroom/multi_subjectモード）
 
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
@@ -11,6 +12,7 @@ import {
   buildDeleteOp,
   buildMoveOps,
   buildReasonOp,
+  buildSetSubjectOp,
   buildSwapOps,
   formatDateJP,
   REASON_PRESETS,
@@ -25,9 +27,9 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { ConfirmChangeDialog, ChangePreview, ChangeOpType } from "@/components/ConfirmChangeDialog";
 import { useGradeColors } from "@/contexts/GradeColorContext";
-import { getClassColor } from "@/lib/gradeColors";
+import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 
-type OpMode = "delete" | "add" | "move" | "swap" | "reason";
+type OpMode = "delete" | "add" | "move" | "swap" | "reason" | "subject";
 
 export function Inspector() {
   const {
@@ -35,14 +37,26 @@ export function Inspector() {
     effectiveEntries, applyOps,
     customClasses,
     classList,
+    mode,
+    subjects,
+    semester,
   } = useTimetable();
 
   // classListが空の場合はVALID_CLASSESにフォールバック
   const effectiveClassList = classList.length > 0 ? classList : [];
-  const { gradeColors } = useGradeColors();
+  const { gradeColors, subjectColors } = useGradeColors();
+
+  const isHomeroomMode = mode === 'homeroom';
+  const isMultiSubjectMode = mode === 'multi_subject';
+  const hasSubjects = subjects.length > 0;
+  const showSubjectOp = hasSubjects || isHomeroomMode || isMultiSubjectMode;
+
+  // homeroomモードでは担任クラスを固定
+  const homeroomClass = semester?.homeroomClass ?? null;
 
   const [opMode, setOpMode] = useState<OpMode>("delete");
   const [newClass, setNewClass] = useState("");
+  const [newSubject, setNewSubject] = useState("");
   const [reason, setReason] = useState("");
   const [dstDate, setDstDate] = useState("");
   const [dstPeriod, setDstPeriod] = useState("1");
@@ -77,6 +91,7 @@ export function Inspector() {
 
   const { date, period } = selectedCell;
   const currentClass = currentSlot?.class ?? null;
+  const currentSubject = currentSlot?.subject ?? null;
 
   // ─── Build preview and show confirm dialog ─────────────────
   const showConfirm = (
@@ -118,8 +133,14 @@ export function Inspector() {
       });
 
     } else if (opMode === "add") {
-      if (!newClass) { toast.error("クラスを選択してください"); return; }
-      const op = buildAddOp(date, period, newClass, reason || undefined);
+      // homeroomモードではクラスを担任クラスに固定
+      const targetClass = isHomeroomMode ? (homeroomClass ?? "") : newClass;
+      if (!targetClass) {
+        if (isHomeroomMode) toast.error("担任クラスが設定されていません（設定から変更できます）");
+        else toast.error("クラスを選択してください");
+        return;
+      }
+      const op = buildAddOp(date, period, targetClass, reason || undefined, newSubject || undefined);
       const v = validateOp(op);
       if (!v.valid) { toast.error(v.errors.join("\n")); return; }
 
@@ -129,23 +150,24 @@ export function Inspector() {
         items: [{
           label: "",
           fromDate: date, fromPeriod: period, fromClass: currentClass,
-          toDate: date, toPeriod: period, toClass: newClass, toReason: reason || undefined,
+          toDate: date, toPeriod: period, toClass: targetClass, toReason: reason || undefined,
         }],
         warnings: v.warnings,
       };
 
-      showConfirm("add", `追加: ${date} ${period}限 → ${newClass}`, preview, () => {
-        const audit = applyOps([op], `追加: ${date} ${period}限 → ${newClass}`);
+      const displayLabel = newSubject ? `${targetClass} / ${newSubject}` : targetClass;
+      showConfirm("add", `追加: ${date} ${period}限 → ${displayLabel}`, preview, () => {
+        const audit = applyOps([op], `追加: ${date} ${period}限 → ${displayLabel}`);
         const errors = audit.filter(a => a.level === "error");
         if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
-        else toast.success(`追加しました: ${newClass}`);
-        setNewClass(""); setReason("");
+        else toast.success(`追加しました: ${displayLabel}`);
+        setNewClass(""); setNewSubject(""); setReason("");
       });
 
     } else if (opMode === "move") {
       if (!dstDate) { toast.error("移動先の日付を選択してください"); return; }
       const dstSlot = entryByDate.get(dstDate)?.periods.find(p => p.period === Number(dstPeriod));
-      const ops = buildMoveOps(date, period, currentClass, dstDate, Number(dstPeriod), dstSlot?.class ?? null, reason || undefined);
+      const ops = buildMoveOps(date, period, currentClass, dstDate, Number(dstPeriod), dstSlot?.class ?? null, reason || undefined, currentSubject);
 
       const preview: ChangePreview = {
         opType: "move",
@@ -176,7 +198,7 @@ export function Inspector() {
     } else if (opMode === "swap") {
       if (!swapDate) { toast.error("交換先の日付を選択してください"); return; }
       const swapSlot = entryByDate.get(swapDate)?.periods.find(p => p.period === Number(swapPeriod));
-      const ops = buildSwapOps(date, period, currentClass, swapDate, Number(swapPeriod), swapSlot?.class ?? null, reason || undefined);
+      const ops = buildSwapOps(date, period, currentClass, swapDate, Number(swapPeriod), swapSlot?.class ?? null, reason || undefined, currentSubject, swapSlot?.subject);
 
       const preview: ChangePreview = {
         opType: "swap",
@@ -223,6 +245,28 @@ export function Inspector() {
         toast.success(`理由を設定しました`);
         setReason("");
       });
+
+    } else if (opMode === "subject") {
+      // 教科のみ変更（クラスは維持）
+      const subjectValue = newSubject || null;
+      const op = buildSetSubjectOp(date, period, currentClass, subjectValue);
+
+      const preview: ChangePreview = {
+        opType: "add",
+        description: `${formatDateJP(date)} ${period}限の教科を設定します`,
+        items: [{
+          label: "",
+          fromDate: date, fromPeriod: period, fromClass: currentClass,
+          toDate: date, toPeriod: period, toClass: currentClass,
+        }],
+        warnings: [],
+      };
+
+      showConfirm("add", `教科設定: ${date} ${period}限 → ${subjectValue ?? "なし"}`, preview, () => {
+        applyOps([op], `教科設定: ${date} ${period}限 → ${subjectValue ?? "なし"}`);
+        toast.success(subjectValue ? `教科を「${subjectValue}」に設定しました` : "教科を削除しました");
+        setNewSubject("");
+      });
     }
   };
 
@@ -247,9 +291,17 @@ export function Inspector() {
     { id: "move", label: "移動" },
     { id: "swap", label: "交換" },
     { id: "reason", label: "理由" },
+    ...(showSubjectOp ? [{ id: "subject" as OpMode, label: "教科" }] : []),
   ];
 
-  const color = getClassColor(currentClass, gradeColors);
+  // Color for current cell
+  const cellColors = (() => {
+    if ((isHomeroomMode || isMultiSubjectMode) && currentSubject) {
+      return getSubjectColor(currentSubject, subjectColors);
+    }
+    if (currentClass) return getClassColor(currentClass, gradeColors);
+    return null;
+  })();
 
   return (
     <>
@@ -294,15 +346,32 @@ export function Inspector() {
           <div className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full border"
-              style={currentClass
-                ? { backgroundColor: color.bg, borderColor: color.border }
+              style={cellColors
+                ? { backgroundColor: cellColors.bg, borderColor: cellColors.border }
                 : { backgroundColor: 'var(--muted)', borderColor: 'var(--border)' }
               }
             />
             <div>
-              <p className="text-sm font-semibold" style={currentClass ? { color: color.text } : {}}>
-                {currentClass ?? <span className="text-muted-foreground font-normal">授業なし</span>}
-              </p>
+              {isHomeroomMode ? (
+                // Homeroom: show subject (or class if no subject)
+                <p className="text-sm font-semibold" style={cellColors ? { color: cellColors.text } : {}}>
+                  {currentSubject
+                    ? currentSubject
+                    : currentClass
+                      ? currentClass
+                      : <span className="text-muted-foreground font-normal">授業なし</span>
+                  }
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold" style={currentClass ? { color: cellColors?.text } : {}}>
+                    {currentClass ?? <span className="text-muted-foreground font-normal">授業なし</span>}
+                  </p>
+                  {currentSubject && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">教科: {currentSubject}</p>
+                  )}
+                </>
+              )}
               {currentSlot?.reason && (
                 <p className="text-[10px] text-muted-foreground mt-0.5">{currentSlot.reason}</p>
               )}
@@ -336,7 +405,12 @@ export function Inspector() {
           {opMode === "delete" && (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">{currentClass ?? "空きコマ"}</span> を削除します
+                <span className="font-medium text-foreground">
+                  {isHomeroomMode
+                    ? (currentSubject ?? currentClass ?? "空きコマ")
+                    : (currentClass ?? "空きコマ")
+                  }
+                </span> を削除します
               </p>
               <ReasonField reason={reason} setReason={setReason} />
             </div>
@@ -345,19 +419,37 @@ export function Inspector() {
           {/* Add mode */}
           {opMode === "add" && (
             <div className="space-y-2">
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1 block">クラス</Label>
-                <Select value={newClass} onValueChange={setNewClass}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="クラスを選択..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {effectiveClassList.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Class field (hidden in homeroom mode) */}
+              {!isHomeroomMode && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">クラス</Label>
+                  <Select value={newClass} onValueChange={setNewClass}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="クラスを選択..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {effectiveClassList.map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {/* Homeroom mode: show fixed class info */}
+              {isHomeroomMode && homeroomClass && (
+                <div className="bg-muted/50 rounded p-2 text-xs text-muted-foreground">
+                  担任クラス: <span className="font-medium text-foreground">{homeroomClass}</span>
+                </div>
+              )}
+              {/* Subject field (shown when subjects are available) */}
+              {(hasSubjects || isHomeroomMode) && (
+                <SubjectField
+                  value={newSubject}
+                  onChange={setNewSubject}
+                  subjects={subjects.map(s => s.name)}
+                  required={isHomeroomMode}
+                />
+              )}
               <ReasonField reason={reason} setReason={setReason} />
             </div>
           )}
@@ -412,6 +504,23 @@ export function Inspector() {
               <ReasonField reason={reason} setReason={setReason} required />
             </div>
           )}
+
+          {/* Subject mode */}
+          {opMode === "subject" && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                このコマの教科を設定します
+                {currentSubject && <span className="ml-1">(現在: <strong>{currentSubject}</strong>)</span>}
+              </p>
+              <SubjectField
+                value={newSubject}
+                onChange={setNewSubject}
+                subjects={subjects.map(s => s.name)}
+                allowEmpty
+                emptyLabel="教科なし（削除）"
+              />
+            </div>
+          )}
         </div>
 
         {/* Execute button */}
@@ -425,6 +534,7 @@ export function Inspector() {
             {opMode === "move" && "移動を確認"}
             {opMode === "swap" && "交換を確認"}
             {opMode === "reason" && "理由を設定"}
+            {opMode === "subject" && "教科を設定"}
           </Button>
         </div>
       </div>
@@ -476,6 +586,38 @@ function ReasonField({
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function SubjectField({
+  value, onChange, subjects, required = false, allowEmpty = false, emptyLabel = "教科なし"
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  subjects: string[];
+  required?: boolean;
+  allowEmpty?: boolean;
+  emptyLabel?: string;
+}) {
+  return (
+    <div>
+      <Label className="text-xs text-muted-foreground mb-1 block">
+        教科{required ? " *" : " (任意)"}
+      </Label>
+      <Select value={value || (allowEmpty ? "__none__" : "")} onValueChange={v => onChange(v === "__none__" ? "" : v)}>
+        <SelectTrigger className="h-8 text-sm">
+          <SelectValue placeholder="教科を選択..." />
+        </SelectTrigger>
+        <SelectContent>
+          {allowEmpty && (
+            <SelectItem value="__none__">{emptyLabel}</SelectItem>
+          )}
+          {subjects.map(s => (
+            <SelectItem key={s} value={s}>{s}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
