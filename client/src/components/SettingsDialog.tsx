@@ -236,7 +236,7 @@ export function SettingsDialog({ open, onClose }: Props) {
     if (semesterSystem === "semester") {
       return semesterNumber === 1 ? "前期" : "後期";
     }
-    return `第${semesterNumber}学期`;
+    return `${semesterNumber}学期`;
   })();
 
   const title = `${academicYear}年度 ${semesterLabel}${school ? ` (${school})` : ""}`;
@@ -302,7 +302,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                 <Select value={semesterSystem} onValueChange={v => handleSemesterSystemChange(v as SemesterSystem)}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="trimester">3学期制（前期・中期・後期）</SelectItem>
+                    <SelectItem value="trimester">3学期制（1学期・2学期・3学期）</SelectItem>
                     <SelectItem value="semester">2学期制（前期・後期）</SelectItem>
                   </SelectContent>
                 </Select>
@@ -327,9 +327,9 @@ export function SettingsDialog({ open, onClose }: Props) {
                 <SelectContent>
                   {semesterSystem === "trimester" ? (
                     <>
-                      <SelectItem value="1">第1学期（4月〜7月）</SelectItem>
-                      <SelectItem value="2">第2学期（9月〜12月）</SelectItem>
-                      <SelectItem value="3">第3学期（1月〜3月）</SelectItem>
+                      <SelectItem value="1">1学期（4月～7月）</SelectItem>
+                      <SelectItem value="2">2学期（9月～12月）</SelectItem>
+                      <SelectItem value="3">3学期（1月～3月）</SelectItem>
                     </>
                   ) : (
                     <>

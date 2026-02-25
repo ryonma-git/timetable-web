@@ -9,6 +9,7 @@ import { Inspector } from "@/components/Inspector";
 import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
 import { Button } from "@/components/ui/button";
 import { Printer, Download, Save, Menu, X } from "lucide-react";
+import { SemesterTabs } from "@/components/SemesterTabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -150,6 +151,9 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* Semester tabs */}
+        {isLoaded && <SemesterTabs />}
 
         {/* Content area */}
         <div className="flex-1 flex overflow-hidden relative">

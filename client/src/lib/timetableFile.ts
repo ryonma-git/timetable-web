@@ -21,6 +21,8 @@ export const TIMETABLE_FILE_EXT = ".timetable";
 
 export type SemesterSystem = "trimester" | "semester"; // 3学期制 / 2学期制
 
+export type SchoolType = 'elementary' | 'junior' | 'high' | 'custom';
+
 export interface SemesterMeta {
   /** 学期番号 (3学期制: 1,2,3 / 2学期制: 1,2) */
   semesterNumber: 1 | 2 | 3;
@@ -38,6 +40,24 @@ export interface SemesterMeta {
   baseSchedule?: Record<string, Record<number, string | null>>;
   /** カスタムクラスラベル（標準クラス以外に追加したもの） */
   customClasses?: string[];
+  /** 学校種別 */
+  schoolType?: SchoolType;
+  /** 学年別クラス数 (index 0 = 1年生) */
+  gradeClassCounts?: number[];
+  /** 全クラスリスト（標準＋カスタム、ソート済み） */
+  classList?: string[];
+  /** 祝日・休校日リスト (YYYY-MM-DD) */
+  holidays?: string[];
+}
+
+/** 複数学期の1学期分のデータ */
+export interface SemesterData {
+  /** 学期メタ情報 */
+  semester: SemesterMeta;
+  /** ベース時間割エントリ */
+  base: TimetableEntry[];
+  /** オーバーライド操作リスト */
+  ops: OverrideOp[];
 }
 
 export interface TimetableFile {
@@ -52,17 +72,21 @@ export interface TimetableFile {
     createdAt: string;
     updatedAt: string;
   };
-  /** Semester metadata */
+  /** Semester metadata (legacy single-semester support) */
   semester?: SemesterMeta;
-  /** Base timetable entries (the "ground truth" before overrides) */
+  /** Base timetable entries (legacy single-semester support) */
   base: TimetableEntry[];
-  /** All override operations applied on top of base */
+  /** All override operations (legacy single-semester support) */
   ops: OverrideOp[];
   /** Override bundle metadata */
   overrideMeta?: {
     notes?: string;
     baseRef?: string;
   };
+  /** Multiple semesters (v2 format) */
+  semesters?: SemesterData[];
+  /** Currently active semester index (for multi-semester files) */
+  activeSemesterIndex?: number;
 }
 
 export interface LoadResult {

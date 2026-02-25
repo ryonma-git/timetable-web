@@ -1,7 +1,7 @@
 // NewFileWizard.tsx
 // Design: Swiss Grid × Japanese Functional Design
 // 4-step wizard for creating a new timetable (semester unit)
-// Step 1: School/year/semester metadata
+// Step 1: School/year/semester metadata + school type + class setup
 // Step 2: Saturday/Sunday class settings
 // Step 3: Base schedule grid (weekday × period → class)
 // Step 4: Confirmation and creation
@@ -16,6 +16,8 @@ import {
   Calendar,
   CalendarDays,
   Grid3X3,
+  Plus,
+  Minus,
 } from "lucide-react";
 import {
   Dialog,
@@ -30,7 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { generateBaseEntries, createNewTimetableFile, SemesterMeta } from "@/lib/timetableFile";
 import { useTimetable } from "@/contexts/TimetableContext";
-import { VALID_CLASSES } from "@/lib/timetable";
+import { normalizeClassName, classSort, generateDefaultClasses, SchoolType } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -48,6 +50,13 @@ const WEEKDAYS = [
 ];
 
 const PERIODS = [1, 2, 3, 4, 5, 6];
+
+// School type definitions
+const SCHOOL_TYPES: { value: SchoolType; label: string; grades: number; defaultClasses: number }[] = [
+  { value: "elementary", label: "小学校（6年制）", grades: 6, defaultClasses: 3 },
+  { value: "junior", label: "中学校（3年制）", grades: 3, defaultClasses: 3 },
+  { value: "high", label: "高等学校（3年制）", grades: 3, defaultClasses: 3 },
+];
 
 // Compute default academic year from current date
 function getDefaultAcademicYear(): number {
@@ -142,6 +151,13 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [semesterSystem, setSemesterSystem] = useState<SemesterSystem>("trimester");
   const [semesterNumber, setSemesterNumber] = useState<1 | 2 | 3>(1);
 
+  // Step 1: School type & class setup
+  const [schoolType, setSchoolType] = useState<SchoolType>("elementary");
+  const [gradeClassCounts, setGradeClassCounts] = useState<number[]>([3, 3, 3, 3, 3, 3]); // 6 grades
+  const [customClassInput, setCustomClassInput] = useState("");
+  const [customClassError, setCustomClassError] = useState("");
+  const [extraClasses, setExtraClasses] = useState<string[]>([]);
+
   // Step 2: Date range & weekend settings
   const [startDate, setStartDate] = useState(() => getSemesterDefaults(academicYear, 1).start);
   const [endDate, setEndDate] = useState(() => getSemesterDefaults(academicYear, 1).end);
@@ -149,7 +165,6 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [hasSunday, setHasSunday] = useState(false);
 
   // Step 3: Base schedule
-  // baseSchedule[weekday][period] = class | null
   const [baseSchedule, setBaseSchedule] = useState<Record<string, Record<number, string | null>>>(() => {
     const schedule: Record<string, Record<number, string | null>> = {};
     WEEKDAYS.forEach(d => {
@@ -158,6 +173,50 @@ export function NewFileWizard({ open, onClose }: Props) {
     });
     return schedule;
   });
+
+  // Derived: current school type info
+  const schoolTypeInfo = SCHOOL_TYPES.find(s => s.value === schoolType) ?? SCHOOL_TYPES[0];
+  const grades = schoolTypeInfo.grades;
+
+  // When school type changes, reset gradeClassCounts
+  const handleSchoolTypeChange = (type: SchoolType) => {
+    const info = SCHOOL_TYPES.find(s => s.value === type)!;
+    setSchoolType(type);
+    setGradeClassCounts(Array(info.grades).fill(info.defaultClasses));
+  };
+
+  // Adjust class count for a grade
+  const adjustGradeCount = (gradeIdx: number, delta: number) => {
+    setGradeClassCounts(prev => {
+      const next = [...prev];
+      next[gradeIdx] = Math.max(1, Math.min(10, (next[gradeIdx] ?? 3) + delta));
+      return next;
+    });
+  };
+
+  // Bulk set all grades to same count
+  const setBulkCount = (count: number) => {
+    setGradeClassCounts(Array(grades).fill(count));
+  };
+
+  // Add custom class
+  const addCustomClass = () => {
+    const raw = customClassInput.trim();
+    if (!raw) return;
+    const normalized = normalizeClassName(raw);
+    if (!normalized) return;
+    if (generatedClasses.includes(normalized) || extraClasses.includes(normalized)) {
+      setCustomClassError("すでに存在するクラス名です");
+      return;
+    }
+    setExtraClasses(prev => [...prev, normalized]);
+    setCustomClassInput("");
+    setCustomClassError("");
+  };
+
+  // All generated classes (standard + extra, sorted)
+  const generatedClasses = generateDefaultClasses(schoolType, gradeClassCounts.slice(0, grades));
+  const allClasses = [...generatedClasses, ...extraClasses].sort(classSort);
 
   // Update dates when semester changes
   const handleSemesterSystemChange = useCallback((sys: SemesterSystem) => {
@@ -198,14 +257,13 @@ export function NewFileWizard({ open, onClose }: Props) {
 
   // Title derived from inputs
   const semesterLabel = semesterSystem === "semester"
-    ? (semesterNumber === 1 ? "前期" : "後期")
-    : `第${semesterNumber}学期`;
+    ? (semesterNumber === 1 ? "前期" : "後期") // 2学期制は前期/後期のまま
+    : `${semesterNumber}学期`;
   const title = `${academicYear}年度 ${semesterLabel}${school ? ` (${school})` : ""}`;
 
   const handleCreate = async () => {
     setLoading(true);
     try {
-      // Build base entries with schedule
       const base = generateBaseEntries(startDate, endDate, {
         hasSaturday,
         hasSunday,
@@ -222,6 +280,10 @@ export function NewFileWizard({ open, onClose }: Props) {
         hasSaturday,
         hasSunday,
         baseSchedule,
+        schoolType,
+        gradeClassCounts: gradeClassCounts.slice(0, grades),
+        classList: allClasses,
+        customClasses: extraClasses,
       };
       file.semester = semester;
       file.base = base;
@@ -239,9 +301,9 @@ export function NewFileWizard({ open, onClose }: Props) {
   };
 
   const canGoNext = () => {
-    if (step === 1) return true; // school is optional
+    if (step === 1) return true;
     if (step === 2) return startDate && endDate && startDate <= endDate;
-    if (step === 3) return true; // base schedule is optional
+    if (step === 3) return true;
     return true;
   };
 
@@ -257,11 +319,11 @@ export function NewFileWizard({ open, onClose }: Props) {
 
         <StepIndicator current={step} total={4} />
 
-        {/* ─── Step 1: School Info ─────────────────────────────── */}
+        {/* ─── Step 1: School Info + Class Setup ─────────────────── */}
         {step === 1 && (
           <div className="space-y-5">
             <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-              学校名・年度・学期を設定します。これらは後から変更できます。
+              学校名・年度・学期・クラス構成を設定します。これらは後から変更できます。
             </div>
 
             <div className="space-y-1.5">
@@ -275,11 +337,23 @@ export function NewFileWizard({ open, onClose }: Props) {
             </div>
 
             <div className="space-y-1.5">
+              <Label className="text-sm font-medium">学校種別 <span className="text-destructive">*</span></Label>
+              <Select value={schoolType} onValueChange={v => handleSchoolTypeChange(v as SchoolType)}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SCHOOL_TYPES.map(s => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
               <Label className="text-sm font-medium">学期制 <span className="text-destructive">*</span></Label>
               <Select value={semesterSystem} onValueChange={v => handleSemesterSystemChange(v as SemesterSystem)}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="trimester">3学期制（前期・中期・後期）</SelectItem>
+                  <SelectItem value="trimester">3学期制（1学期・2学期・3学期）</SelectItem>
                   <SelectItem value="semester">2学期制（前期・後期）</SelectItem>
                 </SelectContent>
               </Select>
@@ -311,9 +385,9 @@ export function NewFileWizard({ open, onClose }: Props) {
                   <SelectContent>
                     {semesterSystem === "trimester" ? (
                       <>
-                        <SelectItem value="1">第1学期（4月〜7月）</SelectItem>
-                        <SelectItem value="2">第2学期（9月〜12月）</SelectItem>
-                        <SelectItem value="3">第3学期（1月〜3月）</SelectItem>
+                        <SelectItem value="1">1学期（4月〜7月）</SelectItem>
+                        <SelectItem value="2">2学期（9月〜12月）</SelectItem>
+                        <SelectItem value="3">3学期（1月〜3月）</SelectItem>
                       </>
                     ) : (
                       <>
@@ -326,9 +400,119 @@ export function NewFileWizard({ open, onClose }: Props) {
               </div>
             </div>
 
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">作成されるファイル名</p>
-              <p className="text-sm font-semibold text-foreground">{title}</p>
+            {/* Class Setup */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">クラス構成</Label>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">一括設定:</span>
+                  {[2, 3, 4, 5].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setBulkCount(n)}
+                      className="text-[11px] px-2 py-0.5 rounded border border-border hover:bg-muted transition-colors"
+                    >
+                      各{n}組
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">学年</th>
+                      <th className="text-center px-3 py-2 text-xs font-medium text-muted-foreground">クラス数</th>
+                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">生成されるクラス</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: grades }, (_, i) => {
+                      const gradeNum = i + 1;
+                      const count = gradeClassCounts[i] ?? 3;
+                      const classes = Array.from({ length: count }, (_, j) => `${gradeNum}年${j + 1}組`);
+                      return (
+                        <tr key={gradeNum} className="border-t border-border/50">
+                          <td className="px-3 py-2 font-medium">{gradeNum}年生</td>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => adjustGradeCount(i, -1)}
+                                disabled={count <= 1}
+                                className="w-6 h-6 rounded border border-border flex items-center justify-center hover:bg-muted disabled:opacity-30 transition-colors"
+                              >
+                                <Minus size={10} />
+                              </button>
+                              <span className="w-6 text-center font-bold text-sm">{count}</span>
+                              <button
+                                onClick={() => adjustGradeCount(i, 1)}
+                                disabled={count >= 10}
+                                className="w-6 h-6 rounded border border-border flex items-center justify-center hover:bg-muted disabled:opacity-30 transition-colors"
+                              >
+                                <Plus size={10} />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap gap-1">
+                              {classes.map(c => (
+                                <span key={c} className="text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5 font-medium">
+                                  {c}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Extra custom classes */}
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">追加クラス（自由記述）</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={customClassInput}
+                    onChange={e => {
+                      setCustomClassInput(e.target.value);
+                      setCustomClassError("");
+                    }}
+                    onKeyDown={e => e.key === "Enter" && addCustomClass()}
+                    placeholder="例: 特別支援学級、英語グループA"
+                    className="h-8 text-sm flex-1"
+                  />
+                  <Button size="sm" variant="outline" className="gap-1 text-xs h-8" onClick={addCustomClass}>
+                    <Plus size={11} />
+                    追加
+                  </Button>
+                </div>
+                {customClassError && <p className="text-xs text-red-500">{customClassError}</p>}
+                {extraClasses.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {extraClasses.map(c => (
+                      <span
+                        key={c}
+                        className="flex items-center gap-1 text-[11px] bg-orange-100 text-orange-700 rounded px-2 py-0.5 cursor-pointer hover:bg-red-100 hover:text-red-600 transition-colors"
+                        onClick={() => setExtraClasses(prev => prev.filter(x => x !== c))}
+                        title="クリックで削除"
+                      >
+                        {c} ×
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-1">作成されるファイル名</p>
+                <p className="text-sm font-semibold text-foreground">{title}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  クラス合計: <span className="font-medium text-foreground">{allClasses.length}</span> クラス
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -389,10 +573,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                   <p className="text-sm font-medium">土曜授業</p>
                   <p className="text-xs text-muted-foreground">毎週土曜日を授業日として追加</p>
                 </div>
-                <Switch
-                  checked={hasSaturday}
-                  onCheckedChange={setHasSaturday}
-                />
+                <Switch checked={hasSaturday} onCheckedChange={setHasSaturday} />
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
@@ -400,10 +581,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                   <p className="text-sm font-medium">日曜授業</p>
                   <p className="text-xs text-muted-foreground">毎週日曜日を授業日として追加</p>
                 </div>
-                <Switch
-                  checked={hasSunday}
-                  onCheckedChange={setHasSunday}
-                />
+                <Switch checked={hasSunday} onCheckedChange={setHasSunday} />
               </div>
 
               <p className="text-xs text-muted-foreground">
@@ -461,12 +639,9 @@ export function NewFileWizard({ open, onClose }: Props) {
                                 <SelectItem value="__empty__">
                                   <span className="text-muted-foreground">— 空き —</span>
                                 </SelectItem>
-                                {["1年", "2年", "3年", "4年", "5年", "6年"].map(grade => {
-                                  const gradeClasses = VALID_CLASSES.filter(c => c.startsWith(grade));
-                                  return gradeClasses.map(c => (
-                                    <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
-                                  ));
-                                })}
+                                {allClasses.map(c => (
+                                  <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </td>
@@ -522,6 +697,20 @@ export function NewFileWizard({ open, onClose }: Props) {
                      hasSaturday ? "土曜のみ" :
                      hasSunday ? "日曜のみ" : "なし"}
                   </p>
+                </div>
+              </div>
+
+              {/* Class list summary */}
+              <div className="bg-card border border-border rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-2">
+                  クラス構成 — {schoolTypeInfo.label}、合計 {allClasses.length} クラス
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {allClasses.map(c => (
+                    <span key={c} className="text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5 font-medium">
+                      {c}
+                    </span>
+                  ))}
                 </div>
               </div>
 

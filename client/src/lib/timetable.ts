@@ -84,6 +84,7 @@ export const WEEKDAY_JP: Record<string, string> = {
   Mon: "月", Tue: "火", Wed: "水", Thu: "木", Fri: "金", Sat: "土", Sun: "日",
 };
 
+// Default class list (6 grades × 3 classes = 18 classes)
 export const VALID_CLASSES: string[] = (() => {
   const classes: string[] = [];
   for (let grade = 1; grade <= 6; grade++) {
@@ -93,6 +94,60 @@ export const VALID_CLASSES: string[] = (() => {
   }
   return classes;
 })();
+
+// ─── Class Utilities ────────────────────────────────────────────
+
+/** 全角数字・全角スペースを半角に正規化する */
+export function normalizeClassName(name: string): string {
+  return name
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/　/g, ' ')
+    .trim();
+}
+
+/** 「n年m組」形式かどうかを判定する */
+export function isStandardClass(name: string): boolean {
+  return /^\d+年\d+組$/.test(name);
+}
+
+/** クラス名からソートキーを生成する（学年→組の順） */
+export function classSort(a: string, b: string): number {
+  const parseClass = (s: string): [number, number] | null => {
+    const m = s.match(/^(\d+)年(\d+)組$/);
+    if (!m) return null;
+    return [parseInt(m[1]), parseInt(m[2])];
+  };
+  const pa = parseClass(a);
+  const pb = parseClass(b);
+  if (pa && pb) {
+    if (pa[0] !== pb[0]) return pa[0] - pb[0];
+    return pa[1] - pb[1];
+  }
+  if (pa) return -1;
+  if (pb) return 1;
+  return a.localeCompare(b, 'ja');
+}
+
+/** 学校種別に応じたデフォルトクラスリストを生成する */
+export type SchoolType = 'elementary' | 'junior' | 'high' | 'custom';
+
+export function generateDefaultClasses(
+  schoolType: SchoolType,
+  gradeClassCounts?: number[] // index 0 = grade 1, etc.
+): string[] {
+  const grades = schoolType === 'elementary' ? 6
+    : schoolType === 'junior' ? 3
+    : schoolType === 'high' ? 3
+    : (gradeClassCounts?.length ?? 6);
+  const classes: string[] = [];
+  for (let g = 1; g <= grades; g++) {
+    const count = gradeClassCounts?.[g - 1] ?? 3;
+    for (let c = 1; c <= count; c++) {
+      classes.push(`${g}年${c}組`);
+    }
+  }
+  return classes;
+}
 
 export const REASON_PRESETS = [
   "手動調整", "行事", "祝日", "欠勤", "補填", "特別授業", "振替", "研修",

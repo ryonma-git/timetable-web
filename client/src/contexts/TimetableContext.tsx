@@ -23,6 +23,7 @@ import {
 import {
   TimetableFile,
   SemesterMeta,
+  SemesterData,
   LoadResult,
   ZipImportResult,
   deserializeTimetableFile,
@@ -105,6 +106,17 @@ interface TimetableContextValue {
 
   // Custom classes
   customClasses: string[];
+  classList: string[];
+  holidays: string[];
+  updateHolidays: (holidays: string[]) => void;
+
+  // Multi-semester
+  activeSemesterIndex: number;
+  semesterCount: number;
+  setActiveSemesterIndex: (idx: number) => void;
+  addSemester: (data: SemesterData) => void;
+  removeSemester: (idx: number) => void;
+  switchToSemester: (idx: number) => void;
 }
 
 // ─── Context ─────────────────────────────────────────────────
@@ -130,6 +142,9 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
 
   const [undoStack, setUndoStack] = useState<HistoryEntry[]>([]);
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
+
+  // Multi-semester state
+  const [activeSemesterIndex, setActiveSemesterIndexState] = useState(0);
 
   // Per-week weekend overrides (temporary Saturday/Sunday classes)
   const [weekendOverrides, setWeekendOverrides] = useState<Record<string, { saturday?: boolean; sunday?: boolean }>>({});
@@ -366,9 +381,96 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setRedoStack([]);
     setIsDirty(true);
   }, [currentFile, baseEntries, allOps]);
+  // ─── Multi-semester management ───────────────────────────────────
+  const semesterCount = currentFile?.semesters?.length ?? (currentFile ? 1 : 0);
 
-  // ─── Custom classes ──────────────────────────────────────────
+  const setActiveSemesterIndex = useCallback((idx: number) => {
+    if (!currentFile) return;
+    setActiveSemesterIndexState(idx);
+  }, [currentFile]);
+
+  const switchToSemester = useCallback((idx: number) => {
+    if (!currentFile?.semesters || idx < 0 || idx >= currentFile.semesters.length) return;
+    const semData = currentFile.semesters[idx];
+    const { effective, audit } = applyOverrides(semData.base, semData.ops ?? []);
+    setBaseEntries(semData.base);
+    setEffectiveEntries(effective);
+    setAllOps(semData.ops ?? []);
+    setPendingOps([]);
+    setAuditLog(audit);
+    setUndoStack([]);
+    setRedoStack([]);
+    setActiveSemesterIndexState(idx);
+    // Navigate to start of new semester
+    if (semData.semester.startDate) {
+      setCurrentWeekMonday(getMondayOfWeek(new Date(semData.semester.startDate + 'T00:00:00')));
+    }
+  }, [currentFile]);
+
+  const addSemester = useCallback((data: SemesterData) => {
+    if (!currentFile) return;
+    const existingSemesters = currentFile.semesters ?? (currentFile.semester ? [{
+      semester: currentFile.semester,
+      base: currentFile.base,
+      ops: currentFile.ops,
+    }] : []);
+    const newSemesters = [...existingSemesters, data];
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      semesters: newSemesters,
+      activeSemesterIndex: newSemesters.length - 1,
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    setCurrentFile(updatedFile);
+    setIsDirty(true);
+    // Switch to new semester
+    const { effective, audit } = applyOverrides(data.base, data.ops ?? []);
+    setBaseEntries(data.base);
+    setEffectiveEntries(effective);
+    setAllOps(data.ops ?? []);
+    setPendingOps([]);
+    setAuditLog(audit);
+    setUndoStack([]);
+    setRedoStack([]);
+    setActiveSemesterIndexState(newSemesters.length - 1);
+  }, [currentFile]);
+
+  const removeSemester = useCallback((idx: number) => {
+    if (!currentFile?.semesters || currentFile.semesters.length <= 1) return;
+    const newSemesters = currentFile.semesters.filter((_, i) => i !== idx);
+    const newIdx = Math.min(activeSemesterIndex, newSemesters.length - 1);
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      semesters: newSemesters,
+      activeSemesterIndex: newIdx,
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    setCurrentFile(updatedFile);
+    setIsDirty(true);
+    if (idx === activeSemesterIndex) {
+      switchToSemester(newIdx);
+    } else {
+      setActiveSemesterIndexState(newIdx);
+    }
+  }, [currentFile, activeSemesterIndex, switchToSemester]);
+
+  // ─── Custom classes & class list ───────────────────────────────────
   const customClasses = currentFile?.semester?.customClasses ?? [];
+  const classList = currentFile?.semester?.classList ?? [];
+  const holidays = currentFile?.semester?.holidays ?? [];
+
+  // ─── Update holidays ──────────────────────────────────────────────────
+  const updateHolidays = useCallback((newHolidays: string[]) => {
+    if (!currentFile) return;
+    const updatedSemester: SemesterMeta = { ...currentFile.semester!, holidays: newHolidays };
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      semester: updatedSemester,
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    setCurrentFile(updatedFile);
+    setIsDirty(true);
+  }, [currentFile]);
 
   return (
     <TimetableContext.Provider value={{
@@ -390,6 +492,15 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       exportEffective, exportOverride, exportCSV,
       updateSettings,
       customClasses,
+      classList,
+      holidays,
+      updateHolidays,
+      activeSemesterIndex,
+      semesterCount,
+      setActiveSemesterIndex,
+      addSemester,
+      removeSemester,
+      switchToSemester,
     }}>
       {children}
     </TimetableContext.Provider>

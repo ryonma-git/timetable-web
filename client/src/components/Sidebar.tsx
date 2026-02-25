@@ -29,6 +29,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ColorSettingsDialog } from "@/components/ColorSettingsDialog";
 import { NewFileWizard } from "@/components/NewFileWizard";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 
 export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
@@ -49,6 +50,7 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
   const [loading, setLoading] = useState(false);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHolidaySettings, setShowHolidaySettings] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
 
@@ -414,14 +416,24 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
       {/* Settings */}
       <div className="px-3 py-3 border-t border-sidebar-border space-y-1">
         {isLoaded && (
-          <button
-            onClick={() => setShowSettings(true)}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]
-                       text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-          >
-            <Settings size={12} />
-            学期設定を変更
-          </button>
+          <>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]
+                         text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            >
+              <Settings size={12} />
+              学期設定を変更
+            </button>
+            <button
+              onClick={() => setShowHolidaySettings(true)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]
+                         text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            >
+              <CalendarDays size={12} />
+              祝日・休校日の設定
+            </button>
+          </>
         )}
         <ColorSettingsDialog />
       </div>
@@ -430,6 +442,8 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
       <NewFileWizard open={showNewDialog} onClose={() => setShowNewDialog(false)} />
       {/* Settings Dialog */}
       <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+      {/* Holiday Settings Dialog */}
+      <HolidaySettingsDialog open={showHolidaySettings} onOpenChange={setShowHolidaySettings} />
     </aside>
   );
 }

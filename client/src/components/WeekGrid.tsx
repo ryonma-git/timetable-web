@@ -3,6 +3,7 @@
 // Week grid with drag-and-drop, today highlight, class color coding (1-6 grades)
 
 import { useState } from "react";
+import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO, VALID_CLASSES } from "@/lib/timetable";
@@ -39,12 +40,14 @@ export function WeekGrid() {
     weekendOverrides,
     toggleWeekendDay,
     customClasses,
+    holidays,
   } = useTimetable();
   const { gradeColors } = useGradeColors();
 
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [dragOver, setDragOver] = useState<{ date: string; period: number } | null>(null);
   const [filterClass, setFilterClass] = useState<string | null>(null);
+  const [showHolidayDialog, setShowHolidayDialog] = useState(false);
   const today = todayISO();
 
   // Determine if this week shows Saturday/Sunday
@@ -142,7 +145,7 @@ export function WeekGrid() {
         const academicYear = month >= 4 ? year : year - 1;
         const semLabel = semester.semesterSystem === "semester"
           ? (semester.semesterNumber === 1 ? "前期" : "後期")
-          : `第${semester.semesterNumber}学期`;
+          : `${semester.semesterNumber}学期`;
         return (
           <div className="flex items-baseline gap-3 mb-2">
             <span className="text-base font-bold text-foreground">{academicYear}年度</span>
@@ -272,7 +275,8 @@ export function WeekGrid() {
                       "text-center py-2 px-1 border-b font-medium text-sm",
                       isToday
                         ? "border-b-2 border-amber-400 bg-[var(--today-bg)] text-amber-800"
-                        : "border-border text-foreground/70"
+                        : "border-border text-foreground/70",
+                      holidays.includes(date) && "bg-muted/60 text-muted-foreground"
                     )}
                   >
                     <div className="flex flex-col items-center gap-0.5">
@@ -286,6 +290,9 @@ export function WeekGrid() {
                       )}
                       {!hasData && (
                         <span className="text-[9px] text-muted-foreground/50">データなし</span>
+                      )}
+                      {holidays.includes(date) && (
+                        <span className="text-[9px] bg-red-100 text-red-500 rounded-full px-1.5 py-0.5 font-medium leading-none">休校</span>
                       )}
                     </div>
                   </th>
@@ -328,15 +335,16 @@ export function WeekGrid() {
                         onDragOver={e => handleDragOver(e, date, period)}
                         onDrop={e => handleDrop(e, date, period)}
                         onDragEnd={handleDragEnd}
-                        className={cn(
-                          "period-cell h-[52px] rounded border cursor-pointer px-2 py-1 flex flex-col justify-between",
-                          isSelected && "ring-2 ring-primary ring-inset",
-                          isDragSrc && "opacity-40",
-                          isDragOver && "ring-2 ring-green-500 ring-inset",
-                          !slot.class && "hover:bg-muted/50",
-                          slot.class && "hover:brightness-95",
-                          isFiltered && "opacity-20"
-                        )}
+                      className={cn(
+                        "period-cell h-[52px] rounded border cursor-pointer px-2 py-1 flex flex-col justify-between",
+                        isSelected && "ring-2 ring-primary ring-inset",
+                        isDragSrc && "opacity-40",
+                        isDragOver && "ring-2 ring-green-500 ring-inset",
+                        !slot.class && "hover:bg-muted/50",
+                        slot.class && "hover:brightness-95",
+                        isFiltered && "opacity-20",
+                        holidays.includes(date) && "opacity-40 cursor-not-allowed"
+                      )}
                         style={isDragOver
                           ? { backgroundColor: '#f0fdf4', borderColor: '#22c55e' }
                           : { backgroundColor: colors.bg, borderColor: colors.border }
@@ -392,6 +400,8 @@ export function WeekGrid() {
         </div>
         <span className="ml-2 text-muted-foreground/60">ドラッグ＆ドロップで交換</span>
       </div>
+
+      <HolidaySettingsDialog open={showHolidayDialog} onOpenChange={setShowHolidayDialog} />
     </div>
   );
 }
