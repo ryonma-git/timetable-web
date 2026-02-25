@@ -451,13 +451,23 @@ export function buildOverrideJSON(
   };
 }
 
-export function toCSV(entries: TimetableEntry[]): string {
+export function toCSV(
+  entries: TimetableEntry[],
+  options?: { holidayMap?: Map<string, string> }
+): string {
+  const { holidayMap } = options ?? {};
   const lines = ["date,weekday,weekday_jp,period,class,reason"];
   const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
   for (const entry of sorted) {
+    const holidayName = holidayMap?.get(entry.date);
     for (const slot of entry.periods.sort((a, b) => a.period - b.period)) {
+      // Append holiday name to reason if this date is a holiday/school-off day
+      let reason = slot.reason ?? "";
+      if (holidayName) {
+        reason = reason ? `${reason}; ${holidayName}` : holidayName;
+      }
       lines.push(
-        `${entry.date},${entry.weekday},${entry.weekday_jp},${slot.period},${slot.class ?? ""},${slot.reason ?? ""}`
+        `${entry.date},${entry.weekday},${entry.weekday_jp},${slot.period},${slot.class ?? ""},${reason}`
       );
     }
   }

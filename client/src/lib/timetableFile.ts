@@ -23,6 +23,14 @@ export type SemesterSystem = "trimester" | "semester"; // 3学期制 / 2学期�
 
 export type SchoolType = 'elementary' | 'junior' | 'high' | 'custom';
 
+/** 休校日・祝日エントリ */
+export interface HolidayEntry {
+  /** YYYY-MM-DD */
+  date: string;
+  /** 祝日名または休校日名（省略可） */
+  name?: string;
+}
+
 export interface SemesterMeta {
   /** 学期番号 (3学期制: 1,2,3 / 2学期制: 1,2) */
   semesterNumber: 1 | 2 | 3;
@@ -46,8 +54,8 @@ export interface SemesterMeta {
   gradeClassCounts?: number[];
   /** 全クラスリスト（標準＋カスタム、ソート済み） */
   classList?: string[];
-  /** 祝日・休校日リスト (YYYY-MM-DD) */
-  holidays?: string[];
+  /** 祝日・休校日リスト */
+  holidays?: HolidayEntry[];
 }
 
 /** 複数学期の1学期分のデータ */

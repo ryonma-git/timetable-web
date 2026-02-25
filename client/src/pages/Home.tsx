@@ -10,6 +10,7 @@ import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
 import { Button } from "@/components/ui/button";
 import { Printer, Download, Save, Menu, X } from "lucide-react";
 import { SemesterTabs } from "@/components/SemesterTabs";
+import { AutoRestoreDialog } from "@/components/AutoRestoreDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,7 @@ export default function Home() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <AutoRestoreDialog />
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div

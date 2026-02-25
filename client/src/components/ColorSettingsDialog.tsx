@@ -1,9 +1,10 @@
 // ColorSettingsDialog.tsx
 // Design: Swiss Grid × Japanese Functional Design
 // All grades share the same COLOR_PALETTE; duplicates are allowed.
+// Custom (non-grade) classes can have individual colors via "custom:className" keys.
 
 import { useState } from "react";
-import { Palette, RotateCcw } from "lucide-react";
+import { Palette, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ import {
   saveGradeColorsToStorage,
 } from "@/lib/gradeColors";
 import { useGradeColors } from "@/contexts/GradeColorContext";
+import { useTimetable } from "@/contexts/TimetableContext";
 
 const GRADE_LABELS: Record<string, string> = {
   "1": "1年",
@@ -27,13 +29,23 @@ const GRADE_LABELS: Record<string, string> = {
   "4": "4年",
   "5": "5年",
   "6": "6年",
-  "special": "特別",
+  "special": "特別（デフォルト）",
 };
+
+// カスタムクラス（「n年m組」形式でないもの）を判定
+function isCustomClass(className: string): boolean {
+  return !/^\d+年\d+組$/.test(className);
+}
 
 export function ColorSettingsDialog() {
   const { gradeColors, setGradeColors } = useGradeColors();
+  const { classList } = useTimetable();
   const [open, setOpen] = useState(false);
   const [localColors, setLocalColors] = useState<Record<string, GradeColorDef>>({ ...gradeColors });
+  const [showCustomSection, setShowCustomSection] = useState(true);
+
+  // カスタムクラスリスト（「n年m組」形式でないもの）
+  const customClasses = classList.filter(isCustomClass);
 
   const handleOpen = () => {
     setLocalColors({ ...gradeColors });
@@ -44,8 +56,8 @@ export function ColorSettingsDialog() {
     setOpen(isOpen);
   };
 
-  const handleSelect = (grade: string, color: GradeColorDef) => {
-    setLocalColors((prev) => ({ ...prev, [grade]: color }));
+  const handleSelect = (key: string, color: GradeColorDef) => {
+    setLocalColors((prev) => ({ ...prev, [key]: color }));
   };
 
   const handleApply = () => {
@@ -55,12 +67,109 @@ export function ColorSettingsDialog() {
   };
 
   const handleReset = () => {
-    setLocalColors({ ...DEFAULT_GRADE_COLORS });
+    // 学年色のみリセット（カスタムクラス個別色は保持）
+    const resetColors = { ...localColors };
+    for (const grade of Object.keys(DEFAULT_GRADE_COLORS)) {
+      resetColors[grade] = DEFAULT_GRADE_COLORS[grade];
+    }
+    setLocalColors(resetColors);
+  };
+
+  const handleResetCustom = (className: string) => {
+    const key = `custom:${className}`;
+    setLocalColors(prev => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const renderColorRow = (key: string, label: string, fallbackKey?: string) => {
+    const fallback = fallbackKey ? (localColors[fallbackKey] ?? DEFAULT_GRADE_COLORS["special"]) : DEFAULT_GRADE_COLORS["special"];
+    const current = localColors[key] ?? fallback;
+    const hasCustom = !!localColors[key];
+
+    return (
+      <div key={key} className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+            style={{
+              backgroundColor: current.bg,
+              borderColor: current.border,
+              color: current.text,
+            }}
+          >
+            {label}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            現在: {current.label}
+            {!hasCustom && fallbackKey && <span className="ml-1 text-muted-foreground/60">（デフォルト色を使用）</span>}
+          </span>
+          {hasCustom && fallbackKey && (
+            <button
+              type="button"
+              onClick={() => handleResetCustom(label)}
+              className="text-[10px] text-muted-foreground hover:text-foreground underline"
+            >
+              リセット
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {COLOR_PALETTE.map((color, i) => {
+            const isSelected =
+              current.bg === color.bg && current.border === color.border;
+            return (
+              <Tooltip key={i}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(key, color)}
+                    className={`relative w-8 h-8 rounded-full border-2 transition-all duration-100 focus:outline-none
+                      ${isSelected
+                        ? "ring-2 ring-offset-1 scale-110"
+                        : "hover:scale-110"
+                      }`}
+                    style={{
+                      backgroundColor: color.bg,
+                      borderColor: isSelected ? color.text : color.border,
+                      // @ts-ignore
+                      "--tw-ring-color": color.text,
+                    }}
+                    aria-label={color.label}
+                  >
+                    <span
+                      className="absolute inset-1.5 rounded-full"
+                      style={{ backgroundColor: color.border }}
+                    />
+                    {isSelected && (
+                      <span className="absolute inset-0 flex items-center justify-center z-10">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path
+                            d="M2 6L5 9L10 3"
+                            stroke={color.text}
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>{color.label}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   return (
     <>
-      {/* Trigger button — standalone, no DialogTrigger wrapper */}
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -77,96 +186,54 @@ export function ColorSettingsDialog() {
         <TooltipContent side="right">学年ごとの表示色を変更</TooltipContent>
       </Tooltip>
 
-      {/* Dialog — controlled externally */}
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Palette size={18} />
-              学年カラー設定
+              カラー設定
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5 py-2">
             <p className="text-xs text-muted-foreground">
-              各学年の表示色を選択してください。同じ色を複数の学年に設定することもできます。選択した色はこのブラウザに保存されます。
+              各学年・クラスの表示色を選択してください。選択した色はこのブラウザに保存されます。
             </p>
 
-            {Object.entries(GRADE_LABELS).map(([grade, label]) => {
-              const current = localColors[grade] ?? DEFAULT_GRADE_COLORS[grade];
+            {/* 学年色セクション */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">学年カラー</p>
+              <div className="space-y-5">
+                {Object.entries(GRADE_LABELS).map(([grade, label]) =>
+                  renderColorRow(grade, label)
+                )}
+              </div>
+            </div>
 
-              return (
-                <div key={grade} className="space-y-2">
-                  {/* Grade label + current color preview */}
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border"
-                      style={{
-                        backgroundColor: current.bg,
-                        borderColor: current.border,
-                        color: current.text,
-                      }}
-                    >
-                      {label}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      現在: {current.label}
-                    </span>
+            {/* カスタムクラス個別色セクション */}
+            {customClasses.length > 0 && (
+              <div className="border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomSection(v => !v)}
+                  className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 hover:text-foreground transition-colors"
+                >
+                  {showCustomSection ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                  特別クラスの個別カラー
+                  <span className="font-normal text-muted-foreground/60">（{customClasses.length} クラス）</span>
+                </button>
+                {showCustomSection && (
+                  <div className="space-y-5">
+                    <p className="text-xs text-muted-foreground -mt-1">
+                      個別色を設定しない場合は「特別（デフォルト）」の色が使われます。
+                    </p>
+                    {customClasses.map(cls =>
+                      renderColorRow(`custom:${cls}`, cls, "special")
+                    )}
                   </div>
-
-                  {/* Color swatches — shared palette */}
-                  <div className="flex flex-wrap gap-2">
-                    {COLOR_PALETTE.map((color, i) => {
-                      const isSelected =
-                        current.bg === color.bg && current.border === color.border;
-                      return (
-                        <Tooltip key={i}>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => handleSelect(grade, color)}
-                              className={`relative w-8 h-8 rounded-full border-2 transition-all duration-100 focus:outline-none
-                                ${isSelected
-                                  ? "ring-2 ring-offset-1 scale-110"
-                                  : "hover:scale-110"
-                                }`}
-                              style={{
-                                backgroundColor: color.bg,
-                                borderColor: isSelected ? color.text : color.border,
-                                // @ts-ignore
-                                "--tw-ring-color": color.text,
-                              }}
-                              aria-label={color.label}
-                            >
-                              {/* Inner dot */}
-                              <span
-                                className="absolute inset-1.5 rounded-full"
-                                style={{ backgroundColor: color.border }}
-                              />
-                              {/* Checkmark */}
-                              {isSelected && (
-                                <span className="absolute inset-0 flex items-center justify-center z-10">
-                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                                    <path
-                                      d="M2 6L5 9L10 3"
-                                      stroke={color.text}
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                </span>
-                              )}
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>{color.label}</TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            )}
           </div>
 
           {/* Preview */}
@@ -181,7 +248,20 @@ export function ColorSettingsDialog() {
                     className="px-2 py-1 rounded text-xs font-medium border"
                     style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
                   >
-                    {label}サンプル
+                    {label}
+                  </div>
+                );
+              })}
+              {customClasses.map(cls => {
+                const key = `custom:${cls}`;
+                const c = localColors[key] ?? localColors["special"] ?? DEFAULT_GRADE_COLORS["special"];
+                return (
+                  <div
+                    key={cls}
+                    className="px-2 py-1 rounded text-xs font-medium border"
+                    style={{ backgroundColor: c.bg, borderColor: c.border, color: c.text }}
+                  >
+                    {cls}
                   </div>
                 );
               })}
@@ -191,7 +271,7 @@ export function ColorSettingsDialog() {
           <div className="flex justify-between pt-2">
             <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1.5">
               <RotateCcw size={13} />
-              デフォルトに戻す
+              学年色をリセット
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setOpen(false)}>

@@ -58,10 +58,16 @@ export function getGradeKey(className: string | null): string {
 }
 
 // Get color for a class name
+// カスタムクラスは "custom:className" キーで個別色を保存
 export function getClassColor(
   className: string | null,
   gradeColors: Record<string, GradeColorDef>
 ): GradeColorDef {
+  if (!className) return gradeColors["special"] ?? COLOR_PALETTE[4];
+  // カスタムクラス個別色を優先
+  const customKey = `custom:${className}`;
+  if (gradeColors[customKey]) return gradeColors[customKey];
+  // 学年キーで学年色
   const key = getGradeKey(className);
   return gradeColors[key] ?? gradeColors["special"] ?? COLOR_PALETTE[4];
 }
@@ -77,9 +83,16 @@ export function loadGradeColorsFromStorage(): Record<string, GradeColorDef> {
     if (!raw) return { ...DEFAULT_GRADE_COLORS };
     const parsed = JSON.parse(raw);
     const result: Record<string, GradeColorDef> = { ...DEFAULT_GRADE_COLORS };
+    // 学年色と「special」を読み込む
     for (const grade of ["1", "2", "3", "4", "5", "6", "special"]) {
       if (parsed[grade]?.bg && parsed[grade]?.border) {
         result[grade] = parsed[grade];
+      }
+    }
+    // 「custom:xxx」キーの個別色も読み込む
+    for (const key of Object.keys(parsed)) {
+      if (key.startsWith('custom:') && parsed[key]?.bg && parsed[key]?.border) {
+        result[key] = parsed[key];
       }
     }
     return result;

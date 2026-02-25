@@ -438,20 +438,21 @@ export function SettingsDialog({ open, onClose }: Props) {
                       {Array.from({ length: grades }, (_, i) => {
                         const gradeNum = i + 1;
                         const count = gradeClassCounts[i] ?? 3;
-                        const classes = Array.from({ length: count }, (_, j) => `${gradeNum}年${j + 1}組`);
+                        const excluded = count === 0;
+                        const classes = excluded ? [] : Array.from({ length: count }, (_, j) => `${gradeNum}年${j + 1}組`);
                         return (
-                          <tr key={gradeNum} className="border-t border-border/50">
+                          <tr key={gradeNum} className={cn("border-t border-border/50", excluded && "opacity-40")}>
                             <td className="px-3 py-1.5 font-medium text-sm">{gradeNum}年生</td>
                             <td className="px-3 py-1.5">
                               <div className="flex items-center justify-center gap-1">
                                 <button
                                   onClick={() => adjustGradeCount(i, -1)}
-                                  disabled={count <= 1}
+                                  disabled={count <= 0}
                                   className="w-5 h-5 rounded border border-border flex items-center justify-center hover:bg-muted disabled:opacity-30 transition-colors"
                                 >
                                   <Minus size={9} />
                                 </button>
-                                <span className="w-5 text-center font-bold text-sm">{count}</span>
+                                <span className="w-5 text-center font-bold text-sm">{excluded ? '−' : count}</span>
                                 <button
                                   onClick={() => adjustGradeCount(i, 1)}
                                   disabled={count >= 10}
@@ -463,12 +464,28 @@ export function SettingsDialog({ open, onClose }: Props) {
                             </td>
                             <td className="px-3 py-1.5">
                               <div className="flex flex-wrap gap-1">
-                                {classes.map(c => (
+                                {excluded ? (
+                                  <span className="text-[10px] text-muted-foreground italic">除外中</span>
+                                ) : classes.map(c => (
                                   <span key={c} className="text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5 font-medium">
                                     {c}
                                   </span>
                                 ))}
                               </div>
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <button
+                                onClick={() => setGradeClassCounts(prev => { const next = [...prev]; next[i] = excluded ? (schoolTypeInfo.defaultClasses) : 0; return next; })}
+                                className={cn(
+                                  "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
+                                  excluded
+                                    ? "border-primary/40 text-primary hover:bg-primary/10"
+                                    : "border-border text-muted-foreground hover:border-red-300 hover:text-red-500"
+                                )}
+                                title={excluded ? "この学年を復元" : "この学年を除外"}
+                              >
+                                {excluded ? "復元" : "除外"}
+                              </button>
                             </td>
                           </tr>
                         );

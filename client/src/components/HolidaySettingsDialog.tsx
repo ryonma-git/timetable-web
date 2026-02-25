@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useTimetable } from "@/contexts/TimetableContext";
+import type { HolidayEntry } from "@/lib/timetableFile";
 import { CalendarX, Plus, Trash2, RefreshCw, Check } from "lucide-react";
 
 interface HolidaySettingsDialogProps {
@@ -63,7 +64,8 @@ function getJapaneseHolidaysInRange(startDate: string, endDate: string): { date:
 
 export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDialogProps) {
   const { semester, holidays, updateHolidays } = useTimetable();
-  const [localHolidays, setLocalHolidays] = useState<string[]>([]);
+  // localHolidays は HolidayEntry[] で管理
+  const [localHolidays, setLocalHolidays] = useState<HolidayEntry[]>([]);
   const [customDateInput, setCustomDateInput] = useState("");
   const [customDateError, setCustomDateError] = useState("");
   const [isDirty, setIsDirty] = useState(false);
@@ -71,7 +73,7 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
   // ダイアログを開いたときに現在の休校日を読み込む
   useEffect(() => {
     if (open) {
-      setLocalHolidays([...(holidays ?? [])].sort());
+      setLocalHolidays([...(holidays ?? [])].sort((a, b) => a.date.localeCompare(b.date)));
       setIsDirty(false);
       setCustomDateInput("");
       setCustomDateError("");
@@ -84,22 +86,37 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
     return getJapaneseHolidaysInRange(semester.startDate, semester.endDate);
   }, [semester?.startDate, semester?.endDate]);
 
-  // 祝日を一括追加
+  // 登録済み日付のSet
+  const localDates = useMemo(() => new Set(localHolidays.map(h => h.date)), [localHolidays]);
+
+  // 祝日を一括追加（祝日名付き）
   const addAutoHolidays = () => {
-    const newDates = autoHolidays.map(h => h.date).filter(d => !localHolidays.includes(d));
-    if (newDates.length === 0) return;
-    const updated = [...localHolidays, ...newDates].sort();
+    const newEntries = autoHolidays
+      .filter(h => !localDates.has(h.date))
+      .map(h => ({ date: h.date, name: h.name }));
+    if (newEntries.length === 0) return;
+    const updated = [...localHolidays, ...newEntries].sort((a, b) => a.date.localeCompare(b.date));
     setLocalHolidays(updated);
     setIsDirty(true);
   };
 
   // 個別削除
   const removeHoliday = (date: string) => {
-    setLocalHolidays(prev => prev.filter(d => d !== date));
+    setLocalHolidays(prev => prev.filter(h => h.date !== date));
     setIsDirty(true);
   };
 
-  // カスタム日付を追加
+  // 祝日バッジをトグル（祝日名付きで追加）
+  const toggleAutoHoliday = (h: { date: string; name: string }) => {
+    if (localDates.has(h.date)) {
+      removeHoliday(h.date);
+    } else {
+      setLocalHolidays(prev => [...prev, { date: h.date, name: h.name }].sort((a, b) => a.date.localeCompare(b.date)));
+      setIsDirty(true);
+    }
+  };
+
+  // カスタム日付を追加（名前なし → "休校日"）
   const addCustomDate = () => {
     const val = customDateInput.trim();
     if (!val) return;
@@ -115,11 +132,11 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
       setCustomDateError("学期終了日より後の日付です");
       return;
     }
-    if (localHolidays.includes(val)) {
+    if (localDates.has(val)) {
       setCustomDateError("すでに登録済みです");
       return;
     }
-    setLocalHolidays(prev => [...prev, val].sort());
+    setLocalHolidays(prev => [...prev, { date: val }].sort((a, b) => a.date.localeCompare(b.date)));
     setCustomDateInput("");
     setCustomDateError("");
     setIsDirty(true);
@@ -134,17 +151,16 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
 
   // 月ごとにグループ化
   const groupedByMonth = useMemo(() => {
-    const groups: Record<string, { date: string; isAuto: boolean; autoName?: string }[]> = {};
-    localHolidays.forEach(date => {
-      const monthKey = date.substring(0, 7); // YYYY-MM
+    const groups: Record<string, HolidayEntry[]> = {};
+    localHolidays.forEach(entry => {
+      const monthKey = entry.date.substring(0, 7); // YYYY-MM
       if (!groups[monthKey]) groups[monthKey] = [];
-      const autoInfo = autoHolidays.find(h => h.date === date);
-      groups[monthKey].push({ date, isAuto: !!autoInfo, autoName: autoInfo?.name });
+      groups[monthKey].push(entry);
     });
     return groups;
-  }, [localHolidays, autoHolidays]);
+  }, [localHolidays]);
 
-  const autoNotYetAdded = autoHolidays.filter(h => !localHolidays.includes(h.date));
+  const autoNotYetAdded = autoHolidays.filter(h => !localDates.has(h.date));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,7 +171,7 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
             祝日・休校日の設定
           </DialogTitle>
           <DialogDescription className="text-xs">
-            登録した日付はグリッド上でグレーアウト表示されます。
+            登録した日付はグリッド上でグレーアウト表示されます。祝日名はCSVのreasonに自動追加されます。
             {semester?.startDate && semester?.endDate && (
               <span className="ml-1 text-muted-foreground">
                 （学期期間: {semester.startDate} 〜 {semester.endDate}）
@@ -193,23 +209,16 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
                 {autoHolidays.map(h => (
                   <Badge
                     key={h.date}
-                    variant={localHolidays.includes(h.date) ? "default" : "outline"}
+                    variant={localDates.has(h.date) ? "default" : "outline"}
                     className={cn(
                       "text-[10px] cursor-pointer transition-all",
-                      localHolidays.includes(h.date)
+                      localDates.has(h.date)
                         ? "bg-red-100 text-red-700 border-red-200 hover:bg-red-200"
                         : "hover:bg-muted"
                     )}
-                    onClick={() => {
-                      if (localHolidays.includes(h.date)) {
-                        removeHoliday(h.date);
-                      } else {
-                        setLocalHolidays(prev => [...prev, h.date].sort());
-                        setIsDirty(true);
-                      }
-                    }}
+                    onClick={() => toggleAutoHoliday(h)}
                   >
-                    {localHolidays.includes(h.date) && <Check size={9} className="mr-0.5" />}
+                    {localDates.has(h.date) && <Check size={9} className="mr-0.5" />}
                     {h.date.substring(5)} {h.name}
                   </Badge>
                 ))}
@@ -274,7 +283,7 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
               </div>
             ) : (
               <div className="space-y-3">
-                {Object.entries(groupedByMonth).map(([monthKey, dates]) => {
+                {Object.entries(groupedByMonth).map(([monthKey, entries]) => {
                   const [y, m] = monthKey.split("-");
                   return (
                     <div key={monthKey}>
@@ -282,22 +291,22 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
                         {y}年{MONTH_NAMES[parseInt(m) - 1]}
                       </p>
                       <div className="space-y-1">
-                        {dates.map(({ date, isAuto, autoName }) => (
+                        {entries.map(entry => (
                           <div
-                            key={date}
+                            key={entry.date}
                             className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-1.5 group"
                           >
                             <div className="flex items-center gap-2">
                               <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                              <span className="text-sm">{formatDateDisplay(date)}</span>
-                              {isAuto && autoName && (
+                              <span className="text-sm">{formatDateDisplay(entry.date)}</span>
+                              {entry.name && (
                                 <Badge variant="outline" className="text-[9px] h-4 px-1 text-muted-foreground">
-                                  {autoName}
+                                  {entry.name}
                                 </Badge>
                               )}
                             </div>
                             <button
-                              onClick={() => removeHoliday(date)}
+                              onClick={() => removeHoliday(entry.date)}
                               className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500"
                             >
                               <Trash2 size={13} />

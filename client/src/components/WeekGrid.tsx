@@ -54,6 +54,10 @@ export function WeekGrid() {
   const [showHolidayDialog, setShowHolidayDialog] = useState(false);
   const today = todayISO();
 
+  // holidays: HolidayEntry[] → 日付のSetとname mapに変換
+  const holidayDates = new Set(holidays.map(h => h.date));
+  const holidayNameMap = new Map(holidays.map(h => [h.date, h.name ?? '休校日']));
+
   // Determine if this week shows Saturday/Sunday
   const weekMondayStr = formatDate(currentWeekMonday);
   const weekOverride = weekendOverrides[weekMondayStr] ?? {};
@@ -267,7 +271,7 @@ export function WeekGrid() {
                       isToday
                         ? "border-b-2 border-amber-400 bg-[var(--today-bg)] text-amber-800"
                         : "border-border text-foreground/70",
-                      holidays.includes(date) && "bg-muted/60 text-muted-foreground"
+                      holidayDates.has(date) && "bg-muted/60 text-muted-foreground"
                     )}
                   >
                     <div className="flex flex-col items-center gap-0.5">
@@ -282,8 +286,8 @@ export function WeekGrid() {
                       {!hasData && (
                         <span className="text-[9px] text-muted-foreground/50">データなし</span>
                       )}
-                      {holidays.includes(date) && (
-                        <span className="text-[9px] bg-red-100 text-red-500 rounded-full px-1.5 py-0.5 font-medium leading-none">休校</span>
+                      {holidayDates.has(date) && (
+                        <span className="text-[9px] bg-red-100 text-red-500 rounded-full px-1.5 py-0.5 font-medium leading-none">{holidayNameMap.get(date) ?? '休校'}</span>
                       )}
                     </div>
                   </th>
@@ -316,7 +320,7 @@ export function WeekGrid() {
                       key={date}
                       className={cn(
                         "border-b border-r border-border/30 p-0.5",
-                        isToday && "bg-[var(--today-bg)]/30"
+                        isToday && "bg-amber-50/60"
                       )}
                     >
                       <div
@@ -334,11 +338,13 @@ export function WeekGrid() {
                         !slot.class && "hover:bg-muted/50",
                         slot.class && "hover:brightness-95",
                         isFiltered && "opacity-20",
-                        holidays.includes(date) && "opacity-40 cursor-not-allowed"
+                        holidayDates.has(date) && "opacity-40 cursor-not-allowed"
                       )}
                         style={isDragOver
                           ? { backgroundColor: '#f0fdf4', borderColor: '#22c55e' }
-                          : { backgroundColor: colors.bg, borderColor: colors.border }
+                          : slot.class
+                            ? { backgroundColor: colors.bg, borderColor: colors.border }
+                            : undefined
                         }
                       >
                         {slot.class ? (

@@ -3,7 +3,7 @@
 // Global state management for timetable app
 // Supports: .timetable (native), ZIP (legacy), new file creation
 
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import {
   AuditEntry,
   ClassStats,
@@ -111,8 +111,8 @@ interface TimetableContextValue {
   // Custom classes
   customClasses: string[];
   classList: string[];
-  holidays: string[];
-  updateHolidays: (holidays: string[]) => void;
+  holidays: import("@/lib/timetableFile").HolidayEntry[];
+  updateHolidays: (holidays: import("@/lib/timetableFile").HolidayEntry[]) => void;
 
   // Multi-semester
   activeSemesterIndex: number;
@@ -122,6 +122,10 @@ interface TimetableContextValue {
   removeSemester: (idx: number) => void;
   switchToSemester: (idx: number) => void;
 }
+
+// ─── LocalStorage key ────────────────────────────────────────
+const LS_KEY = "timetable_autosave";
+const LS_META_KEY = "timetable_autosave_meta";
 
 // ─── Context ─────────────────────────────────────────────────
 
@@ -333,10 +337,14 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   }, [allOps, overrideMeta]);
 
   const exportCSV = useCallback(() => {
-    const csv = toCSV(effectiveEntries);
+    // Build holiday map: date -> name (for CSV reason column)
+    const rawHolidays = currentFile?.semester?.holidays ?? [];
+    const holidayEntries = rawHolidays.map(h => typeof h === 'string' ? { date: h } : h);
+    const holidayMap = new Map(holidayEntries.map(h => [h.date, h.name ?? '祝日']));
+    const csv = toCSV(effectiveEntries, { holidayMap });
     const ts = formatDate(new Date()).replace(/-/g, "");
     downloadFile(csv, `timetable_${ts}.csv`, "text/csv;charset=utf-8;");
-  }, [effectiveEntries]);
+  }, [effectiveEntries, currentFile]);
 
   // ─── Update Settings (base rebuild) ─────────────────────────
   const updateSettings = useCallback((newSemester: SemesterMeta, applyFrom?: string) => {
@@ -473,10 +481,46 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     const merged = [...generated, ...extras].sort(classSort);
     return merged.length > 0 ? merged : VALID_CLASSES;
   })();
-  const holidays = currentFile?.semester?.holidays ?? [];
+  // 旧形式対応: string[]をHolidayEntry[]に変換
+  const holidays: import("@/lib/timetableFile").HolidayEntry[] = (() => {
+    const raw = currentFile?.semester?.holidays;
+    if (!raw || raw.length === 0) return [];
+    return raw.map(h => typeof h === 'string' ? { date: h } : h);
+  })();
 
-  // ─── Update holidays ──────────────────────────────────────────────────
-  const updateHolidays = useCallback((newHolidays: string[]) => {
+  // ─── Auto-save to localStorage ──────────────────────────────
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!isLoaded || !currentFile) return;
+    // Debounce: wait 2s after last change before saving
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      try {
+        const fileToSave: TimetableFile = {
+          ...currentFile,
+          ops: allOps,
+          meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+        };
+        const serialized = serializeTimetableFile(fileToSave);
+        localStorage.setItem(LS_KEY, serialized);
+        localStorage.setItem(LS_META_KEY, JSON.stringify({
+          title: fileToSave.meta.title,
+          savedAt: new Date().toISOString(),
+          filename: loadedFileName,
+        }));
+      } catch (e) {
+        // localStorage full or unavailable - silently ignore
+        console.warn("Auto-save failed:", e);
+      }
+    }, 2000);
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [isLoaded, currentFile, allOps, loadedFileName]);
+
+  // ─── Update holidays ──────────────────────────────────────
+  const updateHolidays = useCallback((newHolidays: import("@/lib/timetableFile").HolidayEntry[]) => {
     if (!currentFile) return;
     const updatedSemester: SemesterMeta = { ...currentFile.semester!, holidays: newHolidays };
     const updatedFile: TimetableFile = {
