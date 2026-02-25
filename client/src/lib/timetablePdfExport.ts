@@ -163,8 +163,8 @@ export async function exportTimetablePdf(opts: PdfExportOptions): Promise<void> 
   // Layout constants
   const margin = 8;
   const contentW = pageW - margin * 2;
-  const headerH = 8;
-  const periodColW = 8;
+  const headerH = 10;
+  const periodColW = 12;
   const tableTop = margin + headerH + 2;
   const tableH = pageH - tableTop - margin;
   const rowH = tableH / 6;
@@ -188,29 +188,29 @@ export async function exportTimetablePdf(opts: PdfExportOptions): Promise<void> 
     const subTitle = [semLabel, weekLabel, schoolName].filter(Boolean).join(" / ");
 
     // ── Header ──────────────────────────────────────────────
-    doc.setFontSize(9);
+    doc.setFontSize(13);
     doc.setTextColor(20, 20, 20);
-    doc.text(fullTitle, margin, margin + 4);
+    doc.text(fullTitle, margin, margin + 6);
 
-    doc.setFontSize(6.5);
+    doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
-    doc.text(subTitle, margin + doc.getTextWidth(fullTitle) + 2, margin + 4);
+    doc.text(subTitle, margin + doc.getTextWidth(fullTitle) + 3, margin + 6);
 
     // Page number
-    doc.setFontSize(6);
+    doc.setFontSize(8);
     doc.setTextColor(180, 180, 180);
-    doc.text(`${wIdx + 1}/${weeksToPrint.length}`, pageW - margin, margin + 4, { align: "right" });
+    doc.text(`${wIdx + 1}/${weeksToPrint.length}`, pageW - margin, margin + 6, { align: "right" });
 
     // Header underline
     doc.setDrawColor(40, 40, 40);
     doc.setLineWidth(0.4);
-    doc.line(margin, margin + 5.5, pageW - margin, margin + 5.5);
+    doc.line(margin, margin + 7.5, pageW - margin, margin + 7.5);
 
-    // ── Column widths ────────────────────────────────────────
+    // ── Column widths ──────────────────────────────────────────────────────
     const dayColW = (contentW - periodColW) / weekDates.length;
 
     // ── Day header row ───────────────────────────────────────
-    const dayHeaderH = 7;
+    const dayHeaderH = 11;
     const dayHeaderTop = tableTop;
 
     // Period col header
@@ -218,9 +218,9 @@ export async function exportTimetablePdf(opts: PdfExportOptions): Promise<void> 
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.2);
     doc.rect(margin, dayHeaderTop, periodColW, dayHeaderH, "FD");
-    doc.setFontSize(5.5);
+    doc.setFontSize(8);
     doc.setTextColor(120, 120, 120);
-    doc.text("時限", margin + periodColW / 2, dayHeaderTop + dayHeaderH / 2 + 1.5, { align: "center" });
+    doc.text("時限", margin + periodColW / 2, dayHeaderTop + dayHeaderH / 2 + 2.5, { align: "center" });
 
     for (let dIdx = 0; dIdx < weekDates.length; dIdx++) {
       const date = weekDates[dIdx];
@@ -233,18 +233,17 @@ export async function exportTimetablePdf(opts: PdfExportOptions): Promise<void> 
       doc.setFillColor(...(isHoliday ? [254, 242, 242] as [number, number, number] : [240, 240, 240] as [number, number, number]));
       doc.rect(x, dayHeaderTop, dayColW, dayHeaderH, "FD");
 
-      doc.setFontSize(7);
-      doc.setTextColor(isHoliday ? 220 : 30, isHoliday ? 30 : 30, isHoliday ? 30 : 30);
+      doc.setFontSize(11);
+      doc.setTextColor(isHoliday ? 200 : 30, isHoliday ? 30 : 30, isHoliday ? 30 : 30);
       const dateStr = `${d.getMonth() + 1}/${d.getDate()}（${dayLabel}）`;
-      doc.text(dateStr, x + dayColW / 2, dayHeaderTop + 3.5, { align: "center" });
+      doc.text(dateStr, x + dayColW / 2, dayHeaderTop + 5, { align: "center" });
 
       if (isHoliday) {
         const hName = holidayNameMap.get(date) ?? "休校";
-        doc.setFontSize(5);
+        doc.setFontSize(7.5);
         doc.setTextColor(180, 30, 30);
-        doc.text(hName, x + dayColW / 2, dayHeaderTop + 5.8, { align: "center" });
-      }
-    }
+        doc.text(hName, x + dayColW / 2, dayHeaderTop + 8.5, { align: "center" });
+      }   }
 
     // ── Period rows ──────────────────────────────────────────
     const gridTop = dayHeaderTop + dayHeaderH;
@@ -258,13 +257,13 @@ export async function exportTimetablePdf(opts: PdfExportOptions): Promise<void> 
       doc.setFillColor(248, 248, 248);
       doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.2);
-      doc.rect(margin, rowTop, periodColW, periodRowH, "FD");
-      doc.setFontSize(7);
+       doc.rect(margin, rowTop, periodColW, periodRowH, "FD");
+      doc.setFontSize(14);
       doc.setTextColor(80, 80, 80);
-      doc.text(`${period}`, margin + periodColW / 2, rowTop + periodRowH / 2 + 0.5, { align: "center" });
-      doc.setFontSize(5);
+      doc.text(`${period}`, margin + periodColW / 2, rowTop + periodRowH / 2 + 1.5, { align: "center" });
+      doc.setFontSize(8);
       doc.setTextColor(160, 160, 160);
-      doc.text("限", margin + periodColW / 2, rowTop + periodRowH / 2 + 3.5, { align: "center" });
+      doc.text("限", margin + periodColW / 2, rowTop + periodRowH / 2 + 6, { align: "center" });
 
       // Day cells
       for (let dIdx = 0; dIdx < weekDates.length; dIdx++) {
@@ -294,31 +293,31 @@ export async function exportTimetablePdf(opts: PdfExportOptions): Promise<void> 
 
         if (displayClass) {
           const textRgb = parseColor(colors?.text);
-          doc.setFontSize(7);
+          doc.setFontSize(14);
           doc.setTextColor(...textRgb);
           // Wrap long class names
-          const maxW = dayColW - 2;
+          const maxW = dayColW - 4;
           const lines = doc.splitTextToSize(displayClass, maxW);
-          const lineH = 3;
+          const lineH = 6;
           const totalH = lines.length * lineH;
-          const startY = rowTop + (periodRowH - totalH) / 2 + lineH * 0.8;
+          const startY = rowTop + (periodRowH - totalH) / 2 + lineH * 0.85;
           lines.forEach((line: string, i: number) => {
             doc.text(line, x + dayColW / 2, startY + i * lineH, { align: "center" });
           });
 
           if (showReason && displayReason) {
-            doc.setFontSize(5);
+            doc.setFontSize(8);
             doc.setTextColor(120, 120, 120);
             const reasonLines = doc.splitTextToSize(displayReason, maxW);
-            const reasonY = startY + lines.length * lineH + 0.5;
+            const reasonY = startY + lines.length * lineH + 1.5;
             reasonLines.slice(0, 2).forEach((line: string, i: number) => {
-              doc.text(line, x + dayColW / 2, reasonY + i * 2.5, { align: "center" });
+              doc.text(line, x + dayColW / 2, reasonY + i * 3.5, { align: "center" });
             });
           }
         } else if (showEmptyCells && !isHoliday) {
-          doc.setFontSize(6);
+          doc.setFontSize(10);
           doc.setTextColor(200, 200, 200);
-          doc.text("—", x + dayColW / 2, rowTop + periodRowH / 2 + 1.5, { align: "center" });
+          doc.text("—", x + dayColW / 2, rowTop + periodRowH / 2 + 2.5, { align: "center" });
         }
       }
     }
