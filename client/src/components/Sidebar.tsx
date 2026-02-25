@@ -1,8 +1,8 @@
 // Sidebar.tsx
 // Design: Swiss Grid × Japanese Functional Design
-// Left sidebar: file load, navigation, undo/redo, export
+// Left sidebar: new/open/save, navigation, undo/redo, export, color settings
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   CalendarDays,
   ChevronLeft,
@@ -10,24 +10,29 @@ import {
   Clock,
   Download,
   FileJson,
+  FilePlus,
   FileSpreadsheet,
+  FolderOpen,
   History,
   Loader2,
   RotateCcw,
   RotateCw,
+  Save,
   TableProperties,
-  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTimetable, type ActiveTab } from "@/contexts/TimetableContext";
-import { formatDateJP } from "@/lib/timetable";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Separator } from "@/components/ui/separator";
+import { ColorSettingsDialog } from "@/components/ColorSettingsDialog";
+import { NewFileDialog } from "@/components/NewFileDialog";
+import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 
 export function Sidebar() {
   const {
-    isLoaded, loadZIP, loadedFileName,
+    isLoaded, isDirty, loadedFileName, currentFile,
+    loadFromNativeFile, loadFromZip,
+    saveFile,
     activeTab, setActiveTab,
     currentWeekMonday, navigateWeek, goToToday,
     canUndo, canRedo, undo, redo,
@@ -38,16 +43,43 @@ export function Sidebar() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [showNewDialog, setShowNewDialog] = useState(false);
+
+  // Keyboard shortcut: Ctrl/Cmd+S to save
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        if (isLoaded) saveFile();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+        e.preventDefault();
+        if (canUndo) undo();
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === "y" || (e.shiftKey && e.key === "z"))) {
+        e.preventDefault();
+        if (canRedo) redo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isLoaded, saveFile, canUndo, undo, canRedo, redo]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setLoading(true);
     try {
-      const result = await loadZIP(file);
-      toast.success(`読み込み完了: ${result.loadedFiles.length}ファイル`);
-      if (result.warnings.length > 0) {
-        result.warnings.forEach(w => toast.warning(w));
+      if (file.name.endsWith(TIMETABLE_FILE_EXT)) {
+        const result = await loadFromNativeFile(file);
+        toast.success(`読み込み完了: ${file.name}`);
+        result.warnings.forEach((w: string) => toast.warning(w));
+      } else if (file.name.endsWith(".zip")) {
+        const result = await loadFromZip(file);
+        toast.success(`ZIPから読み込み完了: ${result.loadedFiles.length}ファイル`);
+        result.warnings.forEach((w: string) => toast.warning(w));
+      } else {
+        toast.error("対応ファイル: .timetable または .zip");
       }
     } catch (err) {
       toast.error(`読み込みエラー: ${String(err)}`);
@@ -60,14 +92,12 @@ export function Sidebar() {
   const handleLoadSample = async () => {
     setLoading(true);
     try {
-      const res = await fetch('https://files.manuscdn.com/user_upload_by_module/session_file/310519663293463662/aEseOLQbmvrIqnRV.zip');
+      const res = await fetch('/sample_data.zip');
       const blob = await res.blob();
       const file = new File([blob], 'sample_data.zip', { type: 'application/zip' });
-      const result = await loadZIP(file);
+      const result = await loadFromZip(file);
       toast.success(`サンプルデータ読み込み完了: ${result.loadedFiles.length}ファイル`);
-      if (result.warnings.length > 0) {
-        result.warnings.forEach(w => toast.warning(w));
-      }
+      result.warnings.forEach((w: string) => toast.warning(w));
     } catch (err) {
       toast.error(`読み込みエラー: ${String(err)}`);
     } finally {
@@ -78,22 +108,30 @@ export function Sidebar() {
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (!file || !file.name.endsWith(".zip")) {
-      toast.error("ZIPファイルをドロップしてください");
-      return;
-    }
+    if (!file) return;
     setLoading(true);
     try {
-      const result = await loadZIP(file);
-      toast.success(`読み込み完了: ${result.loadedFiles.length}ファイル`);
-      if (result.warnings.length > 0) {
-        result.warnings.forEach(w => toast.warning(w));
+      if (file.name.endsWith(TIMETABLE_FILE_EXT)) {
+        const result = await loadFromNativeFile(file);
+        toast.success(`読み込み完了: ${file.name}`);
+        result.warnings.forEach((w: string) => toast.warning(w));
+      } else if (file.name.endsWith(".zip")) {
+        const result = await loadFromZip(file);
+        toast.success(`ZIPから読み込み完了: ${result.loadedFiles.length}ファイル`);
+        result.warnings.forEach((w: string) => toast.warning(w));
+      } else {
+        toast.error("対応ファイル: .timetable または .zip");
       }
     } catch (err) {
       toast.error(`読み込みエラー: ${String(err)}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSave = () => {
+    saveFile();
+    toast.success("保存しました");
   };
 
   // Week label
@@ -120,54 +158,87 @@ export function Sidebar() {
           <div className="w-7 h-7 rounded bg-sidebar-primary flex items-center justify-center shrink-0">
             <CalendarDays size={14} className="text-sidebar-primary-foreground" />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-bold leading-tight text-sidebar-foreground">時間割管理</p>
             <p className="text-[10px] text-sidebar-foreground/50 leading-tight">Timetable Manager</p>
           </div>
         </div>
       </div>
 
-      {/* File Load */}
-      <div className="px-3 py-3 border-b border-sidebar-border">
+      {/* File Operations */}
+      <div className="px-3 py-3 border-b border-sidebar-border space-y-1.5">
         <input
           ref={fileInputRef}
           type="file"
-          accept=".zip"
+          accept={`${TIMETABLE_FILE_EXT},.zip`}
           className="hidden"
           onChange={handleFileChange}
         />
+
+        {/* New */}
+        <button
+          onClick={() => setShowNewDialog(true)}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                     bg-sidebar-primary/90 hover:bg-sidebar-primary text-sidebar-primary-foreground
+                     text-xs font-medium transition-colors duration-150"
+        >
+          <FilePlus size={13} />
+          新規作成
+        </button>
+
+        {/* Open */}
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md
-                     bg-sidebar-accent hover:bg-sidebar-primary/20 text-sidebar-foreground
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                     bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground
                      text-xs font-medium transition-colors duration-150 border border-sidebar-border"
         >
-          {loading ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <Upload size={13} />
-          )}
-          {loading ? "読み込み中..." : "ZIPを開く..."}
+          {loading ? <Loader2 size={13} className="animate-spin" /> : <FolderOpen size={13} />}
+          {loading ? "読み込み中..." : "ファイルを開く"}
         </button>
+
+        {/* Save */}
+        {isLoaded && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={handleSave}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors duration-150
+                  ${isDirty
+                    ? "bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40"
+                    : "bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground/60 border border-sidebar-border"
+                  }`}
+              >
+                <Save size={13} />
+                <span>{isDirty ? "保存（未保存あり）" : "保存済み"}</span>
+                {isDirty && (
+                  <span className="ml-auto w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p className="text-xs">Ctrl+S / ⌘S</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* File info */}
         {loadedFileName && (
-          <p className="mt-1.5 text-[10px] text-sidebar-foreground/50 truncate px-1" title={loadedFileName}>
-            📄 {loadedFileName}
+          <p className="text-[10px] text-sidebar-foreground/40 truncate px-1" title={loadedFileName}>
+            {currentFile?.meta.title ?? loadedFileName}
           </p>
         )}
-        {!loadedFileName && (
-          <>
-            <p className="mt-1.5 text-[10px] text-sidebar-foreground/40 text-center">
-              またはドラッグ＆ドロップ
-            </p>
-            <button
-              onClick={handleLoadSample}
-              disabled={loading}
-              className="mt-1 w-full text-[10px] text-sidebar-primary/70 hover:text-sidebar-primary underline text-center transition-colors"
-            >
-              サンプルデータを読み込む
-            </button>
-          </>
+
+        {/* Sample data */}
+        {!isLoaded && (
+          <button
+            onClick={handleLoadSample}
+            disabled={loading}
+            className="w-full text-[10px] text-sidebar-primary/70 hover:text-sidebar-primary underline text-center transition-colors mt-1"
+          >
+            サンプルデータを読み込む
+          </button>
         )}
       </div>
 
@@ -255,18 +326,13 @@ export function Sidebar() {
             </TooltipContent>
           </Tooltip>
         </div>
-        {pendingOps.length > 0 && (
-          <p className="mt-1.5 text-[10px] text-amber-400 text-center">
-            未保存の変更: {pendingOps.length}件
-          </p>
-        )}
       </div>
 
       {/* Export */}
       {isLoaded && (
         <div className="px-3 py-3 border-t border-sidebar-border">
           <p className="text-[10px] text-sidebar-foreground/50 mb-1.5 font-medium uppercase tracking-wider">エクスポート</p>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <button
               onClick={exportEffective}
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]
@@ -294,6 +360,14 @@ export function Sidebar() {
           </div>
         </div>
       )}
+
+      {/* Settings */}
+      <div className="px-3 py-3 border-t border-sidebar-border">
+        <ColorSettingsDialog />
+      </div>
+
+      {/* New File Dialog */}
+      <NewFileDialog open={showNewDialog} onClose={() => setShowNewDialog(false)} />
     </aside>
   );
 }

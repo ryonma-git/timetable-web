@@ -1,6 +1,6 @@
 // Home.tsx
 // Design: Swiss Grid × Japanese Functional Design
-// Main layout: 3-pane (sidebar + content + inspector)
+// Main layout: 3-pane (sidebar | grid | inspector)
 
 import { useEffect } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
@@ -8,91 +8,75 @@ import { Sidebar } from "@/components/Sidebar";
 import { WeekGrid } from "@/components/WeekGrid";
 import { Inspector } from "@/components/Inspector";
 import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
+import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
 
 export default function Home() {
-  const { activeTab, undo, redo, canUndo, canRedo } = useTimetable();
+  const { activeTab, isLoaded, currentFile, isDirty } = useTimetable();
 
-  // Keyboard shortcuts
+  // Update page title
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.includes("Mac");
-      const mod = isMac ? e.metaKey : e.ctrlKey;
-      if (!mod) return;
+    const title = currentFile?.meta.title ?? "時間割管理";
+    document.title = isDirty ? `● ${title}` : title;
+  }, [currentFile, isDirty]);
 
-      if (e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        if (canUndo) undo();
-      } else if ((e.key === "z" && e.shiftKey) || e.key === "y") {
-        e.preventDefault();
-        if (canRedo) redo();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [undo, redo, canUndo, canRedo]);
-
-  const showInspector = activeTab === "grid";
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
-    <div className="h-screen flex overflow-hidden bg-background">
-      {/* Left Sidebar */}
+    <div className="flex h-screen overflow-hidden bg-background">
+      {/* Sidebar */}
       <Sidebar />
 
-      {/* Main Content */}
+      {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="h-10 border-b border-border flex items-center px-4 shrink-0 bg-card">
-          <div className="flex items-center gap-1">
-            {[
-              { id: "grid" as const, label: "週間時間割" },
-              { id: "stats" as const, label: "クラス別集計" },
-              { id: "history" as const, label: "変更履歴" },
-              { id: "audit" as const, label: "適用ログ" },
-            ].map(tab => (
-              <TabButton
-                key={tab.id}
-                id={tab.id}
-                label={tab.label}
-                active={activeTab === tab.id}
-              />
-            ))}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-background/95 backdrop-blur-sm shrink-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm font-bold text-foreground">
+              {currentFile?.meta.title ?? "時間割管理"}
+            </h1>
+            {currentFile?.meta.school && (
+              <span className="text-xs text-muted-foreground">{currentFile.meta.school}</span>
+            )}
+            {currentFile?.meta.year && (
+              <span className="text-xs bg-muted text-muted-foreground rounded px-1.5 py-0.5">
+                {currentFile.meta.year}
+              </span>
+            )}
+            {isDirty && (
+              <span className="text-xs bg-amber-100 text-amber-700 rounded px-1.5 py-0.5 border border-amber-200">
+                未保存
+              </span>
+            )}
           </div>
-        </header>
+          {isLoaded && activeTab === "grid" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrint}
+              className="h-7 gap-1.5 text-xs print:hidden"
+            >
+              <Printer size={12} />
+              印刷
+            </Button>
+          )}
+        </div>
 
         {/* Content area */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Main panel */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {activeTab === "grid" && <WeekGrid />}
-            {activeTab === "stats" && <StatsView />}
-            {activeTab === "history" && <HistoryView />}
-            {activeTab === "audit" && <AuditView />}
-          </div>
-
-          {/* Right Inspector (grid tab only) */}
-          {showInspector && <Inspector />}
+          {activeTab === "grid" && (
+            <>
+              <WeekGrid />
+              <Inspector />
+            </>
+          )}
+          {activeTab === "stats" && <StatsView />}
+          {activeTab === "history" && <HistoryView />}
+          {activeTab === "audit" && <AuditView />}
         </div>
       </main>
     </div>
-  );
-}
-
-function TabButton({
-  id, label, active,
-}: {
-  id: string; label: string; active: boolean;
-}) {
-  const { setActiveTab } = useTimetable();
-  return (
-    <button
-      onClick={() => setActiveTab(id as any)}
-      className={`px-3 py-1 text-xs rounded transition-colors ${
-        active
-          ? "bg-primary text-primary-foreground font-medium"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-      }`}
-    >
-      {label}
-    </button>
   );
 }

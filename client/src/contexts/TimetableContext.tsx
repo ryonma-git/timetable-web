@@ -1,6 +1,7 @@
 // TimetableContext.tsx
 // Design: Swiss Grid × Japanese Functional Design
 // Global state management for timetable app
+// Supports: .timetable (native), ZIP (legacy), new file creation
 
 import React, { createContext, useCallback, useContext, useState } from "react";
 import {
@@ -19,7 +20,16 @@ import {
   toCSV,
   todayISO,
 } from "@/lib/timetable";
-import { loadZIPFile } from "@/lib/zipLoader";
+import {
+  TimetableFile,
+  LoadResult,
+  ZipImportResult,
+  deserializeTimetableFile,
+  serializeTimetableFile,
+  downloadTimetableFile,
+  importFromZip,
+  TIMETABLE_FILE_EXT,
+} from "@/lib/timetableFile";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -40,8 +50,13 @@ interface TimetableContextValue {
   auditLog: AuditEntry[];
   overrideMeta: Partial<OverrideBundle>;
 
-  // UI State
+  // File state
   isLoaded: boolean;
+  isDirty: boolean;           // unsaved changes
+  currentFile: TimetableFile | null;
+  loadedFileName: string;
+
+  // UI State
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   currentWeekMonday: Date;
@@ -61,13 +76,20 @@ interface TimetableContextValue {
   undo: () => void;
   redo: () => void;
 
-  // Actions
-  loadZIP: (file: File) => Promise<{ warnings: string[]; loadedFiles: string[] }>;
+  // File Actions
+  loadTimetableFile: (file: TimetableFile) => Promise<void>;
+  loadFromNativeFile: (file: File) => Promise<{ warnings: string[] }>;
+  loadFromZip: (file: File) => Promise<{ warnings: string[]; loadedFiles: string[] }>;
+  saveFile: () => void;
+  saveFileAs: (filename?: string) => void;
+
+  // Data Actions
   applyOps: (ops: OverrideOp[], description: string) => AuditEntry[];
+
+  // Export
   exportEffective: () => void;
   exportOverride: () => void;
   exportCSV: () => void;
-  loadedFileName: string;
 }
 
 // ─── Context ─────────────────────────────────────────────────
@@ -82,6 +104,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [overrideMeta, setOverrideMeta] = useState<Partial<OverrideBundle>>({});
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [currentFile, setCurrentFile] = useState<TimetableFile | null>(null);
   const [loadedFileName, setLoadedFileName] = useState("");
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("grid");
@@ -108,37 +132,82 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setCurrentWeekMonday(getMondayOfWeek(new Date()));
   }, []);
 
-  // ─── Load ZIP ────────────────────────────────────────────────
-  const loadZIP = useCallback(async (file: File) => {
-    const result = await loadZIPFile(file);
-    setLoadedFileName(file.name);
-
-    const base = result.base.length > 0 ? result.base : result.effective;
+  // ─── Internal: set loaded state ─────────────────────────────
+  const _setLoadedState = useCallback((
+    file: TimetableFile,
+    base: TimetableEntry[],
+    effective: TimetableEntry[],
+    ops: OverrideOp[],
+    audit: AuditEntry[],
+    filename: string,
+    dirty = false,
+  ) => {
+    setCurrentFile(file);
     setBaseEntries(base);
-
-    if (result.overrideBundle?.ops?.length) {
-      const { effective, audit } = applyOverrides(base, result.overrideBundle.ops);
-      setEffectiveEntries(effective);
-      setAllOps(result.overrideBundle.ops);
-      setPendingOps([]);
-      setAuditLog(audit);
-      setOverrideMeta({
-        base: result.overrideBundle.base,
-        notes: result.overrideBundle.notes,
-      });
-    } else {
-      setEffectiveEntries(result.effective.length > 0 ? result.effective : base);
-      setAllOps([]);
-      setPendingOps([]);
-      setAuditLog([]);
-    }
-
+    setEffectiveEntries(effective);
+    setAllOps(ops);
+    setPendingOps([]);
+    setAuditLog(audit);
+    setOverrideMeta({
+      base: file.overrideMeta?.baseRef,
+      notes: file.overrideMeta?.notes,
+    });
     setIsLoaded(true);
+    setIsDirty(dirty);
+    setLoadedFileName(filename);
     setUndoStack([]);
     setRedoStack([]);
-
-    return { warnings: result.warnings, loadedFiles: result.loadedFiles };
   }, []);
+
+  // ─── Load from TimetableFile object (new/programmatic) ──────
+  const loadTimetableFile = useCallback(async (file: TimetableFile) => {
+    const { effective, audit } = applyOverrides(file.base, file.ops ?? []);
+    const filename = `${file.meta.title}${TIMETABLE_FILE_EXT}`;
+    _setLoadedState(file, file.base, effective, file.ops ?? [], audit, filename, true);
+  }, [_setLoadedState]);
+
+  // ─── Load from .timetable file ───────────────────────────────
+  const loadFromNativeFile = useCallback(async (file: File): Promise<{ warnings: string[] }> => {
+    const text = await file.text();
+    const result: LoadResult = deserializeTimetableFile(text);
+    const { effective, audit } = applyOverrides(result.file.base, result.file.ops ?? []);
+    _setLoadedState(result.file, result.file.base, effective, result.file.ops ?? [], audit, file.name, false);
+    return { warnings: result.warnings };
+  }, [_setLoadedState]);
+
+  // ─── Load from ZIP (legacy) ──────────────────────────────────
+  const loadFromZip = useCallback(async (file: File): Promise<{ warnings: string[]; loadedFiles: string[] }> => {
+    const result: ZipImportResult = await importFromZip(file);
+    const { effective, audit } = applyOverrides(result.file.base, result.file.ops ?? []);
+    _setLoadedState(result.file, result.file.base, effective, result.file.ops ?? [], audit, file.name, true);
+    return { warnings: result.warnings, loadedFiles: result.loadedFiles };
+  }, [_setLoadedState]);
+
+  // ─── Save (overwrite) ────────────────────────────────────────
+  const saveFile = useCallback(() => {
+    if (!currentFile) return;
+    const updated: TimetableFile = {
+      ...currentFile,
+      ops: allOps,
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    downloadTimetableFile(updated, loadedFileName.endsWith(TIMETABLE_FILE_EXT) ? loadedFileName : undefined);
+    setCurrentFile(updated);
+    setIsDirty(false);
+  }, [currentFile, allOps, loadedFileName]);
+
+  // ─── Save As ─────────────────────────────────────────────────
+  const saveFileAs = useCallback((filename?: string) => {
+    if (!currentFile) return;
+    const updated: TimetableFile = {
+      ...currentFile,
+      ops: allOps,
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    downloadTimetableFile(updated, filename);
+    setCurrentFile(updated);
+    setIsDirty(false);
+  }, [currentFile, allOps]);
 
   // ─── Apply Ops ───────────────────────────────────────────────
   const applyOps = useCallback((ops: OverrideOp[], description: string): AuditEntry[] => {
@@ -157,6 +226,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setAuditLog(prev => [...prev, ...audit]);
     setUndoStack(prev => [...prev, histEntry]);
     setRedoStack([]);
+    setIsDirty(true);
 
     return audit;
   }, [allOps, baseEntries]);
@@ -178,6 +248,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setPendingOps(newPendingOps);
     setEffectiveEntries(effective);
     setAuditLog(audit);
+    setIsDirty(true);
   }, [undoStack, allOps, pendingOps, baseEntries]);
 
   // ─── Redo ────────────────────────────────────────────────────
@@ -196,6 +267,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setPendingOps(newPendingOps);
     setEffectiveEntries(effective);
     setAuditLog(audit);
+    setIsDirty(true);
   }, [redoStack, allOps, pendingOps, baseEntries]);
 
   // ─── Export ──────────────────────────────────────────────────
@@ -220,7 +292,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   return (
     <TimetableContext.Provider value={{
       baseEntries, effectiveEntries, pendingOps, allOps, auditLog, overrideMeta,
-      isLoaded, activeTab, setActiveTab,
+      isLoaded, isDirty, currentFile, loadedFileName,
+      activeTab, setActiveTab,
       currentWeekMonday, navigateWeek, goToToday,
       selectedCell, setSelectedCell,
       asOfDate, setAsOfDate, classStats,
@@ -228,9 +301,10 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       canUndo: undoStack.length > 0,
       canRedo: redoStack.length > 0,
       undo, redo,
-      loadZIP, applyOps,
+      loadTimetableFile, loadFromNativeFile, loadFromZip,
+      saveFile, saveFileAs,
+      applyOps,
       exportEffective, exportOverride, exportCSV,
-      loadedFileName,
     }}>
       {children}
     </TimetableContext.Provider>

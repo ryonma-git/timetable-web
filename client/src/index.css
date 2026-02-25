@@ -191,3 +191,81 @@
     background: oklch(0.6 0.02 264);
   }
 }
+
+/* ─── Print Styles ─────────────────────────────────────────── */
+@media print {
+  /* Hide non-essential UI */
+  aside,
+  .print\:hidden,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  /* Reset layout for print */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 10pt;
+  }
+
+  /* Full width main area */
+  main {
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* Top bar: show only title */
+  main > div:first-child {
+    border: none !important;
+    padding: 0 0 8pt 0 !important;
+    background: white !important;
+  }
+
+  /* Grid: full width, no overflow */
+  .flex-1.overflow-auto {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  table {
+    width: 100% !important;
+    min-width: unset !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    border: 0.5pt solid #ccc !important;
+    padding: 2pt 4pt !important;
+  }
+
+  /* Period cells: show colors in print */
+  .period-cell {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    height: auto !important;
+    min-height: 28pt !important;
+    padding: 2pt 4pt !important;
+  }
+
+  /* Today column: show amber highlight */
+  .bg-\[var\(--today-bg\)\]\/30 {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Page settings */
+  @page {
+    size: A4 landscape;
+    margin: 12mm 10mm;
+  }
+
+  /* Inspector: hide */
+  .border-l.border-border.flex.flex-col.bg-card {
+    display: none !important;
+  }
+
+  /* Filter bar: hide */
+  .mt-3.flex.items-center.gap-2 {
+    display: none !important;
+  }
+}

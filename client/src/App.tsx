@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { TimetableProvider } from "./contexts/TimetableContext";
+import { GradeColorProvider } from "./contexts/GradeColorContext";
 import Home from "./pages/Home";
 
 function Router() {
@@ -21,12 +22,14 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <TimetableProvider>
-          <TooltipProvider>
-            <Toaster richColors position="top-right" />
-            <Router />
-          </TooltipProvider>
-        </TimetableProvider>
+        <GradeColorProvider>
+          <TimetableProvider>
+            <TooltipProvider>
+              <Toaster richColors position="top-right" />
+              <Router />
+            </TooltipProvider>
+          </TimetableProvider>
+        </GradeColorProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
