@@ -49,7 +49,7 @@ export function Inspector() {
   const isHomeroomMode = mode === 'homeroom';
   const isMultiSubjectMode = mode === 'multi_subject';
   const hasSubjects = subjects.length > 0;
-  const showSubjectOp = hasSubjects || isHomeroomMode || isMultiSubjectMode;
+  const showSubjectOp = hasSubjects;
 
   // homeroomモードでは担任クラスを固定
   const homeroomClass = semester?.homeroomClass ?? null;
@@ -133,66 +133,51 @@ export function Inspector() {
       });
 
     } else if (opMode === "add") {
-      if (isHomeroomMode) {
-        // 担任モード: 教科のみ設定（クラスはhomeroomClassに固定、または未設定のまま）
-        if (!newSubject) {
-          toast.error("教科を選択してください");
-          return;
-        }
-        // homeroomClassが設定されている場合はclassも同時に設定、なければ教科のみ
-        const op = homeroomClass
-          ? buildAddOp(date, period, homeroomClass, reason || undefined, newSubject)
-          : buildSetSubjectOp(date, period, null, newSubject);
+      // 全モード共通: クラスと教科を独立に設定できる
+      // homeroomモード: newClassが空の場合はhomeroomClassを使用
+      const targetClass = newClass || (isHomeroomMode ? (homeroomClass ?? null) : null);
+      const targetSubject = newSubject || null;
 
-        const preview: ChangePreview = {
-          opType: "add",
-          description: `${formatDateJP(date)} ${period}限に「${newSubject}」を追加します`,
-          items: [{
-            label: "",
-            fromDate: date, fromPeriod: period, fromClass: currentClass,
-            toDate: date, toPeriod: period, toClass: homeroomClass ?? null, toReason: reason || undefined,
-          }],
-          warnings: [],
-        };
-
-        showConfirm("add", `追加: ${date} ${period}限 → ${newSubject}`, preview, () => {
-          const audit = applyOps([op], `追加: ${date} ${period}限 → ${newSubject}`);
-          const errors = audit.filter(a => a.level === "error");
-          if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
-          else toast.success(`追加しました: ${newSubject}`);
-          setNewSubject(""); setReason("");
-        });
-      } else {
-        // 通常モード: クラスを選択して追加
-        const targetClass = newClass;
-        if (!targetClass) {
-          toast.error("クラスを選択してください");
-          return;
-        }
-        const op = buildAddOp(date, period, targetClass, reason || undefined, newSubject || undefined);
-        const v = validateOp(op);
-        if (!v.valid) { toast.error(v.errors.join("\n")); return; }
-
-        const preview: ChangePreview = {
-          opType: "add",
-          description: `${formatDateJP(date)} ${period}限に授業を追加します`,
-          items: [{
-            label: "",
-            fromDate: date, fromPeriod: period, fromClass: currentClass,
-            toDate: date, toPeriod: period, toClass: targetClass, toReason: reason || undefined,
-          }],
-          warnings: v.warnings,
-        };
-
-        const displayLabel = newSubject ? `${targetClass} / ${newSubject}` : targetClass;
-        showConfirm("add", `追加: ${date} ${period}限 → ${displayLabel}`, preview, () => {
-          const audit = applyOps([op], `追加: ${date} ${period}限 → ${displayLabel}`);
-          const errors = audit.filter(a => a.level === "error");
-          if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
-          else toast.success(`追加しました: ${displayLabel}`);
-          setNewClass(""); setNewSubject(""); setReason("");
-        });
+      // クラスも教科もない場合はエラー
+      if (!targetClass && !targetSubject) {
+        toast.error("クラスまたは教科を指定してください");
+        return;
       }
+
+      let op;
+      if (targetClass && targetSubject) {
+        // クラスと教科両方設定
+        op = buildAddOp(date, period, targetClass, reason || undefined, targetSubject);
+      } else if (targetClass) {
+        // クラスのみ
+        op = buildAddOp(date, period, targetClass, reason || undefined, undefined);
+      } else {
+        // 教科のみ（クラスなし）
+        op = buildSetSubjectOp(date, period, currentClass, targetSubject);
+      }
+
+      const v = validateOp(op);
+      if (!v.valid) { toast.error(v.errors.join("\n")); return; }
+
+      const displayLabel = [targetClass, targetSubject].filter(Boolean).join(' / ');
+      const preview: ChangePreview = {
+        opType: "add",
+        description: `${formatDateJP(date)} ${period}限に授業を追加します`,
+        items: [{
+          label: "",
+          fromDate: date, fromPeriod: period, fromClass: currentClass,
+          toDate: date, toPeriod: period, toClass: targetClass, toReason: reason || undefined,
+        }],
+        warnings: v.warnings,
+      };
+
+      showConfirm("add", `追加: ${date} ${period}限 → ${displayLabel}`, preview, () => {
+        const audit = applyOps([op], `追加: ${date} ${period}限 → ${displayLabel}`);
+        const errors = audit.filter(a => a.level === "error");
+        if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
+        else toast.success(`追加しました: ${displayLabel}`);
+        setNewClass(""); setNewSubject(""); setReason("");
+      });
 
     } else if (opMode === "move") {
       if (!dstDate) { toast.error("移動先の日付を選択してください"); return; }
@@ -324,6 +309,9 @@ export function Inspector() {
     ...(showSubjectOp ? [{ id: "subject" as OpMode, label: "教科" }] : []),
   ];
 
+  // 追加モードの初期クラス値: homeroomモードは担任クラスをデフォルトに設定
+  const defaultAddClass = isHomeroomMode ? (homeroomClass ?? "") : "";
+
   // Color for current cell
   const cellColors = (() => {
     if ((isHomeroomMode || isMultiSubjectMode) && currentSubject) {
@@ -446,40 +434,41 @@ export function Inspector() {
             </div>
           )}
 
-          {/* Add mode */}
+          {/* Add mode: 全モードでクラス欄と教科欄を表示 */}
           {opMode === "add" && (
             <div className="space-y-2">
-              {/* Class field (hidden in homeroom mode) */}
-              {!isHomeroomMode && (
-                <div>
-                  <Label className="text-xs text-muted-foreground mb-1 block">クラス</Label>
-                  <Select value={newClass} onValueChange={setNewClass}>
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="クラスを選択..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {effectiveClassList.map(c => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {/* Homeroom mode: show fixed class info */}
-              {isHomeroomMode && homeroomClass && (
-                <div className="bg-muted/50 rounded p-2 text-xs text-muted-foreground">
-                  担任クラス: <span className="font-medium text-foreground">{homeroomClass}</span>
-                </div>
-              )}
-              {/* Subject field (shown when subjects are available) */}
-              {(hasSubjects || isHomeroomMode) && (
-                <SubjectField
-                  value={newSubject}
-                  onChange={setNewSubject}
-                  subjects={subjects.map(s => s.name)}
-                  required={isHomeroomMode}
-                />
-              )}
+              {/* Class field: 全モードで表示。homeroomモードは担任クラスをデフォルトに設定 */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  クラス
+                  {isHomeroomMode && <span className="ml-1 text-[10px] text-amber-600">(担任: {homeroomClass ?? '未設定'})</span>}
+                </Label>
+                <Select
+                  value={newClass || (isHomeroomMode ? (homeroomClass ?? "__none__") : "__none__")}
+                  onValueChange={v => setNewClass(v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="クラスを選択...　(空白=指定なし)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      <span className="text-muted-foreground">— 指定なし —</span>
+                    </SelectItem>
+                    {effectiveClassList.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Subject field: 全モードで表示（教科リストがある場合） */}
+              <SubjectField
+                value={newSubject}
+                onChange={setNewSubject}
+                subjects={subjects.map(s => s.name)}
+                required={isHomeroomMode && !newClass && !homeroomClass}
+                allowEmpty
+                emptyLabel="指定なし"
+              />
               <ReasonField reason={reason} setReason={setReason} />
             </div>
           )}

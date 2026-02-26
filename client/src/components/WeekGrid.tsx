@@ -63,7 +63,9 @@ export function WeekGrid() {
   const homeroomClass = semester?.homeroomClass ?? null;
   const isHomeroomMode = mode === 'homeroom';
   const isMultiSubjectMode = mode === 'multi_subject';
-  const showSubject = isHomeroomMode || isMultiSubjectMode || (mode === 'single_subject' && subjects.length > 0);
+  const isSingleSubjectMode = mode === 'single_subject';
+  // 教科情報がある場合は常に表示切り替えボタンを出す
+  const showSubject = subjects.length > 0;
 
   // クラス/教科メイン切替（デフォルト: homeroomモードは教科メイン、それ以外はクラスメイン）
   const [subjectFirst, setSubjectFirst] = useState<boolean>(isHomeroomMode);
@@ -243,7 +245,7 @@ export function WeekGrid() {
           </button>
         )}
 
-        {/* Subject/Class main toggle button */}
+        {/* Subject/Class main toggle button: 教科情報がある場合は常に表示 */}
         {showSubject && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -416,13 +418,17 @@ export function WeekGrid() {
                   const isFilteredBySubject = filterSubject !== null && slot.subject !== filterSubject;
                   const isFiltered = isFilteredByClass || isFilteredBySubject;
 
-                  // Color logic: homeroom/multi_subject → subject color, single_subject → class color
+                  // Color logic: subjectFirstに応じて教科色または学年色を適用
+                  // 教科メイン時: 教科色を優先、教科なしの場合は学年色へフォールバック
+                  // クラスメイン時: 学年色を優先、クラスなしの場合は教科色へフォールバック
                   const cellColors = (() => {
-                    if (isHomeroomMode || isMultiSubjectMode) {
+                    if (showSubject && subjectFirst) {
                       if (slot.subject) return getSubjectColor(slot.subject, subjectColors);
                       if (slot.class) return getClassColor(slot.class, gradeColors);
+                    } else {
+                      if (slot.class) return getClassColor(slot.class, gradeColors);
+                      if (slot.subject) return getSubjectColor(slot.subject, subjectColors);
                     }
-                    if (slot.class) return getClassColor(slot.class, gradeColors);
                     return null;
                   })();
 

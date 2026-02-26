@@ -5,21 +5,24 @@
 
 import { useMemo, useState } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
-import { ClassStats, todayISO, applyOverrides, calcClassStats, classSort } from "@/lib/timetable";
+import { ClassStats, SubjectStats, todayISO, applyOverrides, calcClassStats, classSort } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle, Info, BarChart3, CalendarRange, Download } from "lucide-react";
+import { AlertTriangle, CheckCircle, Info, BarChart3, CalendarRange, Download, BookOpen } from "lucide-react";
 import { useGradeColors } from "@/contexts/GradeColorContext";
-import { getClassColor } from "@/lib/gradeColors";
+import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { exportAnnualStatsCSV, exportAnnualStatsExcel, type AnnualClassStat } from "@/lib/exportUtils";
 
 // ─── Stats View ───────────────────────────────────────────────
 
 export function StatsView() {
-  const { classStats, asOfDate, setAsOfDate, isLoaded, currentFile } = useTimetable();
+  const { classStats, subjectStats, asOfDate, setAsOfDate, isLoaded, currentFile, mode } = useTimetable();
+  // 学級担任モードは教科集計をデフォルトに表示、教科担任モードはクラス集計をデフォルトに表示
+  const defaultStatsTab = mode === 'homeroom' ? 'subject' : 'class';
   const [viewMode, setViewMode] = useState<"semester" | "annual">("semester");
+  const [statsTab, setStatsTab] = useState<"class" | "subject">(defaultStatsTab);
 
   if (!isLoaded) {
     return <EmptyState message="ファイルを読み込むと集計が表示されます" />;
@@ -58,7 +61,43 @@ export function StatsView() {
       </div>
 
       {viewMode === "semester" && (
-        <SemesterStatsView classStats={classStats} asOfDate={asOfDate} setAsOfDate={setAsOfDate} />
+        <>
+          {/* Class / Subject tab switcher */}
+          <div className="flex items-center gap-1 mb-4">
+            <button
+              onClick={() => setStatsTab("class")}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors border",
+                statsTab === "class"
+                  ? "bg-sky-50 border-sky-300 text-sky-700"
+                  : "bg-background border-border text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <BarChart3 size={12} />
+              クラス別集計
+            </button>
+            {subjectStats.length > 0 && (
+              <button
+                onClick={() => setStatsTab("subject")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors border",
+                  statsTab === "subject"
+                    ? "bg-violet-50 border-violet-300 text-violet-700"
+                    : "bg-background border-border text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <BookOpen size={12} />
+                教科別集計
+              </button>
+            )}
+          </div>
+          {statsTab === "class" && (
+            <SemesterStatsView classStats={classStats} asOfDate={asOfDate} setAsOfDate={setAsOfDate} />
+          )}
+          {statsTab === "subject" && (
+            <SubjectStatsView subjectStats={subjectStats} asOfDate={asOfDate} setAsOfDate={setAsOfDate} />
+          )}
+        </>
       )}
       {viewMode === "annual" && (
         <AnnualStatsView />
@@ -369,6 +408,110 @@ function AnnualStatsView() {
           複数学期のデータがありません
         </div>
       )}
+    </>
+  );
+}
+
+// ─── Subject Stats View ─────────────────────────────────────
+
+function SubjectStatsView({
+  subjectStats,
+  asOfDate,
+  setAsOfDate,
+}: {
+  subjectStats: SubjectStats[];
+  asOfDate: string;
+  setAsOfDate: (d: string) => void;
+}) {
+  const { subjectColors } = useGradeColors();
+
+  if (subjectStats.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-sm text-muted-foreground">教科情報のあるコマがありません</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">授業変更パネルからコマに教科を設定すると集計されます</p>
+      </div>
+    );
+  }
+
+  const totalAll = subjectStats.reduce((s, c) => s + c.totalPeriods, 0);
+  const completedAll = subjectStats.reduce((s, c) => s + c.completedPeriods, 0);
+  const remainingAll = subjectStats.reduce((s, c) => s + c.remainingPeriods, 0);
+
+  return (
+    <>
+      {/* as_of date picker */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground whitespace-nowrap">集計基準日</Label>
+          <Input
+            type="date"
+            value={asOfDate}
+            onChange={e => setAsOfDate(e.target.value)}
+            className="h-8 w-40 text-sm"
+          />
+        </div>
+        <button
+          onClick={() => setAsOfDate(todayISO())}
+          className="text-xs text-primary hover:underline"
+        >
+          今日に戻す
+        </button>
+        <span className="text-xs text-muted-foreground">
+          ※ この日付以前を「実施済み」として集計します
+        </span>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {[
+          { label: "総コマ数", value: totalAll, color: "text-foreground", bg: "bg-muted/50" },
+          { label: "実施済み", value: completedAll, color: "text-emerald-700", bg: "bg-emerald-50" },
+          { label: "残り", value: remainingAll, color: "text-amber-700", bg: "bg-amber-50" },
+        ].map(card => (
+          <div key={card.label} className={cn("rounded-lg p-3 border border-border", card.bg)}>
+            <p className="text-xs text-muted-foreground">{card.label}</p>
+            <p className={cn("text-2xl font-bold tabular-nums", card.color)}>{card.value}</p>
+            <p className="text-[10px] text-muted-foreground">コマ</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Subject rows */}
+      <div className="space-y-2">
+        {subjectStats.map(s => {
+          const colors = getSubjectColor(s.subject, subjectColors);
+          const pct = Math.round(s.completionRate * 100);
+          const totalPct = totalAll > 0 ? Math.round(s.totalPeriods / totalAll * 100) : 0;
+          return (
+            <div key={s.subject} className="bg-card border border-border rounded-lg px-4 py-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full border"
+                    style={{ backgroundColor: colors.bg, borderColor: colors.border }}
+                  />
+                  <span className="text-sm font-medium" style={{ color: colors.text }}>{s.subject}</span>
+                  <span className="text-[10px] text-muted-foreground/60 bg-muted/50 rounded px-1">{totalPct}%</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs tabular-nums">
+                  <span className="text-muted-foreground">計 <span className="font-bold text-foreground">{s.totalPeriods}</span></span>
+                  <span className="text-emerald-600">済 <span className="font-bold">{s.completedPeriods}</span></span>
+                  <span className="text-amber-600">残 <span className="font-bold">{s.remainingPeriods}</span></span>
+                  <span className="text-muted-foreground font-medium">{pct}%</span>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${pct}%`, backgroundColor: colors.border }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </>
   );
 }

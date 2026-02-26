@@ -69,6 +69,12 @@ const DEFAULT_SUBJECTS: SubjectDef[] = [
   { name: "道徳", color: "#f59e0b" },
   { name: "総合", color: "#6366f1" },
   { name: "学活", color: "#64748b" },
+  { name: "図書", color: "#0891b2" },
+  { name: "クラブ", color: "#7c3aed" },
+  { name: "委員会", color: "#b45309" },
+  { name: "書写", color: "#374151" },
+  { name: "自習", color: "#6b7280" },
+  { name: "PC", color: "#0f766e" },
 ];
 
 // School type definitions
@@ -187,6 +193,10 @@ export function NewFileWizard({ open, onClose }: Props) {
   // Step 1: Mode selection
   const [selectedMode, setSelectedMode] = useState<TimetableMode>('single_subject');
   const [homeroomClass, setHomeroomClass] = useState("");
+  // 教科担任モード: 担当教科リスト（数で single/multi を自動判定）
+  const [subjectTeacherSubjects, setSubjectTeacherSubjects] = useState<SubjectDef[]>([]);
+  const [subjectTeacherInput, setSubjectTeacherInput] = useState("");
+  const [subjectTeacherError, setSubjectTeacherError] = useState("");
 
   // Step 2: Date range & weekend settings
   const [startDate, setStartDate] = useState(() => getSemesterDefaults(academicYear, 1).start);
@@ -234,6 +244,7 @@ export function NewFileWizard({ open, onClose }: Props) {
   const schoolTypeInfo = SCHOOL_TYPES.find(s => s.value === schoolType) ?? SCHOOL_TYPES[0];
   const grades = schoolTypeInfo.grades;
   const isHomeroomMode = selectedMode === 'homeroom';
+  const isSubjectTeacherMode = selectedMode === 'single_subject' || selectedMode === 'multi_subject';
   // Total steps: homeroom has 5, others have 4
   const totalSteps = isHomeroomMode ? 5 : 4;
   // Confirmation step number
@@ -410,6 +421,23 @@ export function NewFileWizard({ open, onClose }: Props) {
     : `${semesterNumber}学期`;
   const title = `${academicYear}年度 ${semesterLabel}${school ? ` (${school})` : ""}`;
 
+  // 教科担任モード: 担当教科を追加
+  const addSubjectTeacherSubject = (name?: string) => {
+    const raw = (name ?? subjectTeacherInput).trim();
+    if (!raw) return;
+    if (subjectTeacherSubjects.some(s => s.name === raw)) {
+      if (!name) setSubjectTeacherError("すでに追加されています");
+      return;
+    }
+    const defaultColor = DEFAULT_SUBJECTS.find(s => s.name === raw)?.color;
+    setSubjectTeacherSubjects(prev => [...prev, { name: raw, color: defaultColor }]);
+    if (!name) { setSubjectTeacherInput(""); setSubjectTeacherError(""); }
+  };
+
+  const removeSubjectTeacherSubject = (name: string) => {
+    setSubjectTeacherSubjects(prev => prev.filter(s => s.name !== name));
+  };
+
   const handleCreate = async () => {
     setLoading(true);
     try {
@@ -457,17 +485,13 @@ export function NewFileWizard({ open, onClose }: Props) {
       // Set mode on meta
       file.meta.mode = selectedMode;
 
-      // Set subjects (for homeroom mode: use the subjects list; for others: empty)
+      // Set subjects
       if (isHomeroomMode) {
-        // Only include subjects that are actually used in the schedule
-        const usedSubjectNames = new Set<string>();
-        if (effectiveSubjectSchedule) {
-          Object.values(effectiveSubjectSchedule).forEach(day => {
-            Object.values(day).forEach(s => { if (s) usedSubjectNames.add(s); });
-          });
-        }
-        // Include all subjects (even unused ones, so user can assign later)
         file.subjects = subjects;
+      } else if (isSubjectTeacherMode && subjectTeacherSubjects.length > 0) {
+        file.subjects = subjectTeacherSubjects;
+        // 教科数で内部モードを自動判定
+        file.meta.mode = subjectTeacherSubjects.length === 1 ? 'single_subject' : 'multi_subject';
       }
 
       const semester: SemesterMeta = {
@@ -618,12 +642,12 @@ export function NewFileWizard({ open, onClose }: Props) {
                 {[
                   {
                     value: 'single_subject' as TimetableMode,
-                    label: '教科担任モード（従来）',
-                    desc: '各コマにクラスを割り当てる。複数クラスを担当する教科担任向け。',
+                    label: '教科担任モード',
+                    desc: '複数クラスを担当する教科担任向け。各コマにクラスを割り当て、担当教科を登録できます。',
                   },
                   {
                     value: 'homeroom' as TimetableMode,
-                    label: '担任モード',
+                    label: '学級担任モード',
                     desc: '担任クラスを固定し、各コマに教科名を表示する。学級担任向け。',
                   },
                 ].map(m => (
@@ -648,6 +672,71 @@ export function NewFileWizard({ open, onClose }: Props) {
                   </div>
                 ))}
               </div>
+
+              {/* 教科担任モード: 担当教科設定 */}
+              {isSubjectTeacherMode && (
+                <div className="space-y-2 pl-1 pt-1">
+                  <Label className="text-xs text-muted-foreground">担当教科 <span className="text-muted-foreground font-normal">(任意)</span></Label>
+                  <p className="text-[10px] text-muted-foreground/70">
+                    担当教科を登録すると、コマに教科情報を表示できます。1教科の場合は全コマに自動適用されます。
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 p-2 border border-border rounded-lg bg-muted/20 min-h-[36px]">
+                    {subjectTeacherSubjects.map(s => (
+                      <span
+                        key={s.name}
+                        className="flex items-center gap-1 text-[11px] rounded px-2 py-0.5 font-medium cursor-pointer hover:opacity-70 transition-opacity"
+                        style={{
+                          backgroundColor: s.color ? `${s.color}20` : '#f0f0f0',
+                          color: s.color ?? '#666',
+                          border: `1px solid ${s.color ?? '#ccc'}50`,
+                        }}
+                        title="クリックで削除"
+                        onClick={() => removeSubjectTeacherSubject(s.name)}
+                      >
+                        {s.name} <X size={9} />
+                      </span>
+                    ))}
+                    {subjectTeacherSubjects.length === 0 && (
+                      <span className="text-[10px] text-muted-foreground/40 self-center">教科を追加してください</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Select
+                      value=""
+                      onValueChange={v => v && addSubjectTeacherSubject(v)}
+                    >
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="デフォルト教科から選択..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-48">
+                        {DEFAULT_SUBJECTS.filter(s => !subjectTeacherSubjects.some(x => x.name === s.name)).map(s => (
+                          <SelectItem key={s.name} value={s.name} className="text-xs">
+                            <span style={{ color: s.color }}>{s.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={subjectTeacherInput}
+                      onChange={e => { setSubjectTeacherInput(e.target.value); setSubjectTeacherError(""); }}
+                      onKeyDown={e => e.key === "Enter" && addSubjectTeacherSubject()}
+                      placeholder="リストにない教科を追加..."
+                      className="h-8 text-xs flex-1"
+                    />
+                    <Button size="sm" variant="outline" className="gap-1 text-xs h-8" onClick={() => addSubjectTeacherSubject()}>
+                      <Plus size={11} />追加
+                    </Button>
+                  </div>
+                  {subjectTeacherError && <p className="text-xs text-red-500">{subjectTeacherError}</p>}
+                  {subjectTeacherSubjects.length >= 2 && (
+                    <p className="text-[10px] text-primary/70 bg-primary/5 rounded px-2 py-1">
+                      ✓ 担当教科が2つ以上あるため、複数教科担任として処理されます
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Homeroom class selection */}
               {isHomeroomMode && (
@@ -1216,9 +1305,9 @@ export function NewFileWizard({ open, onClose }: Props) {
               <div className="bg-card border border-border rounded-lg p-3">
                 <p className="text-xs text-muted-foreground mb-1">使用モード</p>
                 <p className="text-sm font-semibold">
-                  {selectedMode === 'single_subject' && '教科担任モード（従来）'}
-                  {selectedMode === 'homeroom' && `担任モード${homeroomClass ? ` — 担任クラス: ${homeroomClass}` : ''}`}
-                  {selectedMode === 'multi_subject' && '複数教科モード'}
+                  {selectedMode === 'single_subject' && `教科担任モード${subjectTeacherSubjects.length > 0 ? ` — 担当: ${subjectTeacherSubjects.map(s => s.name).join('・')}` : ''}`}
+                  {selectedMode === 'homeroom' && `学級担任モード${homeroomClass ? ` — 担任クラス: ${homeroomClass}` : ''}`}
+                  {selectedMode === 'multi_subject' && '複数教科担任モード'}
                 </p>
               </div>
 
@@ -1306,6 +1395,28 @@ export function NewFileWizard({ open, onClose }: Props) {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Subject teacher subjects summary (confirmation step) */}
+              {isSubjectTeacherMode && subjectTeacherSubjects.length > 0 && (
+                <div className="bg-card border border-border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-2">担当教科</p>
+                  <div className="flex flex-wrap gap-1">
+                    {subjectTeacherSubjects.map(s => (
+                      <span
+                        key={s.name}
+                        className="text-[10px] rounded px-1.5 py-0.5 font-medium"
+                        style={{
+                          backgroundColor: s.color ? `${s.color}20` : '#f0f0f0',
+                          color: s.color ?? '#666',
+                          border: `1px solid ${s.color ?? '#ccc'}50`,
+                        }}
+                      >
+                        {s.name}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}

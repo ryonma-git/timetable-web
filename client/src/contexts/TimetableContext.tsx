@@ -8,6 +8,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import {
   AuditEntry,
   ClassStats,
+  SubjectStats,
   OverrideBundle,
   OverrideOp,
   TimetableEntry,
@@ -15,6 +16,7 @@ import {
   buildEffectiveJSON,
   buildOverrideJSON,
   calcClassStats,
+  calcSubjectStats,
   classSort,
   downloadFile,
   formatDate,
@@ -93,6 +95,7 @@ interface TimetableContextValue {
   asOfDate: string;
   setAsOfDate: (date: string) => void;
   classStats: ClassStats[];
+  subjectStats: SubjectStats[];
   // Per-week Saturday/Sunday overrides (for temporary weekend classes)
   weekendOverrides: Record<string, { saturday?: boolean; sunday?: boolean }>;
   toggleWeekendDay: (weekMonday: string, day: 'saturday' | 'sunday') => void;
@@ -182,6 +185,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Stats ──────────────────────────────────────────────────
   const classStats = calcClassStats(effectiveEntries, asOfDate);
+  const subjectStats = calcSubjectStats(effectiveEntries, asOfDate);
 
   // ─── Navigation ─────────────────────────────────────────────
   const navigateWeek = useCallback((delta: number) => {
@@ -625,7 +629,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       activeTab, setActiveTab,
       currentWeekMonday, navigateWeek, goToToday, goToDate,
       selectedCell, setSelectedCell,
-      asOfDate, setAsOfDate, classStats,
+      asOfDate, setAsOfDate, classStats, subjectStats,
       weekendOverrides, toggleWeekendDay,
       undoStack, redoStack,
       canUndo: undoStack.length > 0,
