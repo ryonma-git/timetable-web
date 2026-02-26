@@ -416,12 +416,13 @@ export function WeekGrid() {
                   const isFilteredBySubject = filterSubject !== null && slot.subject !== filterSubject;
                   const isFiltered = isFilteredByClass || isFilteredBySubject;
 
-                  // Color logic: homeroom/multi_subject → subject color, single_subject → class color
+                  // Color logic: homeroom → subject color, single_subject/multi_subject → class (grade) color
                   const cellColors = (() => {
-                    if (isHomeroomMode || isMultiSubjectMode) {
+                    if (isHomeroomMode) {
                       if (slot.subject) return getSubjectColor(slot.subject, subjectColors);
                       if (slot.class) return getClassColor(slot.class, gradeColors);
                     }
+                    // single_subject / multi_subject: always use grade color for clear class distinction
                     if (slot.class) return getClassColor(slot.class, gradeColors);
                     return null;
                   })();
@@ -547,8 +548,8 @@ export function WeekGrid() {
             </div>
           );
         })}
-        {/* Subject-based legend */}
-        {showSubject && Array.from(subjectsInData).sort().map(subj => {
+        {/* Subject-based legend (homeroom mode only) */}
+        {isHomeroomMode && Array.from(subjectsInData).sort().map(subj => {
           const c = getSubjectColor(subj, subjectColors);
           return (
             <div key={subj} className="flex items-center gap-1">
