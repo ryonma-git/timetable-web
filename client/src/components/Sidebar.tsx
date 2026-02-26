@@ -166,7 +166,7 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
 
   return (
     <aside
-      className="w-[220px] shrink-0 flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border"
+      className="w-[220px] shrink-0 flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border overflow-hidden"
       onDragOver={e => e.preventDefault()}
       onDrop={handleDrop}
     >
@@ -281,8 +281,8 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+      {/* Navigation - 常に表示、スクロールしない */}
+      <nav className="px-2 py-2 space-y-0.5 border-b border-sidebar-border">
         {navItems.map(item => (
           <button
             key={item.id}
@@ -294,6 +294,9 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
           </button>
         ))}
       </nav>
+
+      {/* スクロール可能な下部エリア */}
+      <div className="flex-1 overflow-y-auto flex flex-col">
 
       {/* Week Navigation (only on grid tab) */}
       {activeTab === "grid" && (
@@ -481,6 +484,7 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
         )}
         <ColorSettingsDialog />
       </div>
+      </div>{/* end scroll area */}
 
       {/* New File Wizard */}
       <NewFileWizard open={showNewDialog} onClose={() => setShowNewDialog(false)} />

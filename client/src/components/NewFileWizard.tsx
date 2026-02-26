@@ -1105,7 +1105,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                         return (
                           <td key={d.key} className="p-0.5 border-b border-r border-border/30">
                             {addingSubjectForCell?.weekday === d.key && addingSubjectForCell?.period === period ? (
-                              <div className="flex gap-1 h-8">
+                              <div className="flex flex-col gap-1 p-1">
                                 <Input
                                   autoFocus
                                   value={inlineSubjectInput}
@@ -1115,11 +1115,21 @@ export function NewFileWizard({ open, onClose }: Props) {
                                     if (e.key === 'Escape') { setAddingSubjectForCell(null); setInlineSubjectInput(''); }
                                   }}
                                   placeholder="教科名"
-                                  className="h-8 text-xs flex-1 min-w-0"
+                                  className="h-7 text-xs"
                                 />
-                                <Button size="sm" className="h-8 px-2 text-xs" onClick={() => addInlineSubject(d.key, period)}>
-                                  <Plus size={10} />
-                                </Button>
+                                <div className="flex gap-1">
+                                  <Button size="sm" className="h-6 px-2 text-[10px] flex-1" onClick={() => addInlineSubject(d.key, period)}>
+                                    <Plus size={9} /> 追加
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2 text-[10px]"
+                                    onClick={() => { setAddingSubjectForCell(null); setInlineSubjectInput(''); }}
+                                  >
+                                    <X size={9} />
+                                  </Button>
+                                </div>
                               </div>
                             ) : (
                             <Select
