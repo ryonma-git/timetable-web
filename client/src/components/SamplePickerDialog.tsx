@@ -37,7 +37,7 @@ const SAMPLES: SampleDef[] = [
     modeLabel: "担任モード",
     modeColor: "bg-amber-500/15 text-amber-600 border-amber-200",
     icon: <BookOpen size={20} className="text-amber-500" />,
-    filename: "/samples/sample_homeroom.timetable",
+    filename: "/samples/sample_homeroom.99c34a39.timetable",
     details: [
       "担任クラス: 2年1組",
       "教科: 国語・算数・生活・音楽・図工・体育・道徳・学活",
@@ -53,7 +53,7 @@ const SAMPLES: SampleDef[] = [
     modeLabel: "単一教科モード",
     modeColor: "bg-blue-500/15 text-blue-600 border-blue-200",
     icon: <FlaskConical size={20} className="text-blue-500" />,
-    filename: "/samples/sample_single.timetable",
+    filename: "/samples/sample_single.91643cd5.timetable",
     details: [
       "担当クラス: 4〜6年生 10クラス（4年3・5年4・6年3）",
       "教科: 理科",
@@ -69,7 +69,7 @@ const SAMPLES: SampleDef[] = [
     modeLabel: "複数教科モード",
     modeColor: "bg-purple-500/15 text-purple-600 border-purple-200",
     icon: <Music size={20} className="text-purple-500" />,
-    filename: "/samples/sample_multi.timetable",
+    filename: "/samples/sample_multi.52a25183.timetable",
     details: [
       "担当クラス: 4〜6年生 8クラス（4年3・5年3・6年2）",
       "教科: 音楽（4・6年担当）・体育（5年担当）",
