@@ -2,112 +2,20 @@
   "format": "timetable-app/v1",
   "version": "1.0",
   "meta": {
-    "title": "理科専科 第3学期 時間割",
-    "school": "サンプル小学校",
+    "title": "体育専科 3学期 時間割",
+    "school": "石小",
     "year": "2025",
-    "createdAt": "2026-02-26T02:48:30.721594",
-    "updatedAt": "2026-02-26T02:48:30.721594",
+    "createdAt": "2026-02-26T04:38:28.221655",
+    "updatedAt": "2026-02-26T04:38:28.221655",
     "mode": "single_subject"
   },
   "semester": {
     "semesterNumber": 3,
     "semesterSystem": "trimester",
     "startDate": "2026-01-08",
-    "endDate": "2026-03-24",
+    "endDate": "2026-03-27",
     "hasSaturday": false,
     "hasSunday": false,
-    "baseSchedule": {
-      "Mon": {
-        "1": "5-1",
-        "2": "5-2",
-        "3": null,
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Tue": {
-        "1": "4-1",
-        "2": "4-2",
-        "3": "6-1",
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Wed": {
-        "1": "6-2",
-        "2": "5-1",
-        "3": null,
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Thu": {
-        "1": "4-1",
-        "2": "4-2",
-        "3": "5-2",
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Fri": {
-        "1": "6-1",
-        "2": "6-2",
-        "3": null,
-        "4": null,
-        "5": null,
-        "6": null
-      }
-    },
-    "subjectSchedule": {
-      "Mon": {
-        "1": "理科",
-        "2": "理科",
-        "3": null,
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Tue": {
-        "1": "理科",
-        "2": "理科",
-        "3": "理科",
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Wed": {
-        "1": "理科",
-        "2": "理科",
-        "3": null,
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Thu": {
-        "1": "理科",
-        "2": "理科",
-        "3": "理科",
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Fri": {
-        "1": "理科",
-        "2": "理科",
-        "3": null,
-        "4": null,
-        "5": null,
-        "6": null
-      }
-    },
-    "classList": [
-      "4-1",
-      "4-2",
-      "5-1",
-      "5-2",
-      "6-1",
-      "6-2"
-    ],
     "holidays": [
       {
         "date": "2026-01-12",
@@ -126,17 +34,121 @@
         "name": "春分の日"
       }
     ],
-    "schoolType": "elementary",
-    "gradeClassCounts": [
-      0,
-      0,
-      0,
-      2,
-      2,
-      2
-    ]
+    "schoolType": "elementary"
   },
+  "subjects": [
+    {
+      "name": "体育",
+      "short": "体",
+      "color": "#3b82f6"
+    }
+  ],
+  "customClasses": [
+    "4年1組",
+    "4年2組",
+    "4年3組",
+    "5年1組",
+    "5年2組",
+    "5年3組",
+    "5年4組",
+    "6年1組",
+    "6年2組",
+    "6年3組"
+  ],
   "base": [
+    {
+      "date": "2026-01-05",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": null
+        },
+        {
+          "period": 2,
+          "class": null
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-06",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": null
+        },
+        {
+          "period": 2,
+          "class": null
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-07",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": null
+        },
+        {
+          "period": 2,
+          "class": null
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
     {
       "date": "2026-01-08",
       "weekday": "Thu",
@@ -144,18 +156,15 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 4,
@@ -178,13 +187,11 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
@@ -192,7 +199,8 @@
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 5,
@@ -211,13 +219,11 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
@@ -244,18 +250,15 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 4,
@@ -278,29 +281,31 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         }
       ]
     },
@@ -311,30 +316,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -345,25 +353,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
@@ -378,17 +389,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -396,7 +408,8 @@
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 6,
@@ -411,18 +424,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -430,11 +443,13 @@
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -445,29 +460,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         }
       ]
     },
@@ -478,30 +497,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -512,21 +534,23 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 5,
@@ -545,17 +569,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -563,11 +588,13 @@
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         }
       ]
     },
@@ -578,18 +605,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -597,11 +624,13 @@
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -612,29 +641,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         }
       ]
     },
@@ -645,22 +678,21 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 5,
@@ -679,21 +711,21 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 5,
@@ -701,7 +733,8 @@
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -712,29 +745,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         }
       ]
     },
@@ -745,18 +782,15 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 4,
@@ -779,13 +813,11 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
@@ -812,18 +844,15 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 4,
@@ -846,13 +875,11 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
@@ -879,13 +906,11 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
@@ -912,18 +937,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -931,11 +956,13 @@
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -946,13 +973,11 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
@@ -979,30 +1004,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -1013,13 +1041,13 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
@@ -1046,17 +1074,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -1079,18 +1108,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -1098,11 +1127,13 @@
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -1113,29 +1144,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         }
       ]
     },
@@ -1146,30 +1181,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -1180,29 +1218,32 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         }
       ]
     },
@@ -1213,13 +1254,11 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
@@ -1246,18 +1285,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -1265,11 +1304,13 @@
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -1280,29 +1321,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         }
       ]
     },
@@ -1313,18 +1358,17 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 4,
@@ -1332,11 +1376,13 @@
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -1347,29 +1393,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         }
       ]
     },
@@ -1380,17 +1430,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -1413,18 +1464,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -1432,11 +1483,13 @@
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -1447,29 +1500,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         }
       ]
     },
@@ -1480,30 +1537,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -1514,29 +1574,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         }
       ]
     },
@@ -1547,17 +1611,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -1580,18 +1645,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -1599,11 +1664,13 @@
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -1614,29 +1681,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年3組",
+          "subject": "体育"
         }
       ]
     },
@@ -1647,30 +1718,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "6年2組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "6年1組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         }
       ]
     },
@@ -1681,29 +1755,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": "6年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": "4年1組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年4組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         }
       ]
     },
@@ -1714,17 +1792,18 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": "4年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
@@ -1747,18 +1826,15 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 4,
@@ -1781,21 +1857,21 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
@@ -1814,18 +1890,17 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 4,
@@ -1848,13 +1923,11 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
@@ -1881,13 +1954,11 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
@@ -1914,18 +1985,108 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "理科"
+          "class": null
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "理科"
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-25",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": null
+        },
+        {
+          "period": 2,
+          "class": null
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-26",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": null
+        },
+        {
+          "period": 2,
+          "class": null
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-27",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": null
+        },
+        {
+          "period": 2,
+          "class": null
+        },
+        {
+          "period": 3,
+          "class": null
         },
         {
           "period": 4,
@@ -1944,34 +2105,212 @@
   ],
   "ops": [
     {
-      "op": "set",
-      "date": "2026-01-20",
+      "op": "clear_period_class",
+      "date": "2026-03-06",
+      "period": 4,
+      "reason": "手動調整",
+      "target_class": "5年4組"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-02-27",
+      "period": 5,
+      "reason": "手動調整",
+      "target_class": "5年1組"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-03-13",
+      "period": 5,
+      "reason": "手動調整",
+      "target_class": "5年1組"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-03-13",
+      "period": 6,
+      "reason": "手動調整",
+      "target_class": "5年1組"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-03-12",
+      "period": 2,
+      "reason": "手動調整",
+      "target_class": "5年3組"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-02-19",
+      "period": 5,
+      "reason": "手動調整",
+      "target_class": "5年2組"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-02-19",
+      "period": 6,
+      "reason": "手動調整",
+      "target_class": "5年2組"
+    },
+    {
+      "op": "set_period_class",
+      "date": "2026-03-12",
+      "period": 2,
+      "class": "5年1組",
+      "subject": "体育",
+      "reason": "手動調整"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-03-02",
+      "period": 4,
+      "reason": "手動調整",
+      "target_class": "5年1組"
+    },
+    {
+      "op": "set_period_class",
+      "date": "2026-02-13",
+      "period": 4,
+      "class": "4年2組",
+      "subject": "体育",
+      "reason": "手動調整"
+    },
+    {
+      "op": "set_period_class",
+      "date": "2026-02-13",
+      "period": 6,
+      "class": "6年1組",
+      "subject": "体育",
+      "reason": "手動調整"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-02-25",
+      "period": 1,
+      "reason": "手動調整",
+      "target_class": "4年2組"
+    },
+    {
+      "op": "set_day_reason",
+      "date": "2026-02-23",
+      "reason": "天皇誕生日",
+      "clear_all_classes": true
+    },
+    {
+      "op": "set_period_class",
+      "date": "2026-02-24",
+      "period": 1,
+      "class": "4年3組",
+      "subject": "体育",
+      "reason": "時間割変更"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-02-24",
       "period": 3,
-      "class": "6-1",
-      "subject": "理科",
-      "reason": "実験室使用可能になったため追加"
+      "reason": "時間割変更",
+      "target_class": "4年1組"
     },
     {
-      "op": "delete",
-      "date": "2026-02-03",
-      "period": 1,
-      "class": "5-1",
-      "reason": "学校行事のため休講"
+      "op": "set_period_class",
+      "date": "2026-02-24",
+      "period": 4,
+      "class": "6年3組",
+      "subject": "体育",
+      "reason": "時間割変更"
     },
     {
-      "op": "set",
-      "date": "2026-02-10",
+      "op": "set_period_class",
+      "date": "2026-02-25",
       "period": 1,
-      "class": "5-1",
-      "subject": "理科",
-      "reason": "2/3の振替授業"
-    }
-  ],
-  "subjects": [
+      "class": "6年1組",
+      "subject": "体育",
+      "reason": "時間割変更"
+    },
     {
-      "name": "理科",
-      "short": "理",
-      "color": "#22c55e"
+      "op": "set_period_class",
+      "date": "2026-02-25",
+      "period": 4,
+      "class": "4年2組",
+      "subject": "体育",
+      "reason": "時間割変更"
+    },
+    {
+      "op": "set_period_class",
+      "date": "2026-02-25",
+      "period": 6,
+      "class": "4年2組",
+      "subject": "体育",
+      "reason": "時間割変更"
+    },
+    {
+      "op": "set_period_class",
+      "date": "2026-02-26",
+      "period": 4,
+      "class": "4年1組",
+      "subject": "体育",
+      "reason": "時間割変更"
+    },
+    {
+      "op": "set_period_class",
+      "date": "2026-02-27",
+      "period": 5,
+      "class": "5年1組",
+      "subject": "体育",
+      "reason": "時間割変更"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-02-26",
+      "period": 3,
+      "reason": "6年保健出前授業（授業なし扱い）"
+    },
+    {
+      "op": "set_period_reason",
+      "date": "2026-03-06",
+      "period": 4,
+      "reason": "卒業式練習（授業なし）",
+      "replace": true
+    },
+    {
+      "op": "set_period_reason",
+      "date": "2026-02-13",
+      "period": 4,
+      "reason": "5年生校外学習のため",
+      "replace": true,
+      "clear_class": true
+    },
+    {
+      "op": "set_period_reason",
+      "date": "2026-02-13",
+      "period": 6,
+      "reason": "5年生校外学習のため",
+      "replace": true,
+      "clear_class": true
+    },
+    {
+      "op": "set_period_reason",
+      "date": "2026-02-19",
+      "period": 5,
+      "reason": "授業参観(担任)",
+      "replace": true,
+      "clear_class": true
+    },
+    {
+      "op": "set_period_reason",
+      "date": "2026-02-19",
+      "period": 6,
+      "reason": "PTA総会",
+      "replace": true,
+      "clear_class": true
+    },
+    {
+      "op": "set_period_reason",
+      "date": "2026-03-12",
+      "period": 2,
+      "reason": "5-1補填",
+      "replace": true
     }
   ]
 }

@@ -11,7 +11,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Music, FlaskConical, Loader2 } from "lucide-react";
+import { BookOpen, Music, Dumbbell, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { deserializeTimetableFile } from "@/lib/timetableFile";
@@ -46,35 +46,35 @@ const SAMPLES: SampleDef[] = [
     ],
   },
   {
-    id: "multi",
-    title: "音楽専科 第3学期 時間割",
-    description: "複数教科モードのデモデータです。",
-    mode: "multi_subject",
-    modeLabel: "複数教科モード",
+    id: "single",
+    title: "体育専科 3学期 時間割",
+    description: "単一教科モードのデモデータです。実際の体育専科の時間割データです。",
+    mode: "single_subject",
+    modeLabel: "単一教科モード",
     modeColor: "bg-blue-500/15 text-blue-600 border-blue-200",
-    icon: <Music size={20} className="text-blue-500" />,
-    filename: "/samples/sample_multi.timetable",
+    icon: <Dumbbell size={20} className="text-blue-500" />,
+    filename: "/samples/sample_single.timetable",
     details: [
-      "担当クラス: 4〜6年生 各2クラス（計6クラス）",
-      "教科: 音楽",
-      "期間: 2026年1月8日〜3月24日（第3学期）",
-      "授業変更操作: 5件（振替・入れ替え・追加など）",
+      "担当クラス: 4〜6年生 10クラス（4年3・5年4・6年3）",
+      "教科: 体育",
+      "期間: 2026年1月8日〜3月27日（第3学期）",
+      "授業変更操作: 28件（振替・時間割変更・行事など）",
     ],
   },
   {
-    id: "single",
-    title: "理科専科 第3学期 時間割",
-    description: "単一教科モードのデモデータです。",
-    mode: "single_subject",
-    modeLabel: "単一教科モード",
-    modeColor: "bg-green-500/15 text-green-600 border-green-200",
-    icon: <FlaskConical size={20} className="text-green-500" />,
-    filename: "/samples/sample_single.timetable",
+    id: "multi",
+    title: "音楽・体育専科 3学期 時間割",
+    description: "複数教科モードのデモデータです。音楽と体育の2教科を担当する専科教員の例です。",
+    mode: "multi_subject",
+    modeLabel: "複数教科モード",
+    modeColor: "bg-purple-500/15 text-purple-600 border-purple-200",
+    icon: <Music size={20} className="text-purple-500" />,
+    filename: "/samples/sample_multi.timetable",
     details: [
-      "担当クラス: 4〜6年生 各2クラス（計6クラス）",
-      "教科: 理科",
-      "期間: 2026年1月8日〜3月24日（第3学期）",
-      "授業変更操作: 3件（振替・休講など）",
+      "担当クラス: 4〜6年生 8クラス（4年3・5年3・6年2）",
+      "教科: 音楽（4・6年担当）・体育（5年担当）",
+      "期間: 2026年1月8日〜3月27日（第3学期）",
+      "授業変更操作: 12件（振替・行事・卒業式練習など）",
     ],
   },
 ];

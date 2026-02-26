@@ -6,7 +6,7 @@
     "school": "サンプル小学校",
     "year": "2025",
     "createdAt": "2026-02-26T02:48:30.716151",
-    "updatedAt": "2026-02-26T02:48:30.716151",
+    "updatedAt": "2026-02-26T04:38:28.221655",
     "mode": "homeroom"
   },
   "semester": {
@@ -212,33 +212,27 @@
       "periods": [
         {
           "period": 1,
-          "class": "2-1",
-          "subject": "国語"
+          "class": null
         },
         {
           "period": 2,
-          "class": "2-1",
-          "subject": "算数"
+          "class": null
         },
         {
           "period": 3,
-          "class": "2-1",
-          "subject": "生活"
+          "class": null
         },
         {
           "period": 4,
-          "class": "2-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 5,
-          "class": "2-1",
-          "subject": "体育"
+          "class": null
         },
         {
           "period": 6,
-          "class": "2-1",
-          "subject": "学活"
+          "class": null
         }
       ]
     },
@@ -1009,28 +1003,23 @@
       "periods": [
         {
           "period": 1,
-          "class": "2-1",
-          "subject": "国語"
+          "class": null
         },
         {
           "period": 2,
-          "class": "2-1",
-          "subject": "算数"
+          "class": null
         },
         {
           "period": 3,
-          "class": "2-1",
-          "subject": "体育"
+          "class": null
         },
         {
           "period": 4,
-          "class": "2-1",
-          "subject": "道徳"
+          "class": null
         },
         {
           "period": 5,
-          "class": "2-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 6,
@@ -1298,33 +1287,27 @@
       "periods": [
         {
           "period": 1,
-          "class": "2-1",
-          "subject": "国語"
+          "class": null
         },
         {
           "period": 2,
-          "class": "2-1",
-          "subject": "算数"
+          "class": null
         },
         {
           "period": 3,
-          "class": "2-1",
-          "subject": "生活"
+          "class": null
         },
         {
           "period": 4,
-          "class": "2-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 5,
-          "class": "2-1",
-          "subject": "体育"
+          "class": null
         },
         {
           "period": 6,
-          "class": "2-1",
-          "subject": "学活"
+          "class": null
         }
       ]
     },
@@ -1986,28 +1969,23 @@
       "periods": [
         {
           "period": 1,
-          "class": "2-1",
-          "subject": "国語"
+          "class": null
         },
         {
           "period": 2,
-          "class": "2-1",
-          "subject": "算数"
+          "class": null
         },
         {
           "period": 3,
-          "class": "2-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 4,
-          "class": "2-1",
-          "subject": "生活"
+          "class": null
         },
         {
           "period": 5,
-          "class": "2-1",
-          "subject": "学活"
+          "class": null
         },
         {
           "period": 6,

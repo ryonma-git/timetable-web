@@ -2,112 +2,20 @@
   "format": "timetable-app/v1",
   "version": "1.0",
   "meta": {
-    "title": "音楽専科 第3学期 時間割",
+    "title": "音楽・体育専科 3学期 時間割",
     "school": "サンプル小学校",
     "year": "2025",
-    "createdAt": "2026-02-26T02:48:30.719172",
-    "updatedAt": "2026-02-26T02:48:30.719172",
+    "createdAt": "2026-02-26T04:38:28.221655",
+    "updatedAt": "2026-02-26T04:38:28.221655",
     "mode": "multi_subject"
   },
   "semester": {
     "semesterNumber": 3,
     "semesterSystem": "trimester",
     "startDate": "2026-01-08",
-    "endDate": "2026-03-24",
+    "endDate": "2026-03-27",
     "hasSaturday": false,
     "hasSunday": false,
-    "baseSchedule": {
-      "Mon": {
-        "1": "4-1",
-        "2": "5-1",
-        "3": "6-1",
-        "4": "4-2",
-        "5": null,
-        "6": null
-      },
-      "Tue": {
-        "1": "5-2",
-        "2": "6-2",
-        "3": null,
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Wed": {
-        "1": "4-1",
-        "2": "4-2",
-        "3": "5-1",
-        "4": "5-2",
-        "5": null,
-        "6": null
-      },
-      "Thu": {
-        "1": "6-1",
-        "2": "6-2",
-        "3": null,
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Fri": {
-        "1": "4-1",
-        "2": "5-1",
-        "3": "6-1",
-        "4": null,
-        "5": null,
-        "6": null
-      }
-    },
-    "subjectSchedule": {
-      "Mon": {
-        "1": "音楽",
-        "2": "音楽",
-        "3": "音楽",
-        "4": "音楽",
-        "5": null,
-        "6": null
-      },
-      "Tue": {
-        "1": "音楽",
-        "2": "音楽",
-        "3": null,
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Wed": {
-        "1": "音楽",
-        "2": "音楽",
-        "3": "音楽",
-        "4": "音楽",
-        "5": null,
-        "6": null
-      },
-      "Thu": {
-        "1": "音楽",
-        "2": "音楽",
-        "3": null,
-        "4": null,
-        "5": null,
-        "6": null
-      },
-      "Fri": {
-        "1": "音楽",
-        "2": "音楽",
-        "3": "音楽",
-        "4": null,
-        "5": null,
-        "6": null
-      }
-    },
-    "classList": [
-      "4-1",
-      "4-2",
-      "5-1",
-      "5-2",
-      "6-1",
-      "6-2"
-    ],
     "holidays": [
       {
         "date": "2026-01-12",
@@ -126,17 +34,140 @@
         "name": "春分の日"
       }
     ],
-    "schoolType": "elementary",
-    "gradeClassCounts": [
-      0,
-      0,
-      0,
-      2,
-      2,
-      2
-    ]
+    "schoolType": "elementary"
   },
+  "subjects": [
+    {
+      "name": "音楽",
+      "short": "音",
+      "color": "#a855f7"
+    },
+    {
+      "name": "体育",
+      "short": "体",
+      "color": "#3b82f6"
+    }
+  ],
+  "customClasses": [
+    "4年1組",
+    "4年2組",
+    "4年3組",
+    "5年1組",
+    "5年2組",
+    "5年3組",
+    "6年1組",
+    "6年2組"
+  ],
   "base": [
+    {
+      "date": "2026-01-05",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4年1組",
+          "subject": "音楽"
+        },
+        {
+          "period": 2,
+          "class": "4年2組",
+          "subject": "音楽"
+        },
+        {
+          "period": 3,
+          "class": "5年1組",
+          "subject": "体育"
+        },
+        {
+          "period": 4,
+          "class": "5年2組",
+          "subject": "体育"
+        },
+        {
+          "period": 5,
+          "class": "6年1組",
+          "subject": "音楽"
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-06",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4年3組",
+          "subject": "音楽"
+        },
+        {
+          "period": 2,
+          "class": "5年3組",
+          "subject": "体育"
+        },
+        {
+          "period": 3,
+          "class": "6年2組",
+          "subject": "音楽"
+        },
+        {
+          "period": 4,
+          "class": "4年1組",
+          "subject": "音楽"
+        },
+        {
+          "period": 5,
+          "class": "5年1組",
+          "subject": "体育"
+        },
+        {
+          "period": 6,
+          "class": "6年1組",
+          "subject": "音楽"
+        }
+      ]
+    },
+    {
+      "date": "2026-01-07",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4年2組",
+          "subject": "音楽"
+        },
+        {
+          "period": 2,
+          "class": "5年2組",
+          "subject": "体育"
+        },
+        {
+          "period": 3,
+          "class": "4年3組",
+          "subject": "音楽"
+        },
+        {
+          "period": 4,
+          "class": "5年3組",
+          "subject": "体育"
+        },
+        {
+          "period": 5,
+          "class": "6年2組",
+          "subject": "音楽"
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
     {
       "date": "2026-01-08",
       "weekday": "Thu",
@@ -144,29 +175,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -177,30 +212,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -211,23 +249,19 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 5,
@@ -246,29 +280,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         }
       ]
     },
@@ -279,27 +317,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": "5-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -314,29 +353,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -347,30 +390,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -381,27 +427,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年1組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -416,29 +463,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         }
       ]
     },
@@ -449,27 +500,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": "5-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -484,29 +536,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -517,30 +573,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -551,27 +610,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年1組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -586,29 +646,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         }
       ]
     },
@@ -619,27 +683,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": "5-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -654,29 +719,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -687,30 +756,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -721,27 +793,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年1組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -756,29 +829,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         }
       ]
     },
@@ -789,27 +866,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": "5-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -824,29 +902,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -857,30 +939,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -891,27 +976,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年1組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -926,29 +1012,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         }
       ]
     },
@@ -959,23 +1049,19 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 3,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 4,
-          "class": "5-2",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 5,
@@ -994,29 +1080,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1027,30 +1117,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1061,27 +1154,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年1組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -1096,29 +1190,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1129,27 +1227,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": "5-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -1164,29 +1263,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1197,30 +1300,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1231,23 +1337,19 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 5,
@@ -1266,29 +1368,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1299,27 +1405,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": "5-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -1334,29 +1441,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1367,30 +1478,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1401,27 +1515,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年1組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -1436,29 +1551,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1469,27 +1588,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": "5-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -1504,29 +1624,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1537,30 +1661,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1571,27 +1698,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年1組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -1606,29 +1734,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1639,27 +1771,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": "5-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -1674,29 +1807,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1707,30 +1844,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "6-1",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1741,27 +1881,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年1組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -1776,29 +1917,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 6,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1809,27 +1954,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": "5-1",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 4,
-          "class": "5-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -1844,29 +1990,33 @@
       "periods": [
         {
           "period": 1,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 2,
-          "class": "6-2",
+          "class": "6年1組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
-          "class": null
+          "class": "4年2組",
+          "subject": "音楽"
         }
       ]
     },
@@ -1877,18 +2027,15 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 2,
-          "class": "5-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": null
         },
         {
           "period": 4,
@@ -1911,27 +2058,28 @@
       "periods": [
         {
           "period": 1,
-          "class": "4-1",
+          "class": "4年1組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "5-1",
+          "class": "4年2組",
           "subject": "音楽"
         },
         {
           "period": 3,
-          "class": "6-1",
-          "subject": "音楽"
+          "class": "5年1組",
+          "subject": "体育"
         },
         {
           "period": 4,
-          "class": "4-2",
-          "subject": "音楽"
+          "class": "5年2組",
+          "subject": "体育"
         },
         {
           "period": 5,
-          "class": null
+          "class": "6年1組",
+          "subject": "音楽"
         },
         {
           "period": 6,
@@ -1946,79 +2094,235 @@
       "periods": [
         {
           "period": 1,
-          "class": "5-2",
+          "class": "4年3組",
           "subject": "音楽"
         },
         {
           "period": 2,
-          "class": "6-2",
-          "subject": "音楽"
+          "class": "5年3組",
+          "subject": "体育"
         },
         {
           "period": 3,
-          "class": null
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 4,
-          "class": null
+          "class": "4年1組",
+          "subject": "音楽"
         },
         {
           "period": 5,
-          "class": null
+          "class": "5年1組",
+          "subject": "体育"
+        },
+        {
+          "period": 6,
+          "class": "6年1組",
+          "subject": "音楽"
+        }
+      ]
+    },
+    {
+      "date": "2026-03-25",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4年2組",
+          "subject": "音楽"
+        },
+        {
+          "period": 2,
+          "class": "5年2組",
+          "subject": "体育"
+        },
+        {
+          "period": 3,
+          "class": "4年3組",
+          "subject": "音楽"
+        },
+        {
+          "period": 4,
+          "class": "5年3組",
+          "subject": "体育"
+        },
+        {
+          "period": 5,
+          "class": "6年2組",
+          "subject": "音楽"
         },
         {
           "period": 6,
           "class": null
         }
       ]
+    },
+    {
+      "date": "2026-03-26",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5年1組",
+          "subject": "体育"
+        },
+        {
+          "period": 2,
+          "class": "6年1組",
+          "subject": "音楽"
+        },
+        {
+          "period": 3,
+          "class": "4年1組",
+          "subject": "音楽"
+        },
+        {
+          "period": 4,
+          "class": "5年2組",
+          "subject": "体育"
+        },
+        {
+          "period": 5,
+          "class": "6年2組",
+          "subject": "音楽"
+        },
+        {
+          "period": 6,
+          "class": "4年2組",
+          "subject": "音楽"
+        }
+      ]
+    },
+    {
+      "date": "2026-03-27",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4年3組",
+          "subject": "音楽"
+        },
+        {
+          "period": 2,
+          "class": "5年3組",
+          "subject": "体育"
+        },
+        {
+          "period": 3,
+          "class": "6年1組",
+          "subject": "音楽"
+        },
+        {
+          "period": 4,
+          "class": "4年1組",
+          "subject": "音楽"
+        },
+        {
+          "period": 5,
+          "class": "5年1組",
+          "subject": "体育"
+        },
+        {
+          "period": 6,
+          "class": "4年2組",
+          "subject": "音楽"
+        }
+      ]
     }
   ],
   "ops": [
     {
-      "op": "set",
-      "date": "2026-01-19",
+      "op": "clear_period_class",
+      "date": "2026-01-15",
+      "period": 3,
+      "target_class": "4年1組",
+      "reason": "学年行事"
+    },
+    {
+      "op": "set_period_class",
+      "date": "2026-01-15",
+      "period": 3,
+      "class": "5年3組",
+      "subject": "体育",
+      "reason": "振替"
+    },
+    {
+      "op": "clear_period_class",
+      "date": "2026-01-22",
       "period": 5,
-      "class": "4-2",
-      "subject": "音楽",
-      "reason": "1/12(祝)の振替授業"
+      "target_class": "6年2組",
+      "reason": "学校行事"
     },
     {
-      "op": "set",
-      "date": "2026-01-27",
-      "period": 1,
-      "class": "6-1",
+      "op": "set_period_class",
+      "date": "2026-01-23",
+      "period": 5,
+      "class": "6年2組",
       "subject": "音楽",
-      "reason": "5-2と6-1の時間割入れ替え"
+      "reason": "振替"
     },
     {
-      "op": "set",
-      "date": "2026-01-27",
+      "op": "clear_period_class",
+      "date": "2026-02-02",
+      "period": 3,
+      "target_class": "5年1組",
+      "reason": "時間割変更"
+    },
+    {
+      "op": "set_period_class",
+      "date": "2026-02-02",
+      "period": 5,
+      "class": "5年1組",
+      "subject": "体育",
+      "reason": "時間割変更"
+    },
+    {
+      "op": "set_day_reason",
+      "date": "2026-02-11",
+      "reason": "建国記念の日",
+      "clear_all_classes": true
+    },
+    {
+      "op": "set_day_reason",
+      "date": "2026-02-23",
+      "reason": "天皇誕生日",
+      "clear_all_classes": true
+    },
+    {
+      "op": "set_period_reason",
+      "date": "2026-03-05",
       "period": 2,
-      "class": "5-2",
-      "subject": "音楽",
-      "reason": "5-2と6-1の時間割入れ替え"
+      "reason": "6年生を送る会",
+      "replace": true,
+      "clear_class": true
     },
     {
-      "op": "delete",
-      "date": "2026-02-09",
-      "period": 4,
-      "class": "4-2",
-      "reason": "学校行事（6年生を送る会準備）のため"
-    },
-    {
-      "op": "set",
-      "date": "2026-03-02",
+      "op": "set_period_reason",
+      "date": "2026-03-05",
       "period": 5,
-      "class": "5-2",
-      "subject": "音楽",
-      "reason": "卒業式練習のため追加"
-    }
-  ],
-  "subjects": [
+      "reason": "6年生を送る会",
+      "replace": true,
+      "clear_class": true
+    },
     {
-      "name": "音楽",
-      "short": "音",
-      "color": "#a855f7"
+      "op": "clear_period_class",
+      "date": "2026-03-12",
+      "period": 1,
+      "target_class": "5年1組",
+      "reason": "卒業式練習"
+    },
+    {
+      "op": "set_period_class",
+      "date": "2026-03-13",
+      "period": 1,
+      "class": "5年1組",
+      "subject": "体育",
+      "reason": "振替"
     }
   ]
 }
