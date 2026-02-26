@@ -2,9 +2,10 @@
 // 4-step wizard for creating a new timetable (semester unit)
 // Step 1: School/year/semester metadata + school type + class setup + mode selection
 // Step 2: Saturday/Sunday class settings
-// Step 3: Base schedule grid (weekday × period → class)
-// Step 4: Confirmation and creation
-// Phase 4: モード選択・担任クラス設定を追加
+// Step 3: Base schedule grid (weekday × period → class, or homeroom on/off)
+// Step 4 [homeroom only]: Subject schedule (weekday × period → subject)
+// Step 5: Confirmation and creation
+// Phase 4: モード選択・担任クラス設定・教科基礎時間割設定を追加
 
 import { useState, useCallback } from "react";
 import {
@@ -19,6 +20,8 @@ import {
   Plus,
   Minus,
   BookOpen,
+  BookMarked,
+  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -31,7 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { generateBaseEntries, createNewTimetableFile, SemesterMeta, TimetableMode, SemesterSystem } from "@/lib/timetableFile";
+import { generateBaseEntries, createNewTimetableFile, SemesterMeta, TimetableMode, SemesterSystem, SubjectDef } from "@/lib/timetableFile";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { normalizeClassName, classSort, generateDefaultClasses, SchoolType } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
@@ -51,6 +54,22 @@ const WEEKDAYS = [
 ];
 
 const PERIODS = [1, 2, 3, 4, 5, 6];
+
+// Default subjects for homeroom mode
+const DEFAULT_SUBJECTS: SubjectDef[] = [
+  { name: "国語", color: "#ef4444" },
+  { name: "算数", color: "#f97316" },
+  { name: "理科", color: "#22c55e" },
+  { name: "社会", color: "#eab308" },
+  { name: "英語", color: "#3b82f6" },
+  { name: "音楽", color: "#a855f7" },
+  { name: "図工", color: "#ec4899" },
+  { name: "体育", color: "#14b8a6" },
+  { name: "生活", color: "#84cc16" },
+  { name: "道徳", color: "#f59e0b" },
+  { name: "総合", color: "#6366f1" },
+  { name: "学活", color: "#64748b" },
+];
 
 // School type definitions
 const SCHOOL_TYPES: { value: SchoolType; label: string; grades: number; defaultClasses: number }[] = [
@@ -92,13 +111,21 @@ function getSemesterDefaults(year: number, semester: 1 | 2 | 3, system: Semester
 }
 
 // Step indicator component
-function StepIndicator({ current, total }: { current: number; total: number }) {
-  const steps = [
+function StepIndicator({ current, total, isHomeroom }: { current: number; total: number; isHomeroom: boolean }) {
+  const baseSteps = [
     { icon: <School size={14} />, label: "学校情報" },
     { icon: <Calendar size={14} />, label: "授業日設定" },
     { icon: <Grid3X3 size={14} />, label: "基本時間割" },
     { icon: <Check size={14} />, label: "確認・作成" },
   ];
+  const homeroomSteps = [
+    { icon: <School size={14} />, label: "学校情報" },
+    { icon: <Calendar size={14} />, label: "授業日設定" },
+    { icon: <Grid3X3 size={14} />, label: "授業コマ設定" },
+    { icon: <BookMarked size={14} />, label: "教科設定" },
+    { icon: <Check size={14} />, label: "確認・作成" },
+  ];
+  const steps = isHomeroom ? homeroomSteps : baseSteps;
 
   return (
     <div className="flex items-center gap-0 mb-6">
@@ -128,7 +155,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
             </div>
             {i < steps.length - 1 && (
               <div className={cn(
-                "h-0.5 w-8 mx-1 mb-4 transition-all",
+                "h-0.5 w-6 mx-1 mb-4 transition-all",
                 stepNum < current ? "bg-primary/50" : "bg-border"
               )} />
             )}
@@ -167,7 +194,7 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [hasSaturday, setHasSaturday] = useState(false);
   const [hasSunday, setHasSunday] = useState(false);
 
-  // Step 3: Base schedule
+  // Step 3: Base schedule (for single_subject mode: class per slot; for homeroom: on/off per slot)
   const [baseSchedule, setBaseSchedule] = useState<Record<string, Record<number, string | null>>>(() => {
     const schedule: Record<string, Record<number, string | null>> = {};
     WEEKDAYS.forEach(d => {
@@ -177,9 +204,40 @@ export function NewFileWizard({ open, onClose }: Props) {
     return schedule;
   });
 
+  // Step 3 (homeroom mode): which slots have class (true = homeroomClass, false = null)
+  const [homeroomSlots, setHomeroomSlots] = useState<Record<string, Record<number, boolean>>>(() => {
+    const slots: Record<string, Record<number, boolean>> = {};
+    WEEKDAYS.forEach(d => {
+      slots[d.key] = {};
+      // Default: Mon-Fri periods 1-6 all ON
+      PERIODS.forEach(p => { slots[d.key][p] = true; });
+    });
+    return slots;
+  });
+
+  // Step 4 (homeroom mode): subject per slot (only for slots that are ON)
+  const [subjectSchedule, setSubjectSchedule] = useState<Record<string, Record<number, string | null>>>(() => {
+    const schedule: Record<string, Record<number, string | null>> = {};
+    WEEKDAYS.forEach(d => {
+      schedule[d.key] = {};
+      PERIODS.forEach(p => { schedule[d.key][p] = null; });
+    });
+    return schedule;
+  });
+
+  // Step 4: subjects list (starts with defaults, user can add/remove)
+  const [subjects, setSubjects] = useState<SubjectDef[]>(DEFAULT_SUBJECTS);
+  const [newSubjectInput, setNewSubjectInput] = useState("");
+  const [newSubjectError, setNewSubjectError] = useState("");
+
   // Derived: current school type info
   const schoolTypeInfo = SCHOOL_TYPES.find(s => s.value === schoolType) ?? SCHOOL_TYPES[0];
   const grades = schoolTypeInfo.grades;
+  const isHomeroomMode = selectedMode === 'homeroom';
+  // Total steps: homeroom has 5, others have 4
+  const totalSteps = isHomeroomMode ? 5 : 4;
+  // Confirmation step number
+  const confirmStep = totalSteps;
 
   // When school type changes, reset gradeClassCounts
   const handleSchoolTypeChange = (type: SchoolType) => {
@@ -254,9 +312,96 @@ export function NewFileWizard({ open, onClose }: Props) {
     }));
   };
 
+  // Toggle homeroom slot on/off
+  const toggleHomeroomSlot = (weekday: string, period: number) => {
+    setHomeroomSlots(prev => ({
+      ...prev,
+      [weekday]: { ...prev[weekday], [period]: !prev[weekday]?.[period] },
+    }));
+    // If turning off, clear subject
+    if (homeroomSlots[weekday]?.[period]) {
+      setSubjectSchedule(prev => ({
+        ...prev,
+        [weekday]: { ...prev[weekday], [period]: null },
+      }));
+    }
+  };
+
+  // Set subject for a slot
+  const handleSubjectChange = (weekday: string, period: number, subject: string | null) => {
+    setSubjectSchedule(prev => ({
+      ...prev,
+      [weekday]: { ...prev[weekday], [period]: subject },
+    }));
+  };
+
+  // Add new subject
+  const addSubject = (name?: string) => {
+    const raw = (name ?? newSubjectInput).trim();
+    if (!raw) return;
+    if (subjects.some(s => s.name === raw)) {
+      if (!name) setNewSubjectError("すでに存在する教科名です");
+      return;
+    }
+    setSubjects(prev => [...prev, { name: raw }]);
+    if (!name) {
+      setNewSubjectInput("");
+      setNewSubjectError("");
+    }
+  };
+
+  // Add all default subjects at once
+  const addAllDefaultSubjects = () => {
+    DEFAULT_SUBJECTS.forEach(s => {
+      if (!subjects.some(x => x.name === s.name)) {
+        setSubjects(prev => [...prev, s]);
+      }
+    });
+  };
+
+  // State for inline subject add in dropdown
+  const [inlineSubjectInput, setInlineSubjectInput] = useState("");
+  const [addingSubjectForCell, setAddingSubjectForCell] = useState<{ weekday: string; period: number } | null>(null);
+  const addInlineSubject = (weekday: string, period: number) => {
+    const raw = inlineSubjectInput.trim();
+    if (!raw) return;
+    if (!subjects.some(s => s.name === raw)) {
+      setSubjects(prev => [...prev, { name: raw }]);
+    }
+    handleSubjectChange(weekday, period, raw);
+    setInlineSubjectInput("");
+    setAddingSubjectForCell(null);
+  };
+
+  // Remove subject
+  const removeSubject = (name: string) => {
+    setSubjects(prev => prev.filter(s => s.name !== name));
+    // Clear any slots using this subject
+    setSubjectSchedule(prev => {
+      const next = { ...prev };
+      WEEKDAYS.forEach(d => {
+        next[d.key] = { ...next[d.key] };
+        PERIODS.forEach(p => {
+          if (next[d.key][p] === name) next[d.key][p] = null;
+        });
+      });
+      return next;
+    });
+  };
+
   // Count filled cells
   const filledCells = Object.values(baseSchedule).reduce((sum, day) =>
     sum + Object.values(day).filter(c => c !== null).length, 0
+  );
+
+  // Count homeroom ON slots
+  const homeroomOnCount = Object.values(homeroomSlots).reduce((sum, day) =>
+    sum + Object.values(day).filter(Boolean).length, 0
+  );
+
+  // Count subject-assigned slots
+  const subjectFilledCount = Object.values(subjectSchedule).reduce((sum, day) =>
+    sum + Object.values(day).filter(s => s !== null).length, 0
   );
 
   // Title derived from inputs
@@ -268,27 +413,62 @@ export function NewFileWizard({ open, onClose }: Props) {
   const handleCreate = async () => {
     setLoading(true);
     try {
-      // For homeroom mode: fill base schedule with homeroomClass
-      let effectiveBaseSchedule = baseSchedule;
-      if (selectedMode === 'homeroom' && homeroomClass) {
-        const schedule: Record<string, Record<number, string | null>> = {};
+      let effectiveBaseSchedule: Record<string, Record<number, string | null>>;
+      let effectiveSubjectSchedule: Record<string, Record<number, string | null>> | undefined;
+
+      if (isHomeroomMode) {
+        // Build base schedule from homeroomSlots (on = homeroomClass or empty string, off = null)
+        // homeroomClassが未設定でも担任モードの処理を行う
+        effectiveBaseSchedule = {};
         WEEKDAYS.forEach(d => {
-          schedule[d.key] = {};
-          PERIODS.forEach(p => { schedule[d.key][p] = homeroomClass; });
+          effectiveBaseSchedule[d.key] = {};
+          PERIODS.forEach(p => {
+            // ONのスロット: homeroomClassが設定されていればそのクラス、未設定なら空文字列（後で設定可能）
+            effectiveBaseSchedule[d.key][p] = homeroomSlots[d.key]?.[p]
+              ? (homeroomClass || null)  // homeroomClassが空ならnull（授業あり・クラス未設定）
+              : null;
+          });
         });
-        effectiveBaseSchedule = schedule;
+        // Subject schedule (only for ON slots)
+        effectiveSubjectSchedule = {};
+        WEEKDAYS.forEach(d => {
+          effectiveSubjectSchedule![d.key] = {};
+          PERIODS.forEach(p => {
+            if (homeroomSlots[d.key]?.[p]) {
+              effectiveSubjectSchedule![d.key][p] = subjectSchedule[d.key]?.[p] ?? null;
+            } else {
+              effectiveSubjectSchedule![d.key][p] = null;
+            }
+          });
+        });
+      } else {
+        effectiveBaseSchedule = baseSchedule;
       }
 
       const base = generateBaseEntries(startDate, endDate, {
         hasSaturday,
         hasSunday,
         baseSchedule: effectiveBaseSchedule,
+        subjectSchedule: effectiveSubjectSchedule,
       });
 
       const file = createNewTimetableFile(title, school || undefined, `${academicYear}年度`);
 
       // Set mode on meta
       file.meta.mode = selectedMode;
+
+      // Set subjects (for homeroom mode: use the subjects list; for others: empty)
+      if (isHomeroomMode) {
+        // Only include subjects that are actually used in the schedule
+        const usedSubjectNames = new Set<string>();
+        if (effectiveSubjectSchedule) {
+          Object.values(effectiveSubjectSchedule).forEach(day => {
+            Object.values(day).forEach(s => { if (s) usedSubjectNames.add(s); });
+          });
+        }
+        // Include all subjects (even unused ones, so user can assign later)
+        file.subjects = subjects;
+      }
 
       const semester: SemesterMeta = {
         semesterNumber,
@@ -298,11 +478,12 @@ export function NewFileWizard({ open, onClose }: Props) {
         hasSaturday,
         hasSunday,
         baseSchedule: effectiveBaseSchedule,
+        subjectSchedule: effectiveSubjectSchedule,
         schoolType,
         gradeClassCounts: gradeClassCounts.slice(0, grades),
         classList: allClasses,
         customClasses: extraClasses,
-        homeroomClass: selectedMode === 'homeroom' ? (homeroomClass || undefined) : undefined,
+        homeroomClass: isHomeroomMode ? (homeroomClass || undefined) : undefined,
       };
       file.semester = semester;
       file.base = base;
@@ -321,12 +502,12 @@ export function NewFileWizard({ open, onClose }: Props) {
 
   const canGoNext = () => {
     if (step === 1) {
-      // homeroom mode requires a class to be selected
-      if (selectedMode === 'homeroom' && !homeroomClass) return false;
+      if (isHomeroomMode && !homeroomClass) return false;
       return true;
     }
     if (step === 2) return startDate && endDate && startDate <= endDate;
     if (step === 3) return true;
+    if (step === 4 && isHomeroomMode) return true; // subject step is optional
     return true;
   };
 
@@ -340,7 +521,7 @@ export function NewFileWizard({ open, onClose }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <StepIndicator current={step} total={4} />
+        <StepIndicator current={step} total={totalSteps} isHomeroom={isHomeroomMode} />
 
         {/* ─── Step 1: School Info + Class Setup + Mode ──────────── */}
         {step === 1 && (
@@ -465,7 +646,7 @@ export function NewFileWizard({ open, onClose }: Props) {
               </div>
 
               {/* Homeroom class selection */}
-              {selectedMode === 'homeroom' && (
+              {isHomeroomMode && (
                 <div className="space-y-1.5 pl-1 pt-1">
                   <Label className="text-xs text-muted-foreground">担任クラス <span className="text-destructive">*</span></Label>
                   <Select value={homeroomClass || "__none__"} onValueChange={v => setHomeroomClass(v === "__none__" ? "" : v)}>
@@ -549,13 +730,13 @@ export function NewFileWizard({ open, onClose }: Props) {
                                   key={c}
                                   className={cn(
                                     "text-[10px] rounded px-1.5 py-0.5 font-medium",
-                                    selectedMode === 'homeroom' && c === homeroomClass
+                                    isHomeroomMode && c === homeroomClass
                                       ? "bg-amber-100 text-amber-700 ring-1 ring-amber-400"
                                       : "bg-primary/10 text-primary"
                                   )}
                                 >
                                   {c}
-                                  {selectedMode === 'homeroom' && c === homeroomClass && " ★"}
+                                  {isHomeroomMode && c === homeroomClass && " ★"}
                                 </span>
                               ))}
                             </div>
@@ -608,7 +789,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                 <p className="text-sm font-semibold text-foreground">{title}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   クラス合計: <span className="font-medium text-foreground">{allClasses.length}</span> クラス
-                  {selectedMode === 'homeroom' && homeroomClass && (
+                  {isHomeroomMode && homeroomClass && (
                     <span className="ml-2 text-amber-600">/ 担任: <span className="font-medium">{homeroomClass}</span></span>
                   )}
                 </p>
@@ -694,121 +875,312 @@ export function NewFileWizard({ open, onClose }: Props) {
         {/* ─── Step 3: Base Schedule Grid ─────────────────────── */}
         {step === 3 && (
           <div className="space-y-4">
-            {selectedMode === 'homeroom' ? (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
-                <p className="font-semibold mb-1">担任モード — {homeroomClass}</p>
-                <p className="text-xs">
-                  担任モードでは、基本時間割のすべてのコマに担任クラス（{homeroomClass}）が自動設定されます。
-                  教科は週間グリッドの各コマから個別に設定できます。
-                </p>
-              </div>
-            ) : (
-              <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-                基本時間割を入力します。ここで設定した内容が学期期間の各週に自動展開されます。
-                <span className="block mt-1 text-xs">空欄のままでも作成できます（後から週間グリッドで編集可能）</span>
-              </div>
-            )}
+            {isHomeroomMode ? (
+              <>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
+                  <p className="font-semibold mb-1">担任モード — {homeroomClass} の授業コマ設定</p>
+                  <p className="text-xs">
+                    各コマをクリックして「授業あり（ON）」「授業なし（OFF）」を切り替えます。<br />
+                    デフォルトはすべてONです。学年によって5時間目まで、4時間目まで等の違いをここで設定してください。
+                  </p>
+                </div>
 
-            {selectedMode !== 'homeroom' && (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr>
-                      <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
-                      {WEEKDAYS.map(d => (
-                        <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
-                          {d.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {PERIODS.map(period => (
-                      <tr key={period}>
-                        <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
-                          {period}限
-                        </td>
-                        {WEEKDAYS.map(d => {
-                          const cls = baseSchedule[d.key]?.[period] ?? null;
-                          return (
-                            <td key={d.key} className="p-0.5 border-b border-r border-border/30">
-                              <Select
-                                value={cls ?? "__empty__"}
-                                onValueChange={v => handleClassChange(d.key, period, v === "__empty__" ? null : v)}
-                              >
-                                <SelectTrigger className={cn(
-                                  "h-8 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0",
-                                  cls ? "font-medium" : "text-muted-foreground/50"
-                                )}>
-                                  <SelectValue>
-                                    <span className={cls ? "font-medium" : "text-muted-foreground/40"}>
-                                      {cls ?? "—"}
-                                    </span>
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent className="max-h-48">
-                                  <SelectItem value="__empty__">
-                                    <span className="text-muted-foreground">— 空き —</span>
-                                  </SelectItem>
-                                  {allClasses.map(c => (
-                                    <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {selectedMode === 'homeroom' && (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr>
-                      <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
-                      {WEEKDAYS.map(d => (
-                        <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
-                          {d.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {PERIODS.map(period => (
-                      <tr key={period}>
-                        <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
-                          {period}限
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr>
+                        <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
                         {WEEKDAYS.map(d => (
-                          <td key={d.key} className="p-0.5 border-b border-r border-border/30">
-                            <div className="h-8 text-xs px-2 flex items-center rounded bg-amber-50 text-amber-700 font-medium">
-                              {homeroomClass}
-                            </div>
-                          </td>
+                          <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
+                            {d.label}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody>
+                      {PERIODS.map(period => (
+                        <tr key={period}>
+                          <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
+                            {period}限
+                          </td>
+                          {WEEKDAYS.map(d => {
+                            const isOn = homeroomSlots[d.key]?.[period] ?? true;
+                            return (
+                              <td key={d.key} className="p-0.5 border-b border-r border-border/30">
+                                <button
+                                  onClick={() => toggleHomeroomSlot(d.key, period)}
+                                  className={cn(
+                                    "w-full h-10 text-xs rounded border-2 font-semibold transition-all",
+                                    isOn
+                                      ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
+                                      : "bg-muted/30 border-border/30 text-muted-foreground/40 hover:bg-muted/50"
+                                  )}
+                                >
+                                  {isOn ? homeroomClass : "—"}
+                                </button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-            {selectedMode !== 'homeroom' && filledCells > 0 && (
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
-                <span className="font-medium text-primary">{filledCells}</span> コマの授業が設定されています
-                （週あたり {filledCells} コマ × 学期期間の週数 で自動展開されます）
-              </div>
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
+                  <span className="font-medium text-primary">{homeroomOnCount}</span> コマが授業ありに設定されています
+                  （週あたり {homeroomOnCount} コマ × 学期期間の週数 で自動展開されます）
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
+                  基本時間割を入力します。ここで設定した内容が学期期間の各週に自動展開されます。
+                  <span className="block mt-1 text-xs">空欄のままでも作成できます（後から週間グリッドで編集可能）</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr>
+                        <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
+                        {WEEKDAYS.map(d => (
+                          <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
+                            {d.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {PERIODS.map(period => (
+                        <tr key={period}>
+                          <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
+                            {period}限
+                          </td>
+                          {WEEKDAYS.map(d => {
+                            const cls = baseSchedule[d.key]?.[period] ?? null;
+                            return (
+                              <td key={d.key} className="p-0.5 border-b border-r border-border/30">
+                                <Select
+                                  value={cls ?? "__empty__"}
+                                  onValueChange={v => handleClassChange(d.key, period, v === "__empty__" ? null : v)}
+                                >
+                                  <SelectTrigger className={cn(
+                                    "h-8 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0",
+                                    cls ? "font-medium" : "text-muted-foreground/50"
+                                  )}>
+                                    <SelectValue>
+                                      <span className={cls ? "font-medium" : "text-muted-foreground/40"}>
+                                        {cls ?? "—"}
+                                      </span>
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-48">
+                                    <SelectItem value="__empty__">
+                                      <span className="text-muted-foreground">— 空き —</span>
+                                    </SelectItem>
+                                    {allClasses.map(c => (
+                                      <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {filledCells > 0 && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
+                    <span className="font-medium text-primary">{filledCells}</span> コマの授業が設定されています
+                    （週あたり {filledCells} コマ × 学期期間の週数 で自動展開されます）
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
 
-        {/* ─── Step 4: Confirmation ───────────────────────────── */}
-        {step === 4 && (
+        {/* ─── Step 4 (homeroom only): Subject Schedule ────────── */}
+        {step === 4 && isHomeroomMode && (
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
+              <p className="font-semibold mb-1">教科の基礎時間割を設定（任意）</p>
+              <p className="text-xs">
+                授業ありのコマに教科を割り当てます。ここで設定した教科が学期全体の基礎時間割として適用されます。<br />
+                設定しなくても作成できます（後から週間グリッドで個別に設定可能）。
+              </p>
+            </div>
+
+            {/* Subject list management */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium text-muted-foreground">使用する教科リスト</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">{subjects.length}教科</span>
+                  {subjects.length < DEFAULT_SUBJECTS.length && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-[10px] px-2 gap-1"
+                      onClick={addAllDefaultSubjects}
+                    >
+                      <Plus size={9} />
+                      デフォルト教科を全て追加
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 p-2 border border-border rounded-lg bg-muted/20 min-h-[40px]">
+                {subjects.map(s => (
+                  <span
+                    key={s.name}
+                    className="flex items-center gap-1 text-[11px] rounded px-2 py-0.5 font-medium cursor-pointer transition-colors"
+                    style={{
+                      backgroundColor: s.color ? `${s.color}20` : '#f0f0f0',
+                      color: s.color ?? '#666',
+                      border: `1px solid ${s.color ?? '#ccc'}50`,
+                    }}
+                    title="クリックで削除"
+                    onClick={() => removeSubject(s.name)}
+                  >
+                    {s.name}
+                    <X size={9} />
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={newSubjectInput}
+                  onChange={e => {
+                    setNewSubjectInput(e.target.value);
+                    setNewSubjectError("");
+                  }}
+                  onKeyDown={e => e.key === "Enter" && addSubject()}
+                  placeholder="教科名を追加（例: 外国語、総合学習）"
+                  className="h-8 text-sm flex-1"
+                />
+                <Button size="sm" variant="outline" className="gap-1 text-xs h-8" onClick={() => addSubject()}>
+                  <Plus size={11} />
+                  追加
+                </Button>
+              </div>
+              {newSubjectError && <p className="text-xs text-red-500">{newSubjectError}</p>}
+            </div>
+
+            {/* Subject schedule grid */}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr>
+                    <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
+                    {WEEKDAYS.map(d => (
+                      <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
+                        {d.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {PERIODS.map(period => (
+                    <tr key={period}>
+                      <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
+                        {period}限
+                      </td>
+                      {WEEKDAYS.map(d => {
+                        const isOn = homeroomSlots[d.key]?.[period] ?? true;
+                        const subj = subjectSchedule[d.key]?.[period] ?? null;
+                        if (!isOn) {
+                          return (
+                            <td key={d.key} className="p-0.5 border-b border-r border-border/30">
+                              <div className="h-8 text-xs px-1 flex items-center justify-center rounded bg-muted/20 text-muted-foreground/30">
+                                —
+                              </div>
+                            </td>
+                          );
+                        }
+                        return (
+                          <td key={d.key} className="p-0.5 border-b border-r border-border/30">
+                            {addingSubjectForCell?.weekday === d.key && addingSubjectForCell?.period === period ? (
+                              <div className="flex gap-1 h-8">
+                                <Input
+                                  autoFocus
+                                  value={inlineSubjectInput}
+                                  onChange={e => setInlineSubjectInput(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') addInlineSubject(d.key, period);
+                                    if (e.key === 'Escape') { setAddingSubjectForCell(null); setInlineSubjectInput(''); }
+                                  }}
+                                  placeholder="教科名"
+                                  className="h-8 text-xs flex-1 min-w-0"
+                                />
+                                <Button size="sm" className="h-8 px-2 text-xs" onClick={() => addInlineSubject(d.key, period)}>
+                                  <Plus size={10} />
+                                </Button>
+                              </div>
+                            ) : (
+                            <Select
+                              value={subj ?? "__empty__"}
+                              onValueChange={v => {
+                                if (v === '__add_new__') {
+                                  setAddingSubjectForCell({ weekday: d.key, period });
+                                  setInlineSubjectInput('');
+                                } else {
+                                  handleSubjectChange(d.key, period, v === "__empty__" ? null : v);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className={cn(
+                                "h-8 text-xs border focus:ring-0 focus:ring-offset-0",
+                                subj ? "font-semibold bg-amber-50 border-amber-200 text-amber-800" : "bg-transparent border-border/50 text-muted-foreground/50"
+                              )}>
+                                <SelectValue>
+                                  <span className={subj ? "font-semibold" : "text-muted-foreground/40"}>
+                                    {subj ?? "—"}
+                                  </span>
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent className="max-h-48">
+                                <SelectItem value="__empty__">
+                                  <span className="text-muted-foreground">— 未設定 —</span>
+                                </SelectItem>
+                                {subjects.map(s => (
+                                  <SelectItem key={s.name} value={s.name} className="text-xs">
+                                    <span style={{ color: s.color }}>{s.name}</span>
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="__add_new__" className="text-xs text-primary">
+                                  <span className="flex items-center gap-1">
+                                    <Plus size={10} />
+                                    教科を追加...
+                                  </span>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
+              <span className="font-medium text-primary">{subjectFilledCount}</span> コマに教科が設定されています
+              {subjectFilledCount < homeroomOnCount && (
+                <span className="ml-2 text-amber-600">（残り {homeroomOnCount - subjectFilledCount} コマは未設定）</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ─── Confirmation Step ──────────────────────────────── */}
+        {step === confirmStep && (
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
               以下の内容で時間割を作成します。確認してください。
@@ -866,19 +1238,66 @@ export function NewFileWizard({ open, onClose }: Props) {
                       key={c}
                       className={cn(
                         "text-[10px] rounded px-1.5 py-0.5 font-medium",
-                        selectedMode === 'homeroom' && c === homeroomClass
+                        isHomeroomMode && c === homeroomClass
                           ? "bg-amber-100 text-amber-700 ring-1 ring-amber-400"
                           : "bg-primary/10 text-primary"
                       )}
                     >
                       {c}
-                      {selectedMode === 'homeroom' && c === homeroomClass && " ★"}
+                      {isHomeroomMode && c === homeroomClass && " ★"}
                     </span>
                   ))}
                 </div>
               </div>
 
-              {selectedMode !== 'homeroom' && (
+              {/* Homeroom schedule summary */}
+              {isHomeroomMode && (
+                <div className="bg-card border border-border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    授業コマ設定 — 週{homeroomOnCount}コマ
+                    {subjectFilledCount > 0 && <span className="ml-1 text-amber-600">（教科設定: {subjectFilledCount}コマ）</span>}
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="text-xs border-collapse">
+                      <thead>
+                        <tr>
+                          <th className="w-8 text-muted-foreground font-normal border-b border-border pb-1" />
+                          {WEEKDAYS.map(d => (
+                            <th key={d.key} className="text-center font-bold px-2 pb-1 border-b border-border">{d.label}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {PERIODS.map(p => (
+                          <tr key={p}>
+                            <td className="text-muted-foreground text-center py-0.5 pr-1">{p}</td>
+                            {WEEKDAYS.map(d => {
+                              const isOn = homeroomSlots[d.key]?.[p] ?? true;
+                              const subj = subjectSchedule[d.key]?.[p] ?? null;
+                              return (
+                                <td key={d.key} className="text-center px-1 py-0.5">
+                                  {isOn ? (
+                                    subj ? (
+                                      <span className="font-semibold text-amber-700">{subj}</span>
+                                    ) : (
+                                      <span className="text-amber-500/60 text-[9px]">{homeroomClass}</span>
+                                    )
+                                  ) : (
+                                    <span className="text-muted-foreground/30">—</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Single subject schedule summary */}
+              {!isHomeroomMode && (
                 <div className="bg-card border border-border rounded-lg p-3">
                   <p className="text-xs text-muted-foreground mb-2">基本時間割</p>
                   {filledCells > 0 ? (
@@ -924,8 +1343,8 @@ export function NewFileWizard({ open, onClose }: Props) {
                 const end = new Date(endDate + "T00:00:00");
                 const days = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
                 const weekdays = Math.floor(days * 5 / 7);
-                const totalPeriods = selectedMode === 'homeroom'
-                  ? PERIODS.length * WEEKDAYS.length * Math.floor(days / 7)
+                const totalPeriods = isHomeroomMode
+                  ? homeroomOnCount * Math.floor(days / 7)
                   : filledCells * Math.floor(days / 7);
                 return (
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
@@ -952,8 +1371,8 @@ export function NewFileWizard({ open, onClose }: Props) {
           </Button>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{step} / 4</span>
-            {step < 4 ? (
+            <span className="text-xs text-muted-foreground">{step} / {totalSteps}</span>
+            {step < confirmStep ? (
               <Button
                 size="sm"
                 onClick={() => setStep(s => s + 1)}

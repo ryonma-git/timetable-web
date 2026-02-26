@@ -76,6 +76,11 @@ export interface SemesterMeta {
   holidays?: HolidayEntry[];
   /** 担任クラス（homeroomモード用） */
   homeroomClass?: string;
+  /**
+   * 教科基礎時間割（homeroomモード用）
+   * 曜日 -> 時限 -> 教科名（null = 教科未設定）
+   */
+  subjectSchedule?: Record<string, Record<number, string | null>>;
 }
 
 /** 複数学期の1学期分のデータ */
@@ -168,9 +173,11 @@ export function generateBaseEntries(
     hasSaturday?: boolean;
     hasSunday?: boolean;
     baseSchedule?: Record<string, Record<number, string | null>>;
+    /** 教科基礎時間割（homeroomモード用） */
+    subjectSchedule?: Record<string, Record<number, string | null>>;
   } = {}
 ): TimetableEntry[] {
-  const { periodsPerDay = 6, hasSaturday = false, hasSunday = false, baseSchedule } = options;
+  const { periodsPerDay = 6, hasSaturday = false, hasSunday = false, baseSchedule, subjectSchedule } = options;
   const entries: TimetableEntry[] = [];
   const start = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
@@ -188,15 +195,22 @@ export function generateBaseEntries(
 
     // Apply base schedule if provided
     const daySchedule = baseSchedule?.[weekday];
+    const daySubjectSchedule = subjectSchedule?.[weekday];
 
     entries.push({
       date: dateStr,
       weekday,
       weekday_jp,
-      periods: Array.from({ length: periodsPerDay }, (_, i) => ({
-        period: i + 1,
-        class: daySchedule?.[i + 1] ?? null,
-      })),
+      periods: Array.from({ length: periodsPerDay }, (_, i) => {
+        const period = i + 1;
+        const cls = daySchedule?.[period] ?? null;
+        const subj = daySubjectSchedule?.[period] ?? null;
+        return {
+          period,
+          class: cls,
+          ...(subj !== null ? { subject: subj } : {}),
+        };
+      }),
     });
   }
 

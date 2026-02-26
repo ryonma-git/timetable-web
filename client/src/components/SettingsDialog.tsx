@@ -322,11 +322,8 @@ export function SettingsDialog({ open, onClose }: Props) {
       homeroomClass: selectedMode === 'homeroom' ? (homeroomClass || undefined) : undefined,
     };
     const from = applyMode === "from" ? applyFromDate : undefined;
-    updateSettings(newSemester, from);
-    // モードが変わっていれば更新
-    if (selectedMode !== mode) {
-      setMode(selectedMode);
-    }
+    // modeをupdateSettingsに渡してmeta.modeも同時に更新（競合防止）
+    updateSettings(newSemester, from, selectedMode);
     toast.success("設定を適用しました");
     onClose();
   };

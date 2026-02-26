@@ -133,36 +133,66 @@ export function Inspector() {
       });
 
     } else if (opMode === "add") {
-      // homeroomモードではクラスを担任クラスに固定
-      const targetClass = isHomeroomMode ? (homeroomClass ?? "") : newClass;
-      if (!targetClass) {
-        if (isHomeroomMode) toast.error("担任クラスが設定されていません（設定から変更できます）");
-        else toast.error("クラスを選択してください");
-        return;
+      if (isHomeroomMode) {
+        // 担任モード: 教科のみ設定（クラスはhomeroomClassに固定、または未設定のまま）
+        if (!newSubject) {
+          toast.error("教科を選択してください");
+          return;
+        }
+        // homeroomClassが設定されている場合はclassも同時に設定、なければ教科のみ
+        const op = homeroomClass
+          ? buildAddOp(date, period, homeroomClass, reason || undefined, newSubject)
+          : buildSetSubjectOp(date, period, null, newSubject);
+
+        const preview: ChangePreview = {
+          opType: "add",
+          description: `${formatDateJP(date)} ${period}限に「${newSubject}」を追加します`,
+          items: [{
+            label: "",
+            fromDate: date, fromPeriod: period, fromClass: currentClass,
+            toDate: date, toPeriod: period, toClass: homeroomClass ?? null, toReason: reason || undefined,
+          }],
+          warnings: [],
+        };
+
+        showConfirm("add", `追加: ${date} ${period}限 → ${newSubject}`, preview, () => {
+          const audit = applyOps([op], `追加: ${date} ${period}限 → ${newSubject}`);
+          const errors = audit.filter(a => a.level === "error");
+          if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
+          else toast.success(`追加しました: ${newSubject}`);
+          setNewSubject(""); setReason("");
+        });
+      } else {
+        // 通常モード: クラスを選択して追加
+        const targetClass = newClass;
+        if (!targetClass) {
+          toast.error("クラスを選択してください");
+          return;
+        }
+        const op = buildAddOp(date, period, targetClass, reason || undefined, newSubject || undefined);
+        const v = validateOp(op);
+        if (!v.valid) { toast.error(v.errors.join("\n")); return; }
+
+        const preview: ChangePreview = {
+          opType: "add",
+          description: `${formatDateJP(date)} ${period}限に授業を追加します`,
+          items: [{
+            label: "",
+            fromDate: date, fromPeriod: period, fromClass: currentClass,
+            toDate: date, toPeriod: period, toClass: targetClass, toReason: reason || undefined,
+          }],
+          warnings: v.warnings,
+        };
+
+        const displayLabel = newSubject ? `${targetClass} / ${newSubject}` : targetClass;
+        showConfirm("add", `追加: ${date} ${period}限 → ${displayLabel}`, preview, () => {
+          const audit = applyOps([op], `追加: ${date} ${period}限 → ${displayLabel}`);
+          const errors = audit.filter(a => a.level === "error");
+          if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
+          else toast.success(`追加しました: ${displayLabel}`);
+          setNewClass(""); setNewSubject(""); setReason("");
+        });
       }
-      const op = buildAddOp(date, period, targetClass, reason || undefined, newSubject || undefined);
-      const v = validateOp(op);
-      if (!v.valid) { toast.error(v.errors.join("\n")); return; }
-
-      const preview: ChangePreview = {
-        opType: "add",
-        description: `${formatDateJP(date)} ${period}限に授業を追加します`,
-        items: [{
-          label: "",
-          fromDate: date, fromPeriod: period, fromClass: currentClass,
-          toDate: date, toPeriod: period, toClass: targetClass, toReason: reason || undefined,
-        }],
-        warnings: v.warnings,
-      };
-
-      const displayLabel = newSubject ? `${targetClass} / ${newSubject}` : targetClass;
-      showConfirm("add", `追加: ${date} ${period}限 → ${displayLabel}`, preview, () => {
-        const audit = applyOps([op], `追加: ${date} ${period}限 → ${displayLabel}`);
-        const errors = audit.filter(a => a.level === "error");
-        if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
-        else toast.success(`追加しました: ${displayLabel}`);
-        setNewClass(""); setNewSubject(""); setReason("");
-      });
 
     } else if (opMode === "move") {
       if (!dstDate) { toast.error("移動先の日付を選択してください"); return; }

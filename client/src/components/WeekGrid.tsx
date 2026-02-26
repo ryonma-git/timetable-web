@@ -10,7 +10,7 @@ import { useGradeColors } from "@/contexts/GradeColorContext";
 import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
-import { Filter, X, CalendarPlus } from "lucide-react";
+import { Filter, X, CalendarPlus, BookOpen, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -64,6 +64,9 @@ export function WeekGrid() {
   const isHomeroomMode = mode === 'homeroom';
   const isMultiSubjectMode = mode === 'multi_subject';
   const showSubject = isHomeroomMode || isMultiSubjectMode || (mode === 'single_subject' && subjects.length > 0);
+
+  // クラス/教科メイン切替（デフォルト: homeroomモードは教科メイン、それ以外はクラスメイン）
+  const [subjectFirst, setSubjectFirst] = useState<boolean>(isHomeroomMode);
 
   // holidays: HolidayEntry[] → 日付のSetとname mapに変換
   const holidayDates = new Set(holidays.map(h => h.date));
@@ -238,6 +241,31 @@ export function WeekGrid() {
             <X size={11} />
             フィルター解除
           </button>
+        )}
+
+        {/* Subject/Class main toggle button */}
+        {showSubject && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-7 gap-1.5 text-xs",
+                  subjectFirst
+                    ? "bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100"
+                    : "bg-sky-50 border-sky-300 text-sky-700 hover:bg-sky-100"
+                )}
+                onClick={() => setSubjectFirst(v => !v)}
+              >
+                {subjectFirst ? <BookOpen size={11} /> : <Users size={11} />}
+                {subjectFirst ? "教科メイン" : "クラスメイン"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              {subjectFirst ? "教科を大きく、クラスを小さく表示中。クリックで切り替え" : "クラスを大きく、教科を小さく表示中。クリックで切り替え"}
+            </TooltipContent>
+          </Tooltip>
         )}
 
         {/* Subject filter (shown when subjects are available) */}
@@ -432,72 +460,66 @@ export function WeekGrid() {
                         }
                       >
                         {/* Cell content */}
-                        {isHomeroomMode ? (
-                          // Homeroom mode: show subject only (class is fixed)
-                          slot.subject ? (
+                        {(() => {
+                          const hasClass = !!slot.class;
+                          const hasSubject = !!slot.subject;
+                          const hasReason = !!slot.reason;
+
+                          if (!hasClass && !hasSubject) {
+                            // 空きコマ
+                            return (
+                              <span className="text-[10px] text-muted-foreground/30 self-center">
+                                {hasReason ? <span className="text-[9px] text-muted-foreground/50">{slot.reason}</span> : "—"}
+                              </span>
+                            );
+                          }
+
+                          if (!showSubject) {
+                            // 教科なしモード: クラスのみ
+                            return (
+                              <>
+                                <span className="text-xs font-bold leading-tight" style={{ color: cellColors?.text }}>
+                                  {slot.class}
+                                </span>
+                                {hasReason && (
+                                  <span className="text-[9px] bg-white/60 rounded px-1 text-muted-foreground truncate">
+                                    {slot.reason}
+                                  </span>
+                                )}
+                              </>
+                            );
+                          }
+
+                          // 教科ありモード: subjectFirstに応じてメイン/サブを切り替え
+                          // mainLabelがnullの場合はフォールバックとして相手方を表示
+                          const mainLabelRaw = subjectFirst
+                            ? (hasSubject ? slot.subject : null)
+                            : (hasClass ? slot.class : null);
+                          const subLabelRaw = subjectFirst
+                            ? (hasClass ? slot.class : null)
+                            : (hasSubject ? slot.subject : null);
+                          // mainLabelがnullならsubLabelをメインに昇格
+                          const mainLabel = mainLabelRaw ?? subLabelRaw;
+                          const subLabel = mainLabelRaw ? subLabelRaw : null;
+
+                          return (
                             <>
                               <span className="text-xs font-bold leading-tight" style={{ color: cellColors?.text }}>
-                                {slot.subject}
+                                {mainLabel}
                               </span>
-                              {slot.reason && (
+                              {subLabel && (
+                                <span className="text-[9px] leading-tight" style={{ color: cellColors?.text, opacity: 0.65 }}>
+                                  {subLabel}
+                                </span>
+                              )}
+                              {hasReason && (
                                 <span className="text-[9px] bg-white/60 rounded px-1 text-muted-foreground truncate">
                                   {slot.reason}
                                 </span>
                               )}
                             </>
-                          ) : slot.class ? (
-                            <span className="text-xs font-bold leading-tight" style={{ color: cellColors?.text }}>
-                              {slot.class}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground/30 self-center">—</span>
-                          )
-                        ) : showSubject ? (
-                          // single_subject/multi_subject with subjects: show class + subject
-                          slot.class ? (
-                            <>
-                              <span className="text-xs font-bold leading-tight" style={{ color: cellColors?.text }}>
-                                {slot.class}
-                              </span>
-                              {slot.subject && (
-                                <span className="text-[10px] leading-tight" style={{ color: cellColors?.text, opacity: 0.75 }}>
-                                  {slot.subject}
-                                </span>
-                              )}
-                              {slot.reason && (
-                                <span className="text-[9px] bg-white/60 rounded px-1 text-muted-foreground truncate">
-                                  {slot.reason}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground/30 self-center">
-                              {slot.reason ? (
-                                <span className="text-[9px] text-muted-foreground/50">{slot.reason}</span>
-                              ) : "—"}
-                            </span>
-                          )
-                        ) : (
-                          // Original single_subject mode (no subjects)
-                          slot.class ? (
-                            <>
-                              <span className="text-xs font-bold leading-tight" style={{ color: cellColors?.text }}>
-                                {slot.class}
-                              </span>
-                              {slot.reason && (
-                                <span className="text-[9px] bg-white/60 rounded px-1 text-muted-foreground truncate">
-                                  {slot.reason}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground/30 self-center">
-                              {slot.reason ? (
-                                <span className="text-[9px] text-muted-foreground/50">{slot.reason}</span>
-                              ) : "—"}
-                            </span>
-                          )
-                        )}
+                          );
+                        })()}
                       </div>
                     </td>
                   );

@@ -121,7 +121,7 @@ interface TimetableContextValue {
   exportCSV: () => void;
 
   // Settings
-  updateSettings: (newSemester: SemesterMeta, applyFrom?: string) => void;
+  updateSettings: (newSemester: SemesterMeta, applyFrom?: string, newMode?: TimetableMode) => void;
 
   // Custom classes
   customClasses: string[];
@@ -363,7 +363,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   }, [effectiveEntries, currentFile]);
 
   // ─── Update Settings (base rebuild) ─────────────────────────
-  const updateSettings = useCallback((newSemester: SemesterMeta, applyFrom?: string) => {
+  const updateSettings = useCallback((newSemester: SemesterMeta, applyFrom?: string, newMode?: TimetableMode) => {
     if (!currentFile) return;
 
     let newBase: TimetableEntry[];
@@ -375,6 +375,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
         hasSaturday: newSemester.hasSaturday,
         hasSunday: newSemester.hasSunday,
         baseSchedule: newSemester.baseSchedule,
+        subjectSchedule: newSemester.subjectSchedule,
       });
       newOps = allOps; // keep existing ops
     } else {
@@ -384,6 +385,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
         hasSaturday: newSemester.hasSaturday,
         hasSunday: newSemester.hasSunday,
         baseSchedule: newSemester.baseSchedule,
+        subjectSchedule: newSemester.subjectSchedule,
       });
       newBase = [...beforeEntries, ...newEntries];
       // Remove ops that are on or after applyFrom
@@ -395,7 +397,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       semester: newSemester,
       base: newBase,
       ops: newOps,
-      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString(), ...(newMode ? { mode: newMode } : {}) },
     };
 
     const { effective, audit } = applyOverrides(newBase, newOps);
