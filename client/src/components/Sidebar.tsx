@@ -156,7 +156,7 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
 
   return (
     <aside
-      className="w-[220px] shrink-0 flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border overflow-hidden"
+      className="w-[280px] lg:w-[220px] shrink-0 flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border overflow-hidden"
       onDragOver={e => e.preventDefault()}
       onDrop={handleDrop}
     >

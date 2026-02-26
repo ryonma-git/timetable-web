@@ -113,7 +113,7 @@ export function SamplePickerDialog({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>サンプルデータを選択</DialogTitle>
           <DialogDescription className="text-xs">
@@ -121,7 +121,7 @@ export function SamplePickerDialog({ open, onClose }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 py-1">
+        <div className="space-y-3 py-1 overflow-y-auto flex-1 min-h-0">
           {SAMPLES.map(sample => (
             <div
               key={sample.id}

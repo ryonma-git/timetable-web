@@ -12,6 +12,7 @@ import {
   FilePlus,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Check,
   School,
   Calendar,
@@ -1092,7 +1093,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                                       onValueChange={v => setHomeroomSlotClass(d.key, period, v === "__homeroom__" ? null : v)}
                                     >
                                       <SelectTrigger className="w-5 h-full border-0 border-l border-amber-200 bg-amber-100 hover:bg-amber-200 rounded-none px-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
-                                        <span className="text-[9px] text-amber-600 font-bold">▽</span>
+                                        <ChevronDown size={10} className="text-amber-600" />
                                       </SelectTrigger>
                                       <SelectContent className="max-h-48">
                                         <SelectItem value="__homeroom__" className="text-xs">
