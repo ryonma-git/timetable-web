@@ -167,7 +167,7 @@ function StepIndicator({ current, total, isHomeroom }: { current: number; total:
 }
 
 export function NewFileWizard({ open, onClose }: Props) {
-  const { loadTimetableFile } = useTimetable();
+  const { loadTimetableFile, goToDate } = useTimetable();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -489,6 +489,10 @@ export function NewFileWizard({ open, onClose }: Props) {
       file.base = base;
 
       await loadTimetableFile(file);
+      // 学期開始日の週に移動（今日ではなく設定した学期の始まりを表示）
+      if (startDate) {
+        goToDate(new Date(startDate));
+      }
       handleClose();
     } finally {
       setLoading(false);

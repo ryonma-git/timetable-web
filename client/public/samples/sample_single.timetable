@@ -1,0 +1,1977 @@
+{
+  "format": "timetable-app/v1",
+  "version": "1.0",
+  "meta": {
+    "title": "理科専科 第3学期 時間割",
+    "school": "サンプル小学校",
+    "year": "2025",
+    "createdAt": "2026-02-26T02:48:30.721594",
+    "updatedAt": "2026-02-26T02:48:30.721594",
+    "mode": "single_subject"
+  },
+  "semester": {
+    "semesterNumber": 3,
+    "semesterSystem": "trimester",
+    "startDate": "2026-01-08",
+    "endDate": "2026-03-24",
+    "hasSaturday": false,
+    "hasSunday": false,
+    "baseSchedule": {
+      "Mon": {
+        "1": "5-1",
+        "2": "5-2",
+        "3": null,
+        "4": null,
+        "5": null,
+        "6": null
+      },
+      "Tue": {
+        "1": "4-1",
+        "2": "4-2",
+        "3": "6-1",
+        "4": null,
+        "5": null,
+        "6": null
+      },
+      "Wed": {
+        "1": "6-2",
+        "2": "5-1",
+        "3": null,
+        "4": null,
+        "5": null,
+        "6": null
+      },
+      "Thu": {
+        "1": "4-1",
+        "2": "4-2",
+        "3": "5-2",
+        "4": null,
+        "5": null,
+        "6": null
+      },
+      "Fri": {
+        "1": "6-1",
+        "2": "6-2",
+        "3": null,
+        "4": null,
+        "5": null,
+        "6": null
+      }
+    },
+    "subjectSchedule": {
+      "Mon": {
+        "1": "理科",
+        "2": "理科",
+        "3": null,
+        "4": null,
+        "5": null,
+        "6": null
+      },
+      "Tue": {
+        "1": "理科",
+        "2": "理科",
+        "3": "理科",
+        "4": null,
+        "5": null,
+        "6": null
+      },
+      "Wed": {
+        "1": "理科",
+        "2": "理科",
+        "3": null,
+        "4": null,
+        "5": null,
+        "6": null
+      },
+      "Thu": {
+        "1": "理科",
+        "2": "理科",
+        "3": "理科",
+        "4": null,
+        "5": null,
+        "6": null
+      },
+      "Fri": {
+        "1": "理科",
+        "2": "理科",
+        "3": null,
+        "4": null,
+        "5": null,
+        "6": null
+      }
+    },
+    "classList": [
+      "4-1",
+      "4-2",
+      "5-1",
+      "5-2",
+      "6-1",
+      "6-2"
+    ],
+    "holidays": [
+      {
+        "date": "2026-01-12",
+        "name": "成人の日"
+      },
+      {
+        "date": "2026-02-11",
+        "name": "建国記念の日"
+      },
+      {
+        "date": "2026-02-23",
+        "name": "天皇誕生日"
+      },
+      {
+        "date": "2026-03-20",
+        "name": "春分の日"
+      }
+    ],
+    "schoolType": "elementary",
+    "gradeClassCounts": [
+      0,
+      0,
+      0,
+      2,
+      2,
+      2
+    ]
+  },
+  "base": [
+    {
+      "date": "2026-01-08",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-09",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-12",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-13",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-14",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-15",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-16",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-19",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-20",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-21",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-22",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-23",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-26",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-27",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-28",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-29",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-01-30",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-02",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-03",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-04",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-05",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-06",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-09",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-10",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-11",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-12",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-13",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-16",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-17",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-18",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-19",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-20",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-23",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-24",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-25",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-26",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-02-27",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-02",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-03",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-04",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-05",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-06",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-09",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-10",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-11",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-12",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-13",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-16",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-17",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-18",
+      "weekday": "Wed",
+      "weekday_jp": "水",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-19",
+      "weekday": "Thu",
+      "weekday_jp": "木",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-20",
+      "weekday": "Fri",
+      "weekday_jp": "金",
+      "periods": [
+        {
+          "period": 1,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "6-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-23",
+      "weekday": "Mon",
+      "weekday_jp": "月",
+      "periods": [
+        {
+          "period": 1,
+          "class": "5-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "5-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": null
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    },
+    {
+      "date": "2026-03-24",
+      "weekday": "Tue",
+      "weekday_jp": "火",
+      "periods": [
+        {
+          "period": 1,
+          "class": "4-1",
+          "subject": "理科"
+        },
+        {
+          "period": 2,
+          "class": "4-2",
+          "subject": "理科"
+        },
+        {
+          "period": 3,
+          "class": "6-1",
+          "subject": "理科"
+        },
+        {
+          "period": 4,
+          "class": null
+        },
+        {
+          "period": 5,
+          "class": null
+        },
+        {
+          "period": 6,
+          "class": null
+        }
+      ]
+    }
+  ],
+  "ops": [
+    {
+      "op": "set",
+      "date": "2026-01-20",
+      "period": 3,
+      "class": "6-1",
+      "subject": "理科",
+      "reason": "実験室使用可能になったため追加"
+    },
+    {
+      "op": "delete",
+      "date": "2026-02-03",
+      "period": 1,
+      "class": "5-1",
+      "reason": "学校行事のため休講"
+    },
+    {
+      "op": "set",
+      "date": "2026-02-10",
+      "period": 1,
+      "class": "5-1",
+      "subject": "理科",
+      "reason": "2/3の振替授業"
+    }
+  ],
+  "subjects": [
+    {
+      "name": "理科",
+      "short": "理",
+      "color": "#22c55e"
+    }
+  ]
+}

@@ -36,6 +36,7 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { ExportDialog } from "@/components/ExportDialog";
 import { SubjectSettingsDialog } from "@/components/SubjectSettingsDialog";
+import { SamplePickerDialog } from "@/components/SamplePickerDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 
 export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
@@ -62,6 +63,7 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
   const [datePickerValue, setDatePickerValue] = useState("");
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showSubjectSettings, setShowSubjectSettings] = useState(false);
+  const [showSamplePicker, setShowSamplePicker] = useState(false);
 
   // Keyboard shortcut: Ctrl/Cmd+S to save
   useEffect(() => {
@@ -107,20 +109,8 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
     }
   };
 
-  const handleLoadSample = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/sample_data.zip');
-      const blob = await res.blob();
-      const file = new File([blob], 'sample_data.zip', { type: 'application/zip' });
-      const result = await loadFromZip(file);
-      toast.success(`サンプルデータ読み込み完了: ${result.loadedFiles.length}ファイル`);
-      result.warnings.forEach((w: string) => toast.warning(w));
-    } catch (err) {
-      toast.error(`読み込みエラー: ${String(err)}`);
-    } finally {
-      setLoading(false);
-    }
+  const handleLoadSample = () => {
+    setShowSamplePicker(true);
   };
 
   const handleDrop = async (e: React.DragEvent) => {
@@ -270,15 +260,13 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
         )}
 
         {/* Sample data */}
-        {!isLoaded && (
-          <button
-            onClick={handleLoadSample}
-            disabled={loading}
-            className="w-full text-[10px] text-sidebar-primary/70 hover:text-sidebar-primary underline text-center transition-colors mt-1"
-          >
-            サンプルデータを読み込む
-          </button>
-        )}
+        <button
+          onClick={handleLoadSample}
+          disabled={loading}
+          className="w-full text-[10px] text-sidebar-primary/70 hover:text-sidebar-primary underline text-center transition-colors mt-1"
+        >
+          サンプルデータを読み込む
+        </button>
       </div>
 
       {/* Navigation - 常に表示、スクロールしない */}
@@ -494,6 +482,8 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
       <HolidaySettingsDialog open={showHolidaySettings} onOpenChange={setShowHolidaySettings} />
       {/* Subject Settings Dialog */}
       <SubjectSettingsDialog open={showSubjectSettings} onClose={() => setShowSubjectSettings(false)} />
+      {/* Sample Picker Dialog */}
+      <SamplePickerDialog open={showSamplePicker} onClose={() => setShowSamplePicker(false)} />
     </aside>
   );
 }
