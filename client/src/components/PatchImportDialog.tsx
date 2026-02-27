@@ -97,33 +97,36 @@ function parsePatchFile(json: string): ParseResult {
 
 // ─── Template Data ───────────────────────────────────────────
 
-const PARTIAL_TEMPLATE_JSON = JSON.stringify({
+const PARTIAL_TEMPLATE = {
   format: "timetable-patch/v1",
   mode: "partial",
   description: "運動会練習期間 特別時間割（部分書き換えの例）",
   notes: "このファイルはLLMなどで生成したパッチをインポートするためのテンプレートです。\n実際のクラス名・日付に合わせて編集してください。",
   dateRange: { start: "2024-09-09", end: "2024-09-20" },
   ops: [
-    { op: "set_period_class", date: "2024-09-09", period: 1, class: "1年1組", reason: "運動会練習" },
-    { op: "set_period_class", date: "2024-09-09", period: 2, class: "2年1組", reason: "運動会練習" },
-    { op: "set_period_class", date: "2024-09-10", period: 1, class: "3年1組", reason: "運動会練習" },
+    { op: "set_period_class", date: "2024-09-09", period: 1, class: "1年1組", subject: "体育", reason: "運動会練習" },
+    { op: "set_period_class", date: "2024-09-09", period: 2, class: "2年1組", subject: "体育", reason: "運動会練習" },
+    { op: "set_period_class", date: "2024-09-10", period: 1, class: "3年1組", subject: "体育", reason: "運動会練習" },
     { op: "clear_period_class", date: "2024-09-10", period: 3 },
     { op: "set_period_reason", date: "2024-09-11", period: 2, reason: "運動会全体練習（授業なし）" }
   ]
-}, null, 2);
+};
 
-const FULL_REPLACE_TEMPLATE_JSON = JSON.stringify({
+const FULL_REPLACE_TEMPLATE = {
   format: "timetable-patch/v1",
   mode: "full_replace",
   description: "運動会練習期間 特別時間割（全書き換えの例）",
   notes: "full_replaceモードでは、dateRange内の全コマがクリアされてからopsが適用されます。",
   dateRange: { start: "2024-09-09", end: "2024-09-13" },
   ops: [
-    { op: "set_period_class", date: "2024-09-09", period: 1, class: "1年1組", reason: "運動会練習" },
-    { op: "set_period_class", date: "2024-09-09", period: 2, class: "2年1組", reason: "運動会練習" },
-    { op: "set_period_class", date: "2024-09-10", period: 1, class: "3年1組", reason: "運動会練習" }
+    { op: "set_period_class", date: "2024-09-09", period: 1, class: "1年1組", subject: "体育", reason: "運動会練習" },
+    { op: "set_period_class", date: "2024-09-09", period: 2, class: "2年1組", subject: "体育", reason: "運動会練習" },
+    { op: "set_period_class", date: "2024-09-10", period: 1, class: "3年1組", subject: "体育", reason: "運動会練習" }
   ]
-}, null, 2);
+};
+
+const PARTIAL_TEMPLATE_JSON = JSON.stringify(PARTIAL_TEMPLATE, null, 2);
+const FULL_REPLACE_TEMPLATE_JSON = JSON.stringify(FULL_REPLACE_TEMPLATE, null, 2);
 
 const README_IMPORT_MD = `# timetable-patch/v1 インポート形式 仕様書
 
@@ -162,7 +165,7 @@ LLM（ChatGPT・Claude等）にこの仕様書とテンプレートを渡して�
 
 | op | 必須フィールド | 動作 |
 |----|--------------|------|
-| \`set_period_class\` | date, period, class | 指定コマにクラスを割り当て |
+| \`set_period_class\` | date, period, class | 指定コマにクラスを割り当て（subjectで教科名も指定可） |
 | \`clear_period_class\` | date, period | 指定コマを空きコマに |
 | \`set_period_reason\` | date, period, reason | 指定コマに備考のみ設定 |
 | \`set_day_reason\` | date, reason | 指定日に日付レベルの備考 |
@@ -174,6 +177,7 @@ LLM（ChatGPT・Claude等）にこの仕様書とテンプレートを渡して�
 - \`date\`: 日付（YYYY-MM-DD形式、例: "2024-09-09"）
 - \`period\`: 時限番号（1〜6の整数）
 - \`class\`: クラス名（例: "1年1組", "3年2組"）または \`null\`（空きコマ）
+- \`subject\`: 教科名（例: "理科", "体育"）。省略可。指定した場合、教科ビューでその教科名と教科カラーが表示されます
 - \`reason\`: 備考テキスト（省略可）
 
 ---

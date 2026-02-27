@@ -76,6 +76,12 @@ const DEFAULT_SUBJECTS: SubjectDef[] = [
   { name: "書写", color: "#374151" },
   { name: "自習", color: "#6b7280" },
   { name: "PC", color: "#0f766e" },
+  { name: "数学", color: "#1d4ed8" },
+  { name: "家庭科", color: "#be185d" },
+  { name: "技術", color: "#92400e" },
+  { name: "情報", color: "#0369a1" },
+  { name: "保健", color: "#b91c1c" },
+  { name: "外国語活動", color: "#6d28d9" },
 ];
 
 // School type definitions
@@ -1092,8 +1098,8 @@ export function NewFileWizard({ open, onClose }: Props) {
                                       value={slotOverride ?? "__homeroom__"}
                                       onValueChange={v => setHomeroomSlotClass(d.key, period, v === "__homeroom__" ? null : v)}
                                     >
-                                      <SelectTrigger className="w-5 h-full border-0 border-l border-amber-200 bg-amber-100 hover:bg-amber-200 rounded-none px-0 focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
-                                        <ChevronDown size={10} className="text-amber-600" />
+                                      <SelectTrigger className="w-5 h-full border-0 border-l border-amber-200 bg-amber-100 hover:bg-amber-200 rounded-none px-0 focus:ring-0 focus:ring-offset-0 [&>svg:last-child]:hidden">
+                                        <ChevronDown size={10} className="text-amber-600 shrink-0" />
                                       </SelectTrigger>
                                       <SelectContent className="max-h-48">
                                         <SelectItem value="__homeroom__" className="text-xs">
@@ -1125,7 +1131,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
                   <div><span className="font-medium text-primary">{homeroomOnCount}</span> コマが授業ありに設定されています
                   （週あたり {homeroomOnCount} コマ xd7 学期期間の週数 で自動展開されます）</div>
-                  <div className="text-muted-foreground/70">コマ右の <span className="inline-flex items-center gap-0.5 bg-amber-100 border border-amber-200 rounded px-1 text-amber-700 font-medium"><ChevronDown size={9} />ボタン</span> を押すと、そのコマだけ別のクラスに変更できます。学年全体の授業など、担任クラス以外のコマに対応できます。</div>
+                  <div className="text-muted-foreground/70">コマ右端の <span className="inline-flex items-center justify-center bg-amber-100 border border-amber-200 rounded w-5 h-5 text-amber-700"><ChevronDown size={10} /></span> をクリックすると、そのコマだけ別のクラスに変更できます。担任クラス以外の授業（学年全体担当など）に対応できます。</div>
                 </div>
               </>
             ) : (
