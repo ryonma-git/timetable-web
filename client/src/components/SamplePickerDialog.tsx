@@ -91,7 +91,7 @@ export function SamplePickerDialog({ open, onClose }: Props) {
   const handleLoad = async (sample: SampleDef) => {
     setLoading(sample.id);
     try {
-      const res = await fetch(sample.filename);
+      const res = await fetch(sample.filename, { cache: "no-cache" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       const result = deserializeTimetableFile(text);

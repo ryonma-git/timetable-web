@@ -91,21 +91,19 @@ export function AutoRestoreDialog() {
             <RotateCcw size={18} className="text-primary" />
             前回の作業を復元しますか？
           </DialogTitle>
-          <DialogDescription asChild>
-            <div className="pt-2 space-y-1">
-            <p>前回の編集内容が自動保存されています。</p>
-            <div className="mt-3 bg-muted rounded-lg px-4 py-3 text-sm space-y-1">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">ファイル名</span>
-                <span className="font-medium text-foreground">{meta.title}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">最終保存</span>
-                <span className="font-medium text-foreground">{savedAt}</span>
-              </div>
-            </div>
-            </div>
+          <DialogDescription className="pt-2 space-y-1 text-sm">
+            前回の編集内容が自動保存されています。
           </DialogDescription>
+          <div className="mt-3 bg-muted rounded-lg px-4 py-3 text-sm space-y-1">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">ファイル名</span>
+              <span className="font-medium text-foreground">{meta.title}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">最終保存</span>
+              <span className="font-medium text-foreground">{savedAt}</span>
+            </div>
+          </div>
         </DialogHeader>
         <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
           <Button

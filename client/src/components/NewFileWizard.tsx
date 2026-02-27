@@ -59,13 +59,13 @@ const PERIODS = [1, 2, 3, 4, 5, 6];
 // Default subjects for homeroom mode
 const DEFAULT_SUBJECTS: SubjectDef[] = [
   { name: "国語", color: "#ef4444" },
-  { name: "算数", color: "#f97316" },
+  { name: "算数", color: "#3b82f6" },
   { name: "理科", color: "#22c55e" },
   { name: "社会", color: "#eab308" },
-  { name: "英語", color: "#3b82f6" },
-  { name: "音楽", color: "#a855f7" },
-  { name: "図工", color: "#ec4899" },
-  { name: "体育", color: "#14b8a6" },
+  { name: "英語", color: "#8b5cf6" },
+  { name: "音楽", color: "#ec4899" },
+  { name: "図工", color: "#065f46" },
+  { name: "体育", color: "#f97316" },
   { name: "生活", color: "#84cc16" },
   { name: "道徳", color: "#f59e0b" },
   { name: "総合", color: "#6366f1" },
@@ -1122,9 +1122,10 @@ export function NewFileWizard({ open, onClose }: Props) {
                   </table>
                 </div>
 
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
-                  <span className="font-medium text-primary">{homeroomOnCount}</span> コマが授業ありに設定されています
-                  （週あたり {homeroomOnCount} コマ × 学期期間の週数 で自動展開されます）
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+                  <div><span className="font-medium text-primary">{homeroomOnCount}</span> コマが授業ありに設定されています
+                  （週あたり {homeroomOnCount} コマ xd7 学期期間の週数 で自動展開されます）</div>
+                  <div className="text-muted-foreground/70">コマ右の <span className="inline-flex items-center gap-0.5 bg-amber-100 border border-amber-200 rounded px-1 text-amber-700 font-medium"><ChevronDown size={9} />ボタン</span> を押すと、そのコマだけ別のクラスに変更できます。学年全体の授業など、担任クラス以外のコマに対応できます。</div>
                 </div>
               </>
             ) : (
@@ -1481,6 +1482,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                       {WEEKDAYS.map(d => {
                         const isOn = homeroomSlots[d.key]?.[period] ?? true;
                         const subj = subjectSchedule[d.key]?.[period] ?? null;
+                        const subjColor = subj ? (subjects.find(s => s.name === subj)?.color ?? null) : null;
                         if (!isOn) {
                           return (
                             <td key={d.key} className="p-0.5 border-b border-r border-border/30">
@@ -1531,12 +1533,19 @@ export function NewFileWizard({ open, onClose }: Props) {
                                 }
                               }}
                             >
-                              <SelectTrigger className={cn(
-                                "h-8 text-xs border focus:ring-0 focus:ring-offset-0",
-                                subj ? "font-semibold bg-amber-50 border-amber-200 text-amber-800" : "bg-transparent border-border/50 text-muted-foreground/50"
-                              )}>
+                              <SelectTrigger
+                                className={cn(
+                                  "h-8 text-xs border focus:ring-0 focus:ring-offset-0",
+                                  subj ? "font-semibold" : "bg-transparent border-border/50 text-muted-foreground/50"
+                                )}
+                                style={subjColor ? {
+                                  backgroundColor: `${subjColor}18`,
+                                  borderColor: `${subjColor}60`,
+                                  color: subjColor,
+                                } : undefined}
+                              >
                                 <SelectValue>
-                                  <span className={subj ? "font-semibold" : "text-muted-foreground/40"}>
+                                  <span className={subj ? "font-semibold" : "text-muted-foreground/40"} style={subjColor ? { color: subjColor } : undefined}>
                                     {subj ?? "—"}
                                   </span>
                                 </SelectValue>

@@ -67,7 +67,7 @@ export function WeekGrid() {
   // 教科情報がある場合は常に表示切り替えボタンを出す
   const showSubject = subjects.length > 0;
 
-  // クラス/教科メイン切替（デフォルト: homeroomモードは教科メイン、それ以外はクラスメイン）
+  // クラス/教科ビュー切替（デフォルト: homeroomモードは教科ビュー、それ以外はクラスビュー）
   const [subjectFirst, setSubjectFirst] = useState<boolean>(isHomeroomMode);
 
   // holidays: HolidayEntry[] → 日付のSetとname mapに変換
@@ -261,7 +261,7 @@ export function WeekGrid() {
                 onClick={() => setSubjectFirst(v => !v)}
               >
                 {subjectFirst ? <BookOpen size={11} /> : <Users size={11} />}
-                {subjectFirst ? "教科メイン" : "クラスメイン"}
+                {subjectFirst ? "教科ビュー" : "クラスビュー"}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
@@ -419,8 +419,8 @@ export function WeekGrid() {
                   const isFiltered = isFilteredByClass || isFilteredBySubject;
 
                   // Color logic: subjectFirstに応じて教科色または学年色を適用
-                  // 教科メイン時: 教科色を優先、教科なしの場合は学年色へフォールバック
-                  // クラスメイン時: 学年色を優先、クラスなしの場合は教科色へフォールバック
+                   // 教科ビュー時: 教科色を優先、教科なしの場合は学年色へフォールバック
+                   // クラスビュー時: 学年色を優先、クラスなしの場合は教科色へフォールバック
                   const cellColors = (() => {
                     if (showSubject && subjectFirst) {
                       if (slot.subject) return getSubjectColor(slot.subject, subjectColors);
