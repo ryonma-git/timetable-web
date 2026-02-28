@@ -23,6 +23,7 @@ import {
   BookOpen,
   BookMarked,
   X,
+  Clock,
 } from "lucide-react";
 import {
   Dialog,
@@ -35,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { PeriodTimesDialog, PeriodTimesDialogStandalone } from "@/components/PeriodTimesDialog";
 import { generateBaseEntries, createNewTimetableFile, SemesterMeta, TimetableMode, SemesterSystem, SubjectDef, HolidayEntry } from "@/lib/timetableFile";
 import Holidays from "date-holidays";
 import { useTimetable } from "@/contexts/TimetableContext";
@@ -220,6 +222,9 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [hasSunday, setHasSunday] = useState(false);
   // 祝日を自動で休校日に設定するか
   const [autoSetHolidays, setAutoSetHolidays] = useState(true);
+  // 時程表（各コマの開始・終了時刻）
+  const [wizardPeriodTimes, setWizardPeriodTimes] = useState<Record<number, { start: string; end: string }> | undefined>(undefined);
+  const [showPeriodTimesInWizard, setShowPeriodTimesInWizard] = useState(false);
 
   // Step 3: Base schedule (for single_subject mode: class per slot; for homeroom: on/off per slot)
   const [baseSchedule, setBaseSchedule] = useState<Record<string, Record<number, string | null>>>(() => {
@@ -593,6 +598,7 @@ export function NewFileWizard({ open, onClose }: Props) {
         customClasses: extraClasses,
         homeroomClass: isHomeroomMode ? (homeroomClass || undefined) : undefined,
         holidays: autoHolidayEntries.length > 0 ? autoHolidayEntries : undefined,
+        periodTimes: wizardPeriodTimes && Object.keys(wizardPeriodTimes).length > 0 ? wizardPeriodTimes : undefined,
       };
       file.semester = semester;
       file.base = base;
@@ -1081,8 +1087,42 @@ export function NewFileWizard({ open, onClose }: Props) {
                 </p>
               )}
             </div>
+
+            {/* 時程表設定（オプション） */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">時程表の設定（オプション）</p>
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">
+                    {wizardPeriodTimes && Object.keys(wizardPeriodTimes).length > 0
+                      ? `時程表設定済 — ${Object.keys(wizardPeriodTimes).length}コマ`
+                      : "各コマの開始・終了時刻"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    設定するとGoogleカレンダー等へのICS書き出しで正確な時刻が反映されます。後から変更も可能です
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-3 shrink-0 gap-1.5 text-xs"
+                  onClick={() => setShowPeriodTimesInWizard(true)}
+                >
+                  <Clock size={13} />
+                  {wizardPeriodTimes && Object.keys(wizardPeriodTimes).length > 0 ? "編集" : "設定する"}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
+
+        {/* PeriodTimesDialog for wizard */}
+        <PeriodTimesDialogStandalone
+          open={showPeriodTimesInWizard}
+          onOpenChange={setShowPeriodTimesInWizard}
+          value={wizardPeriodTimes}
+          onChange={setWizardPeriodTimes}
+        />
 
         {/* ─── Step 3: Base Schedule Grid ─────────────────────── */}
         {step === 3 && (
@@ -1823,6 +1863,25 @@ export function NewFileWizard({ open, onClose }: Props) {
                   ) : (
                     <p className="text-xs text-muted-foreground/60">基本時間割は設定されていません（空きコマで作成）</p>
                   )}
+                </div>
+              )}
+
+              {/* 時程表設定状況 */}
+              {wizardPeriodTimes && Object.keys(wizardPeriodTimes).length > 0 && (
+                <div className="bg-card border border-border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-1">時程表</p>
+                  <div className="flex flex-wrap gap-2">
+                    {PERIODS.map(p => {
+                      const t = wizardPeriodTimes[p];
+                      if (!t?.start || !t?.end) return null;
+                      return (
+                        <div key={p} className="flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded px-2 py-1">
+                          <span className="font-bold text-blue-700 dark:text-blue-400">{p}限</span>
+                          <span className="text-muted-foreground">{t.start}〜{t.end}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
