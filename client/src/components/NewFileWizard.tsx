@@ -1692,13 +1692,19 @@ export function NewFileWizard({ open, onClose }: Props) {
                             {WEEKDAYS.map(d => {
                               const isOn = homeroomSlots[d.key]?.[p] ?? true;
                               const subj = subjectSchedule[d.key]?.[p] ?? null;
+                              const slotOverride = homeroomSlotOverrides[d.key]?.[p] ?? null;
+                              const displayClass = slotOverride !== null ? slotOverride : homeroomClass;
+                              const isOverridden = slotOverride !== null && slotOverride !== homeroomClass;
                               return (
                                 <td key={d.key} className="text-center px-1 py-0.5">
                                   {isOn ? (
                                     subj ? (
                                       <span className="font-semibold text-amber-700">{subj}</span>
                                     ) : (
-                                      <span className="text-amber-500/60 text-[9px]">{homeroomClass}</span>
+                                      <span className={cn(
+                                        "text-[9px]",
+                                        isOverridden ? "text-blue-600 font-semibold" : "text-amber-500/60"
+                                      )}>{displayClass}</span>
                                     )
                                   ) : (
                                     <span className="text-muted-foreground/30">—</span>
