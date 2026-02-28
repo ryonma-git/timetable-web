@@ -3,14 +3,14 @@
 // Week grid with drag-and-drop, today highlight, class color coding (1-6 grades)
 // Phase 3: 教科表示対応（single_subject/homeroom/multi_subjectモード）
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
-import { Filter, X, CalendarPlus, BookOpen, Users } from "lucide-react";
+import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -46,6 +46,9 @@ export function WeekGrid() {
     holidays,
     mode,
     subjects,
+    navigateWeek,
+    goToToday,
+    goToDate,
   } = useTimetable();
 
   // classListが空の場合はフォールバック
@@ -57,6 +60,9 @@ export function WeekGrid() {
   const [filterClass, setFilterClass] = useState<string | null>(null);
   const [filterSubject, setFilterSubject] = useState<string | null>(null);
   const [showHolidayDialog, setShowHolidayDialog] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerValue, setDatePickerValue] = useState("");
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const today = todayISO();
 
   // homeroomモードでは担任クラスを固定
@@ -170,7 +176,7 @@ export function WeekGrid() {
 
   return (
     <div className="flex-1 overflow-auto p-4">
-      {/* Year/Academic year header */}
+      {/* Week Navigation Header */}
       {semester && (() => {
         const mon = currentWeekMonday;
         const year = mon.getFullYear();
@@ -179,19 +185,102 @@ export function WeekGrid() {
         const semLabel = semester.semesterSystem === "semester"
           ? (semester.semesterNumber === 1 ? "前期" : "後期")
           : `${semester.semesterNumber}学期`;
+        // 週の範囲ラベル
+        const weekEnd = new Date(currentWeekMonday);
+        weekEnd.setDate(weekEnd.getDate() + (showSaturday ? 5 : showSunday ? 6 : 4));
+        const fmt = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
+        const weekRangeLabel = `${fmt(currentWeekMonday)}～${fmt(weekEnd)}`;
+        const isCurrentWeek = formatDate(currentWeekMonday) === formatDate(new Date(today));
         return (
-          <div className="flex items-baseline gap-3 mb-2">
-            <span className="text-base font-bold text-foreground">{academicYear}年度</span>
-            <span className="text-sm text-muted-foreground">{year}年</span>
-            <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">{semLabel}</span>
-            {isHomeroomMode && homeroomClass && (
-              <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 font-medium">
-                担任: {homeroomClass}
-              </span>
-            )}
-            {semester.customClasses && semester.customClasses.length > 0 && (
-              <span className="text-xs text-muted-foreground/60">カスタム: {semester.customClasses.join(", ")}</span>
-            )}
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {/* Meta badges */}
+            <div className="flex items-center gap-2">
+              <span className="text-base font-bold text-foreground">{academicYear}年度</span>
+              <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">{semLabel}</span>
+              {isHomeroomMode && homeroomClass && (
+                <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 font-medium">
+                  担任: {homeroomClass}
+                </span>
+              )}
+            </div>
+            {/* Week navigation — pushed to right */}
+            <div className="flex items-center gap-1 ml-auto">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => navigateWeek(-1)}>
+                    <ChevronLeft size={15} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">前の週</TooltipContent>
+              </Tooltip>
+              {/* Week range — click to go to today */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={goToToday}
+                    className={cn(
+                      "h-8 px-3 text-xs font-medium rounded-md border transition-colors min-w-[8rem] text-center",
+                      isCurrentWeek
+                        ? "border-amber-400 bg-amber-50 text-amber-800 font-semibold"
+                        : "border-border bg-background text-foreground/80 hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    {isCurrentWeek && <span className="mr-1 text-amber-500">●</span>}
+                    {weekRangeLabel}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">今週に戻る</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => navigateWeek(1)}>
+                    <ChevronRight size={15} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">次の週</TooltipContent>
+              </Tooltip>
+              {/* Date jump */}
+              <div className="relative">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => {
+                        setShowDatePicker(v => !v);
+                        setTimeout(() => dateInputRef.current?.focus(), 50);
+                      }}
+                    >
+                      <CalendarDays size={14} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">日付で移動</TooltipContent>
+                </Tooltip>
+                {showDatePicker && (
+                  <div className="absolute top-full mt-1 right-0 bg-popover border border-border rounded-lg shadow-lg p-2 z-50 w-48">
+                    <p className="text-[10px] text-muted-foreground mb-1.5">移動先の日付を選択</p>
+                    <input
+                      ref={dateInputRef}
+                      type="date"
+                      value={datePickerValue}
+                      min={semester.startDate}
+                      max={semester.endDate}
+                      onChange={e => {
+                        setDatePickerValue(e.target.value);
+                        if (e.target.value) {
+                          goToDate(new Date(e.target.value + "T00:00:00"));
+                          setShowDatePicker(false);
+                          setDatePickerValue("");
+                        }
+                      }}
+                      onBlur={() => setTimeout(() => setShowDatePicker(false), 150)}
+                      className="w-full text-[11px] bg-background border border-border rounded px-2 py-1 text-foreground"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         );
       })()}
