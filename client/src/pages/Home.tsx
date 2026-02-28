@@ -14,6 +14,8 @@ import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
 import { AutoRestoreDialog } from "@/components/AutoRestoreDialog";
 import { ExportDialog } from "@/components/ExportDialog";
 import { PatchImportDialog } from "@/components/PatchImportDialog";
+import { PeriodTimesDialog } from "@/components/PeriodTimesDialog";
+import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +35,8 @@ export default function Home() {
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showPatchImport, setShowPatchImport] = useState(false);
+  const [showPeriodTimes, setShowPeriodTimes] = useState(false);
+  const [showHolidaySettings, setShowHolidaySettings] = useState(false);
 
   // Update page title
   useEffect(() => {
@@ -46,6 +50,8 @@ export default function Home() {
       <PrintPreviewDialog open={showPrintPreview} onClose={() => setShowPrintPreview(false)} />
       <ExportDialog open={showExportDialog} onClose={() => setShowExportDialog(false)} />
       <PatchImportDialog open={showPatchImport} onClose={() => setShowPatchImport(false)} />
+      <PeriodTimesDialog open={showPeriodTimes} onOpenChange={setShowPeriodTimes} />
+      <HolidaySettingsDialog open={showHolidaySettings} onOpenChange={setShowHolidaySettings} />
       {/* Mobile sidebar overlay */}
       {mobileSidebarOpen && (
         <div

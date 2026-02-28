@@ -35,7 +35,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { generateBaseEntries, createNewTimetableFile, SemesterMeta, TimetableMode, SemesterSystem, SubjectDef } from "@/lib/timetableFile";
+import { generateBaseEntries, createNewTimetableFile, SemesterMeta, TimetableMode, SemesterSystem, SubjectDef, HolidayEntry } from "@/lib/timetableFile";
+import Holidays from "date-holidays";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { normalizeClassName, classSort, generateDefaultClasses, SchoolType } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
@@ -217,6 +218,8 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [endDate, setEndDate] = useState(() => getSemesterDefaults(academicYear, 1).end);
   const [hasSaturday, setHasSaturday] = useState(false);
   const [hasSunday, setHasSunday] = useState(false);
+  // 祝日を自動で休校日に設定するか
+  const [autoSetHolidays, setAutoSetHolidays] = useState(true);
 
   // Step 3: Base schedule (for single_subject mode: class per slot; for homeroom: on/off per slot)
   const [baseSchedule, setBaseSchedule] = useState<Record<string, Record<number, string | null>>>(() => {
@@ -554,6 +557,27 @@ export function NewFileWizard({ open, onClose }: Props) {
         file.meta.mode = subjectTeacherSubjects.length === 1 ? 'single_subject' : 'multi_subject';
       }
 
+      // 祝日自動取得
+      let autoHolidayEntries: HolidayEntry[] = [];
+      if (autoSetHolidays && startDate && endDate) {
+        const hd = new Holidays("JP");
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const years = new Set<number>();
+        for (let y = start.getFullYear(); y <= end.getFullYear(); y++) years.add(y);
+        years.forEach(year => {
+          hd.getHolidays(year).forEach(h => {
+            if (h.type !== "public") return;
+            const d = new Date(h.date);
+            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            if (iso >= startDate && iso <= endDate) {
+              autoHolidayEntries.push({ date: iso, name: h.name });
+            }
+          });
+        });
+        autoHolidayEntries.sort((a, b) => a.date.localeCompare(b.date));
+      }
+
       const semester: SemesterMeta = {
         semesterNumber,
         semesterSystem,
@@ -568,6 +592,7 @@ export function NewFileWizard({ open, onClose }: Props) {
         classList: allClasses,
         customClasses: extraClasses,
         homeroomClass: isHomeroomMode ? (homeroomClass || undefined) : undefined,
+        holidays: autoHolidayEntries.length > 0 ? autoHolidayEntries : undefined,
       };
       file.semester = semester;
       file.base = base;
@@ -1038,6 +1063,23 @@ export function NewFileWizard({ open, onClose }: Props) {
               <p className="text-xs text-muted-foreground">
                 ※ 土日授業をOFFにしても、後から週単位で臨時授業日を追加できます
               </p>
+            </div>
+
+            {/* 祝日自動設定 */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">祝日の設定</p>
+              <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
+                <div>
+                  <p className="text-sm font-medium">祝日を自動で休校日に設定</p>
+                  <p className="text-xs text-muted-foreground">内閣府の祝日データを取得し、学期期間内の祝日を休校日として登録します。後から変更も可能です</p>
+                </div>
+                <Switch checked={autoSetHolidays} onCheckedChange={setAutoSetHolidays} />
+              </div>
+              {!autoSetHolidays && (
+                <p className="text-xs text-muted-foreground pl-1">
+                  ※ 祝日を休校日にしない場合は、作成後に「祝日・休校日の設定」から手動で登録できます
+                </p>
+              )}
             </div>
           </div>
         )}

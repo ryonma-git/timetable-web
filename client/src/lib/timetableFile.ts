@@ -81,6 +81,11 @@ export interface SemesterMeta {
    * 曜日 -> 時限 -> 教科名（null = 教科未設定）
    */
   subjectSchedule?: Record<string, Record<number, string | null>>;
+  /**
+   * 時程表（各コマの開始・終了時刻）
+   * period -> { start: "HH:MM", end: "HH:MM" }
+   */
+  periodTimes?: Record<number, { start: string; end: string }>;
 }
 
 /** 複数学期の1学期分のデータ */

@@ -5,12 +5,13 @@
 
 import { useState, useRef } from "react";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
+import { PeriodTimesDialog } from "@/components/PeriodTimesDialog";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
-import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -60,6 +61,7 @@ export function WeekGrid() {
   const [filterClass, setFilterClass] = useState<string | null>(null);
   const [filterSubject, setFilterSubject] = useState<string | null>(null);
   const [showHolidayDialog, setShowHolidayDialog] = useState(false);
+  const [showPeriodTimesLocal, setShowPeriodTimesLocal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -203,17 +205,8 @@ export function WeekGrid() {
                 </span>
               )}
             </div>
-            {/* Week navigation — pushed to right */}
+            {/* Week range label + date jump — pushed to right */}
             <div className="flex items-center gap-1 ml-auto">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => navigateWeek(-1)}>
-                    <ChevronLeft size={15} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">前の週</TooltipContent>
-              </Tooltip>
-              {/* Week range — click to go to today */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -230,14 +223,6 @@ export function WeekGrid() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">今週に戻る</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => navigateWeek(1)}>
-                    <ChevronRight size={15} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">次の週</TooltipContent>
               </Tooltip>
               {/* Date jump */}
               <div className="relative">
@@ -295,46 +280,9 @@ export function WeekGrid() {
         isHomeroomMode={isHomeroomMode}
       />
 
-      {/* Filter bar */}
+      {/* Filter bar: ビュー切替 → クラス絞り込み → 教科絞り込み */}
       <div className="mt-3 flex items-center gap-2 flex-wrap">
-        {/* Class filter (not shown in homeroom mode) */}
-        {!isHomeroomMode && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
-                <Filter size={12} />
-                {filterClass ? filterClass : "クラスで絞り込み"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-44 max-h-72 overflow-y-auto">
-              <DropdownMenuLabel className="text-xs">クラスフィルター</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setFilterClass(null)} className="text-xs">
-                すべて表示
-              </DropdownMenuItem>
-              {effectiveClassList.map(cls => (
-                <DropdownMenuItem
-                  key={cls}
-                  onClick={() => setFilterClass(cls)}
-                  className="text-xs"
-                >
-                  {cls}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        {filterClass && (
-          <button
-            onClick={() => setFilterClass(null)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X size={11} />
-            フィルター解除
-          </button>
-        )}
-
-        {/* Subject/Class main toggle button: 教科情報がある場合は常に表示 */}
+        {/* Subject/Class main toggle button: 教科情報がある場合は常に表示（一番左） */}
         {showSubject && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -359,13 +307,59 @@ export function WeekGrid() {
           </Tooltip>
         )}
 
+        {/* Class filter (not shown in homeroom mode) */}
+        {!isHomeroomMode && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("h-7 gap-1.5 text-xs", filterClass && "border-primary text-primary")}>
+                <Filter size={12} />
+                {filterClass ? filterClass : "クラスで絞り込み"}
+                {filterClass && (
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); setFilterClass(null); }}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X size={10} />
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44 max-h-72 overflow-y-auto">
+              <DropdownMenuLabel className="text-xs">クラスフィルター</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setFilterClass(null)} className="text-xs">
+                すべて表示
+              </DropdownMenuItem>
+              {effectiveClassList.map(cls => (
+                <DropdownMenuItem
+                  key={cls}
+                  onClick={() => setFilterClass(cls)}
+                  className="text-xs"
+                >
+                  {cls}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         {/* Subject filter (shown when subjects are available) */}
         {showSubject && subjects.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+              <Button variant="outline" size="sm" className={cn("h-7 gap-1.5 text-xs", filterSubject && "border-primary text-primary")}>
                 <Filter size={12} />
                 {filterSubject ? filterSubject : "教科で絞り込み"}
+                {filterSubject && (
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); setFilterSubject(null); }}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X size={10} />
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44 max-h-72 overflow-y-auto">
@@ -386,19 +380,34 @@ export function WeekGrid() {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        {filterSubject && (
-          <button
-            onClick={() => setFilterSubject(null)}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X size={11} />
-            教科フィルター解除
-          </button>
-        )}
 
-        {/* Weekend temporary class buttons */}
+        {/* Period times + Weekend temporary class buttons */}
         {isLoaded && (
           <div className="flex items-center gap-1.5 ml-auto">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-7 gap-1 text-xs",
+                    semester?.periodTimes && Object.keys(semester.periodTimes).length > 0
+                      ? "border-blue-400 text-blue-600 dark:text-blue-400"
+                      : ""
+                  )}
+                  onClick={() => setShowPeriodTimesLocal(true)}
+                >
+                  <Clock size={11} />
+                  時程表
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">
+                {semester?.periodTimes && Object.keys(semester.periodTimes).length > 0
+                  ? "時程表設定済（クリックで編集）"
+                  : "各コマの開始・終了時刻を設定（ICS書き出し用）"
+                }
+              </TooltipContent>
+            </Tooltip>
             {!semester?.hasSaturday && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -450,7 +459,17 @@ export function WeekGrid() {
         <table className="w-full border-collapse" style={{ minWidth: 600 }}>
           <thead>
             <tr>
-              <th className="w-14 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
+              {/* 前の週ボタン — 左端 */}
+              <th className="w-14 border-b border-border p-0">
+                <button
+                  onClick={() => navigateWeek(-1)}
+                  className="w-full h-full flex flex-col items-center justify-center gap-0.5 py-2 hover:bg-accent rounded transition-colors group"
+                  title="前の週"
+                >
+                  <ChevronLeft size={14} className="text-muted-foreground group-hover:text-foreground" />
+                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground leading-none">前の週</span>
+                </button>
+              </th>
               {weekDates.map(date => {
                 const isToday = date === today;
                 const hasData = entryByDate.has(date);
@@ -484,6 +503,17 @@ export function WeekGrid() {
                   </th>
                 );
               })}
+              {/* 次の週ボタン — 右端 */}
+              <th className="w-14 border-b border-border p-0">
+                <button
+                  onClick={() => navigateWeek(1)}
+                  className="w-full h-full flex flex-col items-center justify-center gap-0.5 py-2 hover:bg-accent rounded transition-colors group"
+                  title="次の週"
+                >
+                  <ChevronRight size={14} className="text-muted-foreground group-hover:text-foreground" />
+                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground leading-none">次の週</span>
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -619,6 +649,8 @@ export function WeekGrid() {
                     </td>
                   );
                 })}
+                {/* 右端のスペーサーセル */}
+                <td className="w-14 border-b border-border/30" />
               </tr>
             ))}
           </tbody>
@@ -663,6 +695,7 @@ export function WeekGrid() {
       </div>
 
       <HolidaySettingsDialog open={showHolidayDialog} onOpenChange={setShowHolidayDialog} />
+      <PeriodTimesDialog open={showPeriodTimesLocal} onOpenChange={setShowPeriodTimesLocal} />
     </div>
   );
 }

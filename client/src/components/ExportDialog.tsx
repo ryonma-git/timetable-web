@@ -25,15 +25,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { X, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
+import { X, FileText, FileSpreadsheet, Loader2, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportTimetableExcel } from "@/lib/exportUtils";
 import { exportTimetablePdf } from "@/lib/timetablePdfExport";
+import { exportToICS, downloadICS } from "@/lib/icsExport";
 
 // ─── Types ────────────────────────────────────────────────────
 
 type RangeMode = "single" | "month" | "semester" | "from_today_n" | "from_today_all";
-type ExportFormat = "excel" | "pdf";
+type ExportFormat = "excel" | "pdf" | "ics";
 
 interface Props {
   open: boolean;
@@ -383,16 +384,42 @@ export function ExportDialog({ open, onClose }: Props) {
       setIsExporting(false);
     }
   }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason]);
+  // ── Export: ICS ───────────────────────────────────────────
+  const handleExportICS = useCallback(async () => {
+    if (!semester) return;
+    setIsExporting(true);
+    try {
+      // 選択された週のエントリをフィルタリング
+      const targetDates = new Set(weeksToPrint.flatMap(w => {
+        const mondayDate = typeof w === 'string' ? new Date(w + 'T00:00:00') : w;
+        return getWeekDates(mondayDate, { includeSaturday: semester.hasSaturday, includeSunday: semester.hasSunday });
+      }));
+      const filteredEntries = effectiveEntries.filter(e => targetDates.has(e.date));
+      const icsContent = exportToICS({
+        entries: filteredEntries,
+        semester,
+        title: currentFile?.meta?.title ?? "時間割",
+        school: currentFile?.meta?.school,
+        fallbackToAllDay: true,
+      });
+      const filename = `${currentFile?.meta?.title ?? "時間割"}.ics`;
+      downloadICS(icsContent, filename);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [weeksToPrint, semester, effectiveEntries, currentFile]);
 
-  // ── Dispatch export ──────────────────────────────────────────
+  // ── Dispatch export ───────────────────────────────────────────
   const handleExport = useCallback(async () => {
     if (format === "excel") await handleExportExcel();
     else if (format === "pdf") await handleExportPdf();
-  }, [format, handleExportExcel, handleExportPdf]);
+    else if (format === "ics") await handleExportICS();
+  }, [format, handleExportExcel, handleExportPdf, handleExportICS]);
 
   const formatButtons: { value: ExportFormat; label: string; icon: React.ReactNode; desc: string }[] = [
     { value: "excel", label: "Excel", icon: <FileSpreadsheet size={12} />, desc: ".xlsx形式でダウンロード" },
     { value: "pdf", label: "PDF", icon: <FileText size={12} />, desc: ".pdf形式でダウンロード（日本語フォント埋め込み）" },
+    { value: "ics", label: "ICS", icon: <CalendarDays size={12} />, desc: ".ics形式でダウンロード（Googleカレンダー等に取り込み可）" },
   ];
 
   return (
@@ -714,6 +741,8 @@ export function ExportDialog({ open, onClose }: Props) {
                 <><Loader2 size={13} className="animate-spin" />処理中...</>
               ) : format === "excel" ? (
                 <><FileSpreadsheet size={13} />Excelでダウンロード</>
+              ) : format === "ics" ? (
+                <><CalendarDays size={13} />ICSでダウンロード</>
               ) : (
                 <><FileText size={13} />PDFでダウンロード</>
               )}
