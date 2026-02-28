@@ -116,6 +116,28 @@ export function generateTimetablePrompt(semester: SemesterMeta): string {
 入力済みのJSONのみを出力してください。説明文は不要です。`;
 }
 
+// 学級担任モード専用: 授業コマ設定＋教科設定を同時に行うプロンプト
+export function generateHomeroomTimetablePrompt(semester: SemesterMeta): string {
+  const subjectExamples = '国語、算数、理科、社会、音楽、図工、体育、生活、道徳、特活、英語、数学、理科、社会、外国語';
+  const homeroomClass = semester.homeroomClass ? `担任クラス: ${semester.homeroomClass}` : '（担任クラス未設定）';
+  return `あなたは学校の時間割を読み取るアシスタントです。
+添付された時間割の画像を見て、以下のJSONテンプレートに情報を入力してください。
+
+これは「学級担任モード」の時間割です。${homeroomClass}
+
+【入力ルール】
+- 各コマ（period）に授業の「教科名」を入力してください。
+  例: ${subjectExamples}
+- 授業がないコマ（空っぽ、欠課、休みなど）はnullのままにしてください。
+- 曜日キーは Mon（月）、Tue（火）、Wed（水）、Thu（木）、Fri（金）です。
+- periodは1～6の数字です（1限～6限）。
+- JSONの_descriptionと_instructionsフィールドはそのままにしてください。
+- 読み取れない場合はnullにしてください。
+
+【出力形式】
+入力済みのJSONのみを出力してください。説明文は不要です。`;
+}
+
 export function generatePeriodTimesPrompt(): string {
   return `あなたは学校の時程表を読み取るアシスタントです。
 添付された時程表の画像を見て、以下のJSONテンプレートに情報を入力してください。
