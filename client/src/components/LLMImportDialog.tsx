@@ -1,7 +1,7 @@
 // Design: Swiss Grid × Japanese Functional Design
 // LLMImportDialog: LLM連携による画像からの時間割・時程表・年間予定表読み取り支援ダイアログ
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -103,6 +103,18 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
   const [userRules, setUserRules] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
+
+  // ダイアログが開くたびにmodeに合わせてactiveModeをリセット
+  useEffect(() => {
+    if (open) {
+      setActiveMode(mode);
+      setImportJson("");
+      setParseError(null);
+      setImportSuccess(false);
+      setCopiedPrompt(false);
+      setCopiedTemplate(false);
+    }
+  }, [open, mode]);
 
   if (!semester) return null;
 
@@ -285,12 +297,12 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
               <div className="pb-3 flex-1">
                 <p className="text-sm font-medium mb-0.5">個別ルールを入力（任意）</p>
                 <p className="text-xs text-muted-foreground mb-2">
-                  行事ごとの休講ルールをLLMに伝えます。例：「運動会は全コマ休講」「遠足は4限まで授業あり、5・6限は休講」
+                  行事ごとの休講ルールをLLMに伝えます。例：「運動会は全コマ休講」「校外学習は4限まで授業なし、5・6限は授業あり」
                 </p>
                 <Textarea
                   value={userRules}
                   onChange={(e) => setUserRules(e.target.value)}
-                  placeholder="例: 運動会は全コマ休講。遠足は4限まで授業あり5,6限は休講。..."
+                  placeholder="例: 運動会は全コマ休講。校外学習は4限まで授業なし、5・6限は授業あり。..."
                   className="text-xs min-h-[60px] resize-none"
                 />
               </div>

@@ -7,7 +7,7 @@
 // Step 5: Confirmation and creation
 // Phase 4: モード選択・担任クラス設定・教科基礎時間割設定を追加
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   FilePlus,
   ChevronRight,
@@ -38,6 +38,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { PeriodTimesDialog, PeriodTimesDialogStandalone } from "@/components/PeriodTimesDialog";
 import { generateBaseEntries, createNewTimetableFile, SemesterMeta, TimetableMode, SemesterSystem, SubjectDef, HolidayEntry } from "@/lib/timetableFile";
+import { generateTimetableTemplate, generateTimetablePrompt, copyToClipboard } from "@/lib/llmImport";
 import Holidays from "date-holidays";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { normalizeClassName, classSort, generateDefaultClasses, SchoolType } from "@/lib/timetable";
@@ -226,6 +227,13 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [wizardPeriodTimes, setWizardPeriodTimes] = useState<Record<number, { start: string; end: string }> | undefined>(undefined);
   const [wizardPeriodTimesByDay, setWizardPeriodTimesByDay] = useState<Record<string, Record<number, { start: string; end: string }>> | undefined>(undefined);
   const [showPeriodTimesInWizard, setShowPeriodTimesInWizard] = useState(false);
+
+  // ─── ウィザード専用LLMヘルパー ───────────────────────────────
+  const [showWizardLLM, setShowWizardLLM] = useState(false);
+  const [wizardLLMJson, setWizardLLMJson] = useState("");
+  const [wizardLLMCopied, setWizardLLMCopied] = useState(false);
+  const [wizardLLMTemplateCopied, setWizardLLMTemplateCopied] = useState(false);
+  const [wizardLLMError, setWizardLLMError] = useState<string | null>(null);
 
   // Step 3: Base schedule (for single_subject mode: class per slot; for homeroom: on/off per slot)
   const [baseSchedule, setBaseSchedule] = useState<Record<string, Record<number, string | null>>>(() => {
@@ -438,6 +446,93 @@ export function NewFileWizard({ open, onClose }: Props) {
       });
       return next;
     });
+  };
+
+  // ウィザード専用: 仮のSemesterMeta（LLMテンプレート生成用）
+  const wizardSemesterMeta = useMemo((): SemesterMeta => ({
+    semesterNumber,
+    semesterSystem,
+    startDate,
+    endDate,
+    hasSaturday,
+    hasSunday,
+    baseSchedule: {},
+    schoolType,
+    gradeClassCounts: gradeClassCounts.slice(0, grades),
+    classList: allClasses,
+    customClasses: extraClasses,
+    homeroomClass: isHomeroomMode ? (homeroomClass || undefined) : undefined,
+  }), [semesterNumber, semesterSystem, startDate, endDate, hasSaturday, hasSunday, schoolType, gradeClassCounts, grades, allClasses, extraClasses, isHomeroomMode, homeroomClass]);
+
+  // LLMヘルパー: テンプレートコピー
+  const handleWizardLLMCopyTemplate = async () => {
+    const template = generateTimetableTemplate(wizardSemesterMeta);
+    await copyToClipboard(JSON.stringify(template, null, 2));
+    setWizardLLMTemplateCopied(true);
+    setTimeout(() => setWizardLLMTemplateCopied(false), 2000);
+  };
+
+  // LLMヘルパー: プロンプトコピー
+  const handleWizardLLMCopyPrompt = async () => {
+    const prompt = generateTimetablePrompt(wizardSemesterMeta);
+    await copyToClipboard(prompt);
+    setWizardLLMCopied(true);
+    setTimeout(() => setWizardLLMCopied(false), 2000);
+  };
+
+  // LLMヘルパー: JSON貴り付けでグリッドに反映
+  const handleWizardLLMImport = () => {
+    setWizardLLMError(null);
+    try {
+      const parsed = JSON.parse(wizardLLMJson);
+      if (!parsed.weekdays || typeof parsed.weekdays !== 'object') {
+        setWizardLLMError('weekdaysフィールドが見つかりません。テンプレートの形式で入力してください。');
+        return;
+      }
+      const dayMap: Record<string, string> = { Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat', Sun: 'Sun' };
+      if (isHomeroomMode) {
+        // 学級担任モード: weekdaysの各コマに値があればONにする
+        const newSlots: Record<string, Record<number, boolean>> = {};
+        const newSubjectSchedule: Record<string, Record<number, string | null>> = {};
+        WEEKDAYS.forEach(d => {
+          newSlots[d.key] = {};
+          newSubjectSchedule[d.key] = {};
+          PERIODS.forEach(p => {
+            const val = parsed.weekdays[dayMap[d.key]]?.[p] ?? null;
+            if (val !== null && val !== '') {
+              // 値がクラス名か教科名か判定: クラスリストに含まれれば授業オン
+              newSlots[d.key][p] = true;
+              // 教科名らしければsubjectScheduleに設定
+              if (!allClasses.includes(val)) {
+                newSubjectSchedule[d.key][p] = val;
+              } else {
+                newSubjectSchedule[d.key][p] = null;
+              }
+            } else {
+              newSlots[d.key][p] = false;
+              newSubjectSchedule[d.key][p] = null;
+            }
+          });
+        });
+        setHomeroomSlots(newSlots);
+        setSubjectSchedule(newSubjectSchedule);
+      } else {
+        // 教科担任モード: weekdaysの各コマにクラス名を設定
+        const newSchedule: Record<string, Record<number, string | null>> = {};
+        WEEKDAYS.forEach(d => {
+          newSchedule[d.key] = {};
+          PERIODS.forEach(p => {
+            const val = parsed.weekdays[dayMap[d.key]]?.[p] ?? null;
+            newSchedule[d.key][p] = (val && allClasses.includes(val)) ? val : null;
+          });
+        });
+        setBaseSchedule(newSchedule);
+      }
+      setWizardLLMJson('');
+      setShowWizardLLM(false);
+    } catch {
+      setWizardLLMError('JSONのパースに失敗しました。正しいJSON形式で入力してください。');
+    }
   };
 
   // Count filled cells
@@ -1132,17 +1227,83 @@ export function NewFileWizard({ open, onClose }: Props) {
           }}
         />
 
-        {/* ─── Step 3: Base Schedule Grid ─────────────────────── */}
+        {/* ─── Step 3: Base Schedule Grid ───────────────────── */}
         {step === 3 && (
           <div className="space-y-4">
+            {/* LLMヘルパーパネル */}
+            {showWizardLLM && (
+              <div className="border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">✨ LLM読み取りヘルパー</p>
+                  <button onClick={() => { setShowWizardLLM(false); setWizardLLMError(null); }} className="text-blue-400 hover:text-blue-600 transition-colors">
+                    <X size={14} />
+                  </button>
+                </div>
+                <p className="text-xs text-blue-700 dark:text-blue-400">
+                  手順：① テンプレートをコピー → ② ChatGPT/Claudeに画像と一緒に貼り付け → ③ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs h-8 border-blue-300 text-blue-700 hover:bg-blue-100"
+                    onClick={handleWizardLLMCopyTemplate}
+                  >
+                    {wizardLLMTemplateCopied ? <Check size={12} /> : null}
+                    {wizardLLMTemplateCopied ? 'コピー済み!' : '① JSONテンプレートをコピー'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs h-8 border-blue-300 text-blue-700 hover:bg-blue-100"
+                    onClick={handleWizardLLMCopyPrompt}
+                  >
+                    {wizardLLMCopied ? <Check size={12} /> : null}
+                    {wizardLLMCopied ? 'コピー済み!' : '② プロンプトをコピー'}
+                  </Button>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-blue-700 dark:text-blue-400">③ LLMが返したJSONを貼り付け</Label>
+                  <textarea
+                    className="w-full h-28 text-xs font-mono rounded border border-blue-200 bg-white dark:bg-slate-900 p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    value={wizardLLMJson}
+                    onChange={e => { setWizardLLMJson(e.target.value); setWizardLLMError(null); }}
+                    placeholder='{"weekdays": {"Mon": {"1": "4年1組", ...}, ...}}'
+                  />
+                  {wizardLLMError && <p className="text-xs text-red-500">{wizardLLMError}</p>}
+                  <Button
+                    size="sm"
+                    className="gap-1.5 text-xs h-8 w-full"
+                    onClick={handleWizardLLMImport}
+                    disabled={!wizardLLMJson.trim()}
+                  >
+                    <Check size={12} />
+                    インポートしてグリッドに反映
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {isHomeroomMode ? (
               <>
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
-                  <p className="font-semibold mb-1">担任モード — {homeroomClass} の授業コマ設定</p>
-                  <p className="text-xs">
-                    各コマをクリックして「授業あり（ON）」「授業なし（OFF）」を切り替えます。<br />
-                    デフォルトはすべてONです。学年によって5時間目まで、4時間目まで等の違いをここで設定してください。
-                  </p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold mb-1">担任モード — {homeroomClass} の授業コマ設定</p>
+                      <p className="text-xs">
+                        各コマをクリックして「授業あり（ON）」「授業なし（OFF）」を切り替えます。<br />
+                        デフォルトはすべてONです。学年によって5時間目まで、4時間目まで等の違いをここで設定してください。
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 gap-1.5 text-xs h-7 border-amber-300 text-amber-700 hover:bg-amber-100"
+                      onClick={() => { setShowWizardLLM(v => !v); setWizardLLMError(null); }}
+                    >
+                      ✨ LLM読み取り
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -1227,8 +1388,20 @@ export function NewFileWizard({ open, onClose }: Props) {
             ) : (
               <>
                 <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-                  基本時間割を入力します。ここで設定した内容が学期期間の各週に自動展開されます。
-                  <span className="block mt-1 text-xs">空欄のままでも作成できます（後から週間グリッドで編集可能）</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span>基本時間割を入力します。ここで設定した内容が学期期間の各週に自動展開されます。</span>
+                      <span className="block mt-1 text-xs">空欄のままでも作成できます（後から週間グリッドで編集可能）</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 gap-1.5 text-xs h-7"
+                      onClick={() => { setShowWizardLLM(v => !v); setWizardLLMError(null); }}
+                    >
+                      ✨ LLM読み取り
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -1490,14 +1663,83 @@ export function NewFileWizard({ open, onClose }: Props) {
           </div>
         )}
 
-        {/* ─── Step 4 (homeroom only): Subject Schedule ──────────────────── */}
+          {/* ─── Step 4 (homeroom only): Subject Schedule ────────────────── */}
         {step === 4 && isHomeroomMode && (        <div className="space-y-4">
+            {/* LLMヘルパーパネル (Step4 homeroom) */}
+            {showWizardLLM && (
+              <div className="border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">✨ LLM読み取りヘルパー</p>
+                  <button onClick={() => { setShowWizardLLM(false); setWizardLLMError(null); }} className="text-blue-400 hover:text-blue-600 transition-colors">
+                    <X size={14} />
+                  </button>
+                </div>
+                <p className="text-xs text-blue-700 dark:text-blue-400">
+                  手順：① テンプレートをコピー → ② ChatGPT/Claudeに画像と一緒に貼り付け → ③ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded px-2 py-1">
+                  ℹ️ 学級担任モードでは、JSONの各コマに「教科名」を入れてください（例: 「国語」「算数」等）。クラス名は不要です。
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs h-8 border-blue-300 text-blue-700 hover:bg-blue-100"
+                    onClick={handleWizardLLMCopyTemplate}
+                  >
+                    {wizardLLMTemplateCopied ? <Check size={12} /> : null}
+                    {wizardLLMTemplateCopied ? 'コピー済み!' : '① JSONテンプレートをコピー'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 text-xs h-8 border-blue-300 text-blue-700 hover:bg-blue-100"
+                    onClick={handleWizardLLMCopyPrompt}
+                  >
+                    {wizardLLMCopied ? <Check size={12} /> : null}
+                    {wizardLLMCopied ? 'コピー済み!' : '② プロンプトをコピー'}
+                  </Button>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-blue-700 dark:text-blue-400">③ LLMが返したJSONを貼り付け</Label>
+                  <textarea
+                    className="w-full h-28 text-xs font-mono rounded border border-blue-200 bg-white dark:bg-slate-900 p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    value={wizardLLMJson}
+                    onChange={e => { setWizardLLMJson(e.target.value); setWizardLLMError(null); }}
+                    placeholder='{"weekdays": {"Mon": {"1": "国語", "2": "算数", ...}, ...}}'
+                  />
+                  {wizardLLMError && <p className="text-xs text-red-500">{wizardLLMError}</p>}
+                  <Button
+                    size="sm"
+                    className="gap-1.5 text-xs h-8 w-full"
+                    onClick={handleWizardLLMImport}
+                    disabled={!wizardLLMJson.trim()}
+                  >
+                    <Check size={12} />
+                    インポートしてグリッドに反映
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
-              <p className="font-semibold mb-1">教科の基礎時間割を設定（任意）</p>
-              <p className="text-xs">
-                授業ありのコマに教科を割り当てます。ここで設定した教科が学期全体の基礎時間割として適用されます。<br />
-                設定しなくても作成できます（後から週間グリッドで個別に設定可能）。
-              </p>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold mb-1">教科の基礎時間割を設定（任意）</p>
+                  <p className="text-xs">
+                    授業ありのコマに教科を割り当てます。ここで設定した教科が学期全体の基礎時間割として適用されます。<br />
+                    設定しなくても作成できます（後から週間グリッドで個別に設定可能）。
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 gap-1.5 text-xs h-7 border-amber-300 text-amber-700 hover:bg-amber-100"
+                  onClick={() => { setShowWizardLLM(v => !v); setWizardLLMError(null); }}
+                >
+                  ✨ LLM読み取り
+                </Button>
+              </div>
             </div>
 
             {/* Subject list management */}
