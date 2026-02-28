@@ -131,6 +131,86 @@ export function generatePeriodTimesPrompt(): string {
 入力済みのJSONのみを出力してください。説明文は不要です。`;
 }
 
+// ─── 年間予定表JSONテンプレート（override形式） ─────────────────────
+
+export interface ScheduleImportTemplate {
+  _description: string;
+  _instructions: string;
+  _available_classes: string[];
+  _override_op_types: string;
+  user_rules: string;
+  ops: Array<{
+    op: string;
+    date: string;
+    period?: number | "all";
+    class?: string | null;
+    target_class?: string | null;
+    reason?: string;
+    clear_all_classes?: boolean;
+  }>;
+}
+
+export function generateScheduleTemplate(semester: SemesterMeta): ScheduleImportTemplate {
+  return {
+    _description: "年間予定表インポート用JSONテンプレート（Timetable Manager）",
+    _instructions: [
+      "ops配列に休講・変更情報をOverrideOp形式で入力してください。",
+      "op: 'clear_period_class' → 特定コマを休講にする（period指定）",
+      "op: 'set_day_reason' → 日全体に理由を設定する（period不要）",
+      "op: 'set_period_reason' → 特定コマに理由を設定する",
+      "period: 1〜6の数字、または全コマ休講の場合は clear_all_classes: true を使う",
+      "date: YYYY-MM-DD形式",
+      "reason: 休講理由（例: '運動会', '遠足', '学校行事'）",
+      "target_class: nullの場合は全クラス対象",
+    ].join(" / "),
+    _available_classes: semester.classList ?? [],
+    _override_op_types: "clear_period_class | set_day_reason | set_period_reason",
+    user_rules: "（ここにユーザーが個別ルールを記入します。例: 運動会は全コマ休講、遠足は4限まで授業あり5,6限は休講など）",
+    ops: [
+      {
+        op: "clear_period_class",
+        date: "YYYY-MM-DD",
+        period: 1,
+        target_class: null,
+        reason: "学校行事",
+        clear_all_classes: true,
+      },
+      {
+        op: "set_day_reason",
+        date: "YYYY-MM-DD",
+        reason: "運動会",
+      },
+    ],
+  };
+}
+
+export function generateSchedulePrompt(semester: SemesterMeta, userRules: string): string {
+  const classList = semester.classList?.join("、") ?? "（クラスリストなし）";
+  const startDate = semester.startDate ?? "（開始日未設定）";
+  const endDate = semester.endDate ?? "（終了日未設定）";
+  const rulesSection = userRules.trim()
+    ? `\n【ユーザーが指定した個別ルール】\n${userRules.trim()}\n`
+    : "";
+  return `あなたは学校の年間予定表を読み取り、休講・行事情報をJSONに変換するアシスタントです。
+添付された年間予定表の画像を見て、以下のJSONテンプレートのops配列に情報を入力してください。
+
+【学期情報】
+- 学期期間: ${startDate} 〜 ${endDate}
+- 利用可能なクラス: ${classList}
+${rulesSection}
+【入力ルール】
+- 行事・休校日をops配列に追加してください。
+- 全クラスが休講の場合は clear_all_classes: true を設定してください。
+- 特定クラスのみ休講の場合は target_class にクラス名を指定してください。
+- 日全体に理由を付ける場合は op: 'set_day_reason' を使ってください。
+- 特定コマを休講にする場合は op: 'clear_period_class' を使い、period（1〜6）を指定してください。
+- 日付はYYYY-MM-DD形式で入力してください。
+- 読み取れない情報は含めないでください。
+
+【出力形式】
+入力済みのJSONのみを出力してください。説明文は不要です。`;
+}
+
 // ─── ファイルダウンロード ────────────────────────────────────────
 
 export function downloadJSON(data: unknown, filename: string): void {
