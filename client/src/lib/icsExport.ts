@@ -71,10 +71,25 @@ export interface ICSExportOptions {
   fallbackToAllDay?: boolean;
 }
 
+// 曜日番号（0=日, 1=月, ...6=土）をキーに変換
+const DAY_NUM_TO_KEY: Record<number, string> = {
+  0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat",
+};
+
 export function exportToICS(options: ICSExportOptions): string {
   const { entries, semester, title, school, fallbackToAllDay = true } = options;
   const periodTimes = semester.periodTimes;
-  const hasTimes = periodTimes && Object.keys(periodTimes).length > 0;
+  const periodTimesByDay = semester.periodTimesByDay;
+  const hasTimes = (periodTimes && Object.keys(periodTimes).length > 0) ||
+    (periodTimesByDay && Object.keys(periodTimesByDay).length > 0);
+
+  const getPeriodTime = (dateStr: string, periodNum: number): { start: string; end: string } | null => {
+    const dayOfWeek = new Date(dateStr + "T00:00:00").getDay();
+    const dayKey = DAY_NUM_TO_KEY[dayOfWeek];
+    if (periodTimesByDay?.[dayKey]?.[periodNum]) return periodTimesByDay[dayKey][periodNum];
+    if (periodTimes?.[periodNum]) return periodTimes[periodNum];
+    return null;
+  };
 
   const now = new Date();
   const pad = (n: number, len = 2) => String(n).padStart(len, "0");
@@ -122,8 +137,9 @@ export function exportToICS(options: ICSExportOptions): string {
       lines.push(`UID:${uid}`);
       lines.push(`DTSTAMP:${dtstamp}`);
 
-      if (hasTimes && periodTimes![periodNum]) {
-        const { start, end } = periodTimes![periodNum];
+      const timeSlot = hasTimes ? getPeriodTime(dateStr, periodNum) : null;
+      if (timeSlot) {
+        const { start, end } = timeSlot;
         lines.push(`DTSTART:${toICSDateTimeUTC(dateStr, start)}`);
         lines.push(`DTEND:${toICSDateTimeUTC(dateStr, end)}`);
       } else if (fallbackToAllDay) {

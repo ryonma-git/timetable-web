@@ -224,6 +224,7 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [autoSetHolidays, setAutoSetHolidays] = useState(true);
   // 時程表（各コマの開始・終了時刻）
   const [wizardPeriodTimes, setWizardPeriodTimes] = useState<Record<number, { start: string; end: string }> | undefined>(undefined);
+  const [wizardPeriodTimesByDay, setWizardPeriodTimesByDay] = useState<Record<string, Record<number, { start: string; end: string }>> | undefined>(undefined);
   const [showPeriodTimesInWizard, setShowPeriodTimesInWizard] = useState(false);
 
   // Step 3: Base schedule (for single_subject mode: class per slot; for homeroom: on/off per slot)
@@ -599,6 +600,7 @@ export function NewFileWizard({ open, onClose }: Props) {
         homeroomClass: isHomeroomMode ? (homeroomClass || undefined) : undefined,
         holidays: autoHolidayEntries.length > 0 ? autoHolidayEntries : undefined,
         periodTimes: wizardPeriodTimes && Object.keys(wizardPeriodTimes).length > 0 ? wizardPeriodTimes : undefined,
+        periodTimesByDay: wizardPeriodTimesByDay && Object.keys(wizardPeriodTimesByDay).length > 0 ? wizardPeriodTimesByDay : undefined,
       };
       file.semester = semester;
       file.base = base;
@@ -1121,7 +1123,13 @@ export function NewFileWizard({ open, onClose }: Props) {
           open={showPeriodTimesInWizard}
           onOpenChange={setShowPeriodTimesInWizard}
           value={wizardPeriodTimes}
-          onChange={setWizardPeriodTimes}
+          valueByDay={wizardPeriodTimesByDay}
+          hasSaturday={hasSaturday}
+          hasSunday={hasSunday}
+          onChange={(times, byDay) => {
+            setWizardPeriodTimes(times);
+            setWizardPeriodTimesByDay(byDay);
+          }}
         />
 
         {/* ─── Step 3: Base Schedule Grid ─────────────────────── */}

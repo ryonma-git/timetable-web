@@ -83,9 +83,17 @@ export interface SemesterMeta {
   subjectSchedule?: Record<string, Record<number, string | null>>;
   /**
    * 時程表（各コマの開始・終了時刻）
-   * period -> { start: "HH:MM", end: "HH:MM" }
+   * 一括設定: period -> { start: "HH:MM", end: "HH:MM" }
+   * 曜日別設定: weekday -> period -> { start: "HH:MM", end: "HH:MM" }
+   * 両方の場合は曜日別設定が優先（曜日別になければ一括設定をフォールバック）
    */
   periodTimes?: Record<number, { start: string; end: string }>;
+  /**
+   * 曜日別時程表（曜日ごとに時刻が異なる場合）
+   * weekday -> period -> { start: "HH:MM", end: "HH:MM" }
+   * weekdayは "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"
+   */
+  periodTimesByDay?: Record<string, Record<number, { start: string; end: string }>>;
 }
 
 /** 複数学期の1学期分のデータ */

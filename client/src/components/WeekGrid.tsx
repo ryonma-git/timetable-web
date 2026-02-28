@@ -6,12 +6,13 @@
 import { useState, useRef } from "react";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { PeriodTimesDialog } from "@/components/PeriodTimesDialog";
+import { LLMImportDialog } from "@/components/LLMImportDialog";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
-import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays, Clock } from "lucide-react";
+import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays, Clock, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -62,6 +63,8 @@ export function WeekGrid() {
   const [filterSubject, setFilterSubject] = useState<string | null>(null);
   const [showHolidayDialog, setShowHolidayDialog] = useState(false);
   const [showPeriodTimesLocal, setShowPeriodTimesLocal] = useState(false);
+  const [showLLMImportLocal, setShowLLMImportLocal] = useState(false);
+  const [llmImportMode, setLlmImportMode] = useState<"timetable" | "period_times">("timetable");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -408,6 +411,20 @@ export function WeekGrid() {
                 }
               </TooltipContent>
             </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
+                  onClick={() => { setLlmImportMode("timetable"); setShowLLMImportLocal(true); }}
+                >
+                  <Bot size={11} />
+                  LLM読み取り
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs">画像からLLMで時間割・時程表を読み取る</TooltipContent>
+            </Tooltip>
             {!semester?.hasSaturday && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -696,6 +713,7 @@ export function WeekGrid() {
 
       <HolidaySettingsDialog open={showHolidayDialog} onOpenChange={setShowHolidayDialog} />
       <PeriodTimesDialog open={showPeriodTimesLocal} onOpenChange={setShowPeriodTimesLocal} />
+      <LLMImportDialog open={showLLMImportLocal} onOpenChange={setShowLLMImportLocal} mode={llmImportMode} />
     </div>
   );
 }
