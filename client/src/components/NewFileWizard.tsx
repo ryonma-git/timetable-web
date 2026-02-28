@@ -1286,7 +1286,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     </button>
                   </div>
                   <p className="text-xs text-blue-700 dark:text-blue-400">
-                    手順：① テンプレートをコピー → ② ChatGPT/Claudeに時程表画像と一緒に貼り付け → ③ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
+                    手順：① JSONテンプレートをコピー → ② プロンプトをコピー → ③ ChatGPT/Claudeに「プロンプト＋テンプレート＋時程表画像」を貼り付けて送信 → ④ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
                   </p>
                   <div className="flex gap-2 flex-wrap">
                     <Button
@@ -1392,7 +1392,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                   </button>
                 </div>
                 <p className="text-xs text-blue-700 dark:text-blue-400">
-                  手順：① テンプレートをコピー → ② ChatGPT/Claudeに画像と一緒に貼り付け → ③ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
+                  手順：① JSONテンプレートをコピー → ② プロンプトをコピー → ③ ChatGPT/Claudeに「プロンプト＋テンプレート＋時間割画像」を貼り付けて送信 → ④ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
                 </p>
                 {isHomeroomMode && (
                   <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded px-2 py-1">
@@ -1834,10 +1834,10 @@ export function NewFileWizard({ open, onClose }: Props) {
                   </button>
                 </div>
                 <p className="text-xs text-blue-700 dark:text-blue-400">
-                  手順：① テンプレートをコピー → ② ChatGPT/Claudeに画像と一緒に貼り付け → ③ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
+                  手順：① JSONテンプレートをコピー → ② プロンプトをコピー → ③ ChatGPT/Claudeに「プロンプト＋テンプレート＋時間割画像」を貼り付けて送信 → ④ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded px-2 py-1">
-                  ℹ️ 学級担任モードでは、JSONの各コマに「教科名」を入れてください（例: 「国語」「算数」等）。クラス名は不要です。
+                  ℹ️ 学級担任モードでは、JSONの各コマに「教科名」を入れるように指示します（例: 「国語」「算数」等）。クラス名は不要です。
                 </p>
                 <div className="flex gap-2 flex-wrap">
                   <Button
