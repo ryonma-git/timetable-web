@@ -339,9 +339,10 @@ export function buildSwapOps(
   aSubject?: string | null,
   bSubject?: string | null,
 ): OverrideOp[] {
+  // subjectは必ず明示的に渡す（undefinedだとapplyOverridesでスキップされ、空きコマ→授業ありに交換した際に教科情報が残るバグの原因）
   return [
-    { id: nanoid(), op: "set_period_class", date: aDate, period: aPeriod, class: bClass, subject: bSubject ?? undefined, target_class: aClass, reason: reason || undefined },
-    { id: nanoid(), op: "set_period_class", date: bDate, period: bPeriod, class: aClass, subject: aSubject ?? undefined, target_class: bClass, reason: reason || undefined },
+    { id: nanoid(), op: "set_period_class", date: aDate, period: aPeriod, class: bClass, subject: bSubject ?? null, target_class: aClass, reason: reason || undefined },
+    { id: nanoid(), op: "set_period_class", date: bDate, period: bPeriod, class: aClass, subject: aSubject ?? null, target_class: bClass, reason: reason || undefined },
   ];
 }
 
