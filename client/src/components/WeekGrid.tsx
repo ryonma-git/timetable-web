@@ -3,7 +3,7 @@
 // Week grid with drag-and-drop, today highlight, class color coding (1-6 grades)
 // Phase 3: 教科表示対応（single_subject/homeroom/multi_subjectモード）
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { PeriodTimesDialog } from "@/components/PeriodTimesDialog";
 import { LLMImportDialog } from "@/components/LLMImportDialog";
@@ -80,6 +80,14 @@ export function WeekGrid() {
 
   // クラス/教科ビュー切替（デフォルト: homeroomモードは教科ビュー、それ以外はクラスビュー）
   const [subjectFirst, setSubjectFirst] = useState<boolean>(isHomeroomMode);
+
+  // ファイル読み込み時にモードに応じた初期ビューを強制設定する
+  // homeroom → 教科ビュー（subjectFirst=true）
+  // single_subject / multi_subject → クラスビュー（subjectFirst=false）
+  useEffect(() => {
+    if (!isLoaded) return;
+    setSubjectFirst(isHomeroomMode);
+  }, [isLoaded, mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // holidays: HolidayEntry[] → 日付のSetとname mapに変換
   const holidayDates = new Set(holidays.map(h => h.date));
