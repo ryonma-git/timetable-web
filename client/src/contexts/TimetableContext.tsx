@@ -65,6 +65,7 @@ interface TimetableContextValue {
   // File state
   isLoaded: boolean;
   isDirty: boolean;           // unsaved changes
+  lastFileSavedAt: Date | null; // 最後に.timetableファイルをダウンロードした日時
   currentFile: TimetableFile | null;
   loadedFileName: string;
 
@@ -144,6 +145,7 @@ interface TimetableContextValue {
 // ─── LocalStorage key ────────────────────────────────────────
 const LS_KEY = "timetable_autosave";
 const LS_META_KEY = "timetable_autosave_meta";
+const LS_LAST_SAVED_KEY = "timetable_last_file_saved";
 
 // ─── Context ─────────────────────────────────────────────────
 
@@ -160,6 +162,10 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   const [isDirty, setIsDirty] = useState(false);
   const [currentFile, setCurrentFile] = useState<TimetableFile | null>(null);
   const [loadedFileName, setLoadedFileName] = useState("");
+  const [lastFileSavedAt, setLastFileSavedAt] = useState<Date | null>(() => {
+    const v = localStorage.getItem(LS_LAST_SAVED_KEY);
+    return v ? new Date(v) : null;
+  });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("grid");
   const [currentWeekMonday, setCurrentWeekMonday] = useState(() => getMondayOfWeek(new Date()));
@@ -266,6 +272,9 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     downloadTimetableFile(updated, loadedFileName.endsWith(TIMETABLE_FILE_EXT) ? loadedFileName : undefined);
     setCurrentFile(updated);
     setIsDirty(false);
+    const now = new Date();
+    setLastFileSavedAt(now);
+    localStorage.setItem(LS_LAST_SAVED_KEY, now.toISOString());
   }, [currentFile, allOps, loadedFileName]);
 
   // ─── Save As ─────────────────────────────────────────────────
@@ -279,6 +288,9 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     downloadTimetableFile(updated, filename);
     setCurrentFile(updated);
     setIsDirty(false);
+    const now = new Date();
+    setLastFileSavedAt(now);
+    localStorage.setItem(LS_LAST_SAVED_KEY, now.toISOString());
   }, [currentFile, allOps]);
 
   // ─── Apply Ops ───────────────────────────────────────────────
@@ -622,7 +634,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   return (
     <TimetableContext.Provider value={{
       baseEntries, effectiveEntries, pendingOps, allOps, auditLog, overrideMeta,
-      isLoaded, isDirty, currentFile, loadedFileName,
+      isLoaded, isDirty, lastFileSavedAt, currentFile, loadedFileName,
       semester: currentFile?.semester ?? null,
       mode, setMode,
       subjects, addSubject, updateSubject, removeSubject, reorderSubjects,
