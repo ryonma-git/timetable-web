@@ -8,7 +8,7 @@ import { WeekGrid } from "@/components/WeekGrid";
 import { Inspector } from "@/components/Inspector";
 import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Save, Menu, FileImage, FileText, FileSpreadsheet, FileInput } from "lucide-react";
+import { Printer, Download, Save, Menu, FileImage, FileText, FileSpreadsheet, FileInput, MoreHorizontal } from "lucide-react";
 import { SemesterTabs } from "@/components/SemesterTabs";
 import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
 import { AutoRestoreDialog } from "@/components/AutoRestoreDialog";
@@ -46,9 +46,14 @@ export default function Home() {
         setUnsavedMinutes(0);
         return;
       }
-      // 最後のファイル保存からの経過分数
-      const ref = lastFileSavedAt ?? new Date(0);
-      const mins = Math.floor((Date.now() - ref.getTime()) / 60000);
+      // 最後のファイル保存からの経過分数（一度もファイル保存していない場合は-1）
+      if (!lastFileSavedAt) {
+        setUnsavedMinutes(-1);
+        // ファイルを一度も保存していない場合もリマインダー表示
+        if (!reminderDismissed) setShowSaveReminder(true);
+        return;
+      }
+      const mins = Math.floor((Date.now() - lastFileSavedAt.getTime()) / 60000);
       setUnsavedMinutes(mins);
       // 30分以上未保存ならリマインダー表示
       if (mins >= 30 && !reminderDismissed) {
@@ -103,10 +108,12 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <span className="text-base">⚠️</span>
             <span className="font-medium">
-              {unsavedMinutes >= 60
-                ? `${Math.floor(unsavedMinutes / 60)}時間${unsavedMinutes % 60 > 0 ? `${unsavedMinutes % 60}分` : ""}`
-                : `${unsavedMinutes}分`
-              }以上ファイル保存されていません。ブラウザを閉じるとデータが失われる可能性があります。
+              {unsavedMinutes === -1
+                ? "まだファイルに保存されていません。"
+                : unsavedMinutes >= 60
+                ? "長期間ファイル保存されていません。"
+                : `${unsavedMinutes}分以上ファイル保存されていません。`
+              }ブラウザを閉じるとデータが失われる可能性があります。
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -183,7 +190,7 @@ export default function Home() {
                     : "bg-amber-100 text-amber-700 border-amber-200"
                 }`}
               >
-                {unsavedMinutes >= 1 ? `未保存 ${unsavedMinutes >= 60 ? `${Math.floor(unsavedMinutes/60)}h` : `${unsavedMinutes}m`}` : "未保存"}
+                {unsavedMinutes === -1 ? "未保存" : unsavedMinutes >= 60 ? "未保存（長時間）" : unsavedMinutes >= 1 ? `未保存 ${unsavedMinutes}m` : "未保存"}
               </span>
             )}
           </div>
@@ -203,75 +210,108 @@ export default function Home() {
                 </Button>
               )}
 
-              {/* Export dropdown */}
-              {activeTab === "grid" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 gap-1.5 text-xs print:hidden"
-                    >
-                      <Download size={12} />
-                      <span className="hidden sm:inline">エクスポート</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
-                    <DropdownMenuLabel className="text-xs">データエクスポート</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={exportCSV} className="text-xs gap-2">
-                      <span className="font-mono text-muted-foreground">.csv</span>
-                      CSV形式でダウンロード
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={exportEffective} className="text-xs gap-2">
-                      <span className="font-mono text-muted-foreground">.json</span>
-                      確定データ（JSON）
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={exportOverride} className="text-xs gap-2">
-                      <span className="font-mono text-muted-foreground">.json</span>
-                      変更履歴（JSON）
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setShowExportDialog(true)} className="text-xs gap-2">
-                      <FileSpreadsheet size={12} className="text-green-600" />
-                      Excelエクスポート…
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
-              {/* Print button */}
+              {/* Desktop: individual buttons / Mobile: collapsed into "..." menu */}
               {activeTab === "grid" && (
                 <>
+                  {/* Desktopのみ表示する個別ボタン */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
+                      >
+                        <Download size={12} />
+                        <span>エクスポート</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuLabel className="text-xs">データエクスポート</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={exportCSV} className="text-xs gap-2">
+                        <span className="font-mono text-muted-foreground">.csv</span>
+                        CSV形式でダウンロード
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={exportEffective} className="text-xs gap-2">
+                        <span className="font-mono text-muted-foreground">.json</span>
+                        確定データ（JSON）
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={exportOverride} className="text-xs gap-2">
+                        <span className="font-mono text-muted-foreground">.json</span>
+                        変更履歴（JSON）
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setShowExportDialog(true)} className="text-xs gap-2">
+                        <FileSpreadsheet size={12} className="text-green-600" />
+                        Excelエクスポート…
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowPatchImport(true)}
-                    className="h-7 gap-1.5 text-xs print:hidden"
+                    className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
                     title="パッチインポート"
                   >
                     <FileInput size={12} />
-                    <span className="hidden sm:inline">インポート</span>
+                    <span>インポート</span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowExportDialog(true)}
-                    className="h-7 gap-1.5 text-xs print:hidden"
+                    className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
                     title="Excelエクスポート"
                   >
                     <FileSpreadsheet size={12} />
-                    <span className="hidden sm:inline">書き出し</span>
+                    <span>書き出し</span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowPrintPreview(true)}
-                    className="h-7 gap-1.5 text-xs print:hidden"
+                    className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
                   >
                     <Printer size={12} />
-                    <span className="hidden sm:inline">印刷</span>
+                    <span>印刷</span>
                   </Button>
+
+                  {/* モバイルのみ表示する「…」メニュー */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 w-7 p-0 print:hidden sm:hidden"
+                        title="その他の操作"
+                      >
+                        <MoreHorizontal size={14} />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuLabel className="text-xs">エクスポート</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={exportCSV} className="text-xs gap-2">
+                        <Download size={12} />
+                        CSV形式でダウンロード
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowExportDialog(true)} className="text-xs gap-2">
+                        <FileSpreadsheet size={12} className="text-green-600" />
+                        Excelエクスポート…
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setShowPatchImport(true)} className="text-xs gap-2">
+                        <FileInput size={12} />
+                        パッチインポート
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setShowPrintPreview(true)} className="text-xs gap-2">
+                        <Printer size={12} />
+                        印刷プレビュー
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               )}
             </div>
