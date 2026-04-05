@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { TimetableProvider } from "./contexts/TimetableContext";
 import { GradeColorProvider } from "./contexts/GradeColorContext";
 import Home from "./pages/Home";
+import { InstallBanner } from "./components/InstallBanner";
 
 function Router() {
   return (
@@ -27,6 +28,7 @@ function App() {
             <TooltipProvider>
               <Toaster richColors position="top-right" />
               <Router />
+              <InstallBanner />
             </TooltipProvider>
           </TimetableProvider>
         </GradeColorProvider>

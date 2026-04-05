@@ -39,7 +39,7 @@ import { SubjectSettingsDialog } from "@/components/SubjectSettingsDialog";
 import { SamplePickerDialog } from "@/components/SamplePickerDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 
-export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
+export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBottomSheet?: boolean } = {}) {
   const {
     isLoaded, isDirty, loadedFileName, currentFile,
     loadFromNativeFile, loadFromZip,
@@ -156,7 +156,10 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
 
   return (
     <aside
-      className="w-[280px] lg:w-[220px] shrink-0 flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border overflow-hidden"
+      className={isBottomSheet
+        ? "w-full flex flex-col bg-sidebar text-sidebar-foreground overflow-hidden"
+        : "w-[280px] lg:w-[220px] shrink-0 flex flex-col h-full bg-sidebar text-sidebar-foreground border-r border-sidebar-border overflow-hidden"
+      }
       onDragOver={e => e.preventDefault()}
       onDrop={handleDrop}
     >
@@ -274,7 +277,11 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
         {navItems.map(item => (
           <button
             key={item.id}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => {
+              setActiveTab(item.id);
+              // ボトムシートモードでは選択後に閉じる
+              if (isBottomSheet && onClose) onClose();
+            }}
             className={`sidebar-item w-full text-left ${activeTab === item.id ? "active" : ""}`}
           >
             {item.icon}
@@ -284,7 +291,7 @@ export function Sidebar({ onClose }: { onClose?: () => void } = {}) {
       </nav>
 
       {/* スクロール可能な下部エリア */}
-      <div className="flex-1 overflow-y-auto flex flex-col">
+      <div className={`overflow-y-auto flex flex-col ${isBottomSheet ? "" : "flex-1"}`}>
 
       {/* Week Navigation (only on grid tab) */}
       {activeTab === "grid" && (

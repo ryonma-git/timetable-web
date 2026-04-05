@@ -24,6 +24,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Drawer,
+  DrawerContent,
+} from "@/components/ui/drawer";
 
 export default function Home() {
   const {
@@ -137,22 +141,24 @@ export default function Home() {
       <PatchImportDialog open={showPatchImport} onClose={() => setShowPatchImport(false)} />
       <PeriodTimesDialog open={showPeriodTimes} onOpenChange={setShowPeriodTimes} />
       <HolidaySettingsDialog open={showHolidaySettings} onOpenChange={setShowHolidaySettings} />
-      {/* Mobile sidebar overlay */}
-      {mobileSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar: desktop always visible, mobile slide-in */}
-      <div className={`
-        fixed inset-y-0 left-0 z-50 lg:static lg:z-auto
-        transition-transform duration-300 ease-in-out
-        ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-      `}>
-        <Sidebar onClose={() => setMobileSidebarOpen(false)} />
+      {/* Desktop sidebar: always visible */}
+      <div className="hidden lg:block">
+        <Sidebar />
       </div>
+
+      {/* Mobile sidebar: bottom sheet (Drawer) */}
+      <Drawer
+        open={mobileSidebarOpen}
+        onOpenChange={setMobileSidebarOpen}
+        direction="bottom"
+      >
+        <DrawerContent className="lg:hidden max-h-[85vh] bg-sidebar text-sidebar-foreground border-sidebar-border flex flex-col">
+          {/* Sidebarコンテンツ（スクロール可能） */}
+          <div className="overflow-y-auto overscroll-contain flex-1">
+            <Sidebar onClose={() => setMobileSidebarOpen(false)} isBottomSheet />
+          </div>
+        </DrawerContent>
+      </Drawer>
 
       {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
