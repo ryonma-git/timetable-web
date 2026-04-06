@@ -28,6 +28,7 @@ import {
   Drawer,
   DrawerContent,
 } from "@/components/ui/drawer";
+import { useSidebarStyle } from "@/hooks/useSidebarStyle";
 
 export default function Home() {
   const {
@@ -82,6 +83,7 @@ export default function Home() {
   }, [handleBeforeUnload]);
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const { sidebarStyle } = useSidebarStyle();
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showPatchImport, setShowPatchImport] = useState(false);
@@ -146,19 +148,37 @@ export default function Home() {
         <Sidebar />
       </div>
 
-      {/* Mobile sidebar: bottom sheet (Drawer) */}
-      <Drawer
-        open={mobileSidebarOpen}
-        onOpenChange={setMobileSidebarOpen}
-        direction="bottom"
-      >
-        <DrawerContent className="lg:hidden max-h-[85vh] bg-sidebar text-sidebar-foreground border-sidebar-border flex flex-col">
-          {/* Sidebarコンテンツ（スクロール可能） */}
-          <div className="overflow-y-auto overscroll-contain flex-1">
-            <Sidebar onClose={() => setMobileSidebarOpen(false)} isBottomSheet />
+      {/* Mobile sidebar: bottom sheet (Drawer) or slide-left overlay */}
+      {sidebarStyle === "bottom_sheet" ? (
+        <Drawer
+          open={mobileSidebarOpen}
+          onOpenChange={setMobileSidebarOpen}
+          direction="bottom"
+        >
+          <DrawerContent className="lg:hidden max-h-[85vh] bg-sidebar text-sidebar-foreground border-sidebar-border flex flex-col">
+            <div className="overflow-y-auto overscroll-contain flex-1">
+              <Sidebar onClose={() => setMobileSidebarOpen(false)} isBottomSheet />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <>
+          {/* スライドインオーバーレイ */}
+          {mobileSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+          )}
+          <div className={`
+            fixed inset-y-0 left-0 z-50 lg:hidden
+            transition-transform duration-300 ease-in-out
+            ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          `}>
+            <Sidebar onClose={() => setMobileSidebarOpen(false)} />
           </div>
-        </DrawerContent>
-      </Drawer>
+        </>
+      )}
 
       {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">

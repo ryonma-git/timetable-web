@@ -38,6 +38,8 @@ import { ExportDialog } from "@/components/ExportDialog";
 import { SubjectSettingsDialog } from "@/components/SubjectSettingsDialog";
 import { SamplePickerDialog } from "@/components/SamplePickerDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
+import { useSidebarStyle, type SidebarStyle } from "@/hooks/useSidebarStyle";
+import { Smartphone } from "lucide-react";
 
 export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBottomSheet?: boolean } = {}) {
   const {
@@ -56,6 +58,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const { sidebarStyle, setSidebarStyle } = useSidebarStyle();
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHolidaySettings, setShowHolidaySettings] = useState(false);
@@ -478,6 +481,32 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
           </>
         )}
         <ColorSettingsDialog />
+
+        {/* モバイルメニュー形式切り替え (デスクトップでは非表示) */}
+        <div className="lg:hidden border-t border-sidebar-border/50 pt-2 mt-1">
+          <p className="text-[10px] text-sidebar-foreground/40 mb-1.5 px-2 font-medium uppercase tracking-wider flex items-center gap-1">
+            <Smartphone size={9} />
+            モバイルメニュー形式
+          </p>
+          <div className="flex gap-1">
+            {([
+              { value: "bottom_sheet" as SidebarStyle, label: "下から開く" },
+              { value: "slide_left" as SidebarStyle, label: "左から開く" },
+            ]).map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setSidebarStyle(opt.value)}
+                className={`flex-1 text-[10px] py-1 rounded border transition-colors ${
+                  sidebarStyle === opt.value
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground border-sidebar-primary"
+                    : "border-sidebar-border text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       </div>{/* end scroll area */}
 

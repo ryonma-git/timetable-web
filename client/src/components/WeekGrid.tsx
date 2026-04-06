@@ -3,7 +3,7 @@
 // Week grid with drag-and-drop, today highlight, class color coding (1-6 grades)
 // Phase 3: 教科表示対応（single_subject/homeroom/multi_subjectモード）
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { PeriodTimesDialog } from "@/components/PeriodTimesDialog";
 import { LLMImportDialog } from "@/components/LLMImportDialog";
@@ -33,6 +33,22 @@ interface DragState {
   srcSubject?: string | null;
 }
 
+// タッチ長押しドラッグの状態
+interface TouchDragState {
+  srcDate: string;
+  srcPeriod: number;
+  srcClass: string | null;
+  srcSubject?: string | null;
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+  label: string; // ゴースト表示用
+  labelSub?: string;
+  bgColor?: string;
+  textColor?: string;
+}
+
 export function WeekGrid() {
   const {
     effectiveEntries,
@@ -59,6 +75,13 @@ export function WeekGrid() {
 
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [dragOver, setDragOver] = useState<{ date: string; period: number } | null>(null);
+
+  // タッチ長押しドラッグ状態
+  const [touchDrag, setTouchDrag] = useState<TouchDragState | null>(null);
+  const [touchDragOver, setTouchDragOver] = useState<{ date: string; period: number } | null>(null);
+  const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchDragRef = useRef<TouchDragState | null>(null); // ムーブハンドラー用
+  const cellRefs = useRef<Map<string, HTMLDivElement>>(new Map()); // date-period → DOMノード
   const [filterClass, setFilterClass] = useState<string | null>(null);
   const [filterSubject, setFilterSubject] = useState<string | null>(null);
   const [showHolidayDialog, setShowHolidayDialog] = useState(false);
@@ -146,6 +169,123 @@ export function WeekGrid() {
     setDragState(null);
     setDragOver(null);
   };
+
+  // ─── Touch Long-Press Drag Handlers ──────────────────────────
+  // タッチ中に指の下にあるセルを特定する
+  const getCellAtPoint = useCallback((x: number, y: number): { date: string; period: number } | null => {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    // data-date / data-period属性を持つ親要素を湯る
+    let node: Element | null = el;
+    while (node) {
+      const d = node.getAttribute("data-date");
+      const p = node.getAttribute("data-period");
+      if (d && p) return { date: d, period: Number(p) };
+      node = node.parentElement;
+    }
+    return null;
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent, date: string, period: number, cls: string | null, subj: string | null | undefined, label: string, labelSub?: string, bgColor?: string, textColor?: string) => {
+    const touch = e.touches[0];
+    const startX = touch.clientX;
+    const startY = touch.clientY;
+
+    // 長押しタイマー（500ms）
+    touchTimerRef.current = setTimeout(() => {
+      // バイブレーション（サポートされる場合）
+      if (navigator.vibrate) navigator.vibrate(50);
+
+      const state: TouchDragState = {
+        srcDate: date,
+        srcPeriod: period,
+        srcClass: cls,
+        srcSubject: subj,
+        startX,
+        startY,
+        currentX: startX,
+        currentY: startY,
+        label,
+        labelSub,
+        bgColor,
+        textColor,
+      };
+      touchDragRef.current = state;
+      setTouchDrag(state);
+      setTouchDragOver({ date, period });
+    }, 500);
+  }, []);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!touchDragRef.current) return;
+    e.preventDefault(); // ページスクロールを防ぐ
+    const touch = e.touches[0];
+    const x = touch.clientX;
+    const y = touch.clientY;
+
+    // ゴースト位置を更新
+    touchDragRef.current = { ...touchDragRef.current, currentX: x, currentY: y };
+    setTouchDrag(prev => prev ? { ...prev, currentX: x, currentY: y } : null);
+
+    // ホバー中のセルを特定
+    const cell = getCellAtPoint(x, y);
+    setTouchDragOver(cell);
+  }, [getCellAtPoint]);
+
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
+    // 長押しタイマーをクリア
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+
+    const drag = touchDragRef.current;
+    if (!drag) return;
+
+    // ドロップ先を特定
+    const touch = e.changedTouches[0];
+    const cell = getCellAtPoint(touch.clientX, touch.clientY);
+
+    if (cell && !(cell.date === drag.srcDate && cell.period === drag.srcPeriod)) {
+      const dstSlot = getSlot(cell.date, cell.period);
+      const ops = buildSwapOps(
+        drag.srcDate, drag.srcPeriod, drag.srcClass,
+        cell.date, cell.period, dstSlot.class,
+        undefined,
+        drag.srcSubject, dstSlot.subject
+      );
+      applyOps(ops, `交換: ${drag.srcDate} ${drag.srcPeriod}限 ↔ ${cell.date} ${cell.period}限`);
+    }
+
+    touchDragRef.current = null;
+    setTouchDrag(null);
+    setTouchDragOver(null);
+  }, [getCellAtPoint, getSlot, applyOps]);
+
+  const handleTouchCancel = useCallback(() => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+    touchDragRef.current = null;
+    setTouchDrag(null);
+    setTouchDragOver(null);
+  }, []);
+
+  // グローバルタッチイベントリスナー（passive: falseでスクロール防止）
+  useEffect(() => {
+    const onMove = (e: TouchEvent) => handleTouchMove(e);
+    const onEnd = (e: TouchEvent) => handleTouchEnd(e);
+    const onCancel = () => handleTouchCancel();
+    document.addEventListener("touchmove", onMove, { passive: false });
+    document.addEventListener("touchend", onEnd);
+    document.addEventListener("touchcancel", onCancel);
+    return () => {
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onEnd);
+      document.removeEventListener("touchcancel", onCancel);
+    };
+  }, [handleTouchMove, handleTouchEnd, handleTouchCancel]);
 
   // ─── Empty State ─────────────────────────────────────────────
   if (!isLoaded) {
@@ -587,6 +727,19 @@ export function WeekGrid() {
                     return null;
                   })();
 
+                  // タッチドラッグ用のラベル計算
+                  const touchLabel = (() => {
+                    if (showSubject && subjectFirst) return slot.subject ?? slot.class ?? "空き";
+                    return slot.class ?? slot.subject ?? "空き";
+                  })();
+                  const touchLabelSub = (() => {
+                    if (showSubject && subjectFirst) return slot.class ?? undefined;
+                    return slot.subject ?? undefined;
+                  })();
+
+                  const isTouchDragSrc = touchDrag?.srcDate === date && touchDrag?.srcPeriod === period;
+                  const isTouchDragOver = touchDragOver?.date === date && touchDragOver?.period === period;
+
                   return (
                     <td
                       key={date}
@@ -596,18 +749,26 @@ export function WeekGrid() {
                       )}
                     >
                       <div
+                        data-date={date}
+                        data-period={String(period)}
                         draggable
                         onClick={() => setSelectedCell(isSelected ? null : { date, period })}
                         onDragStart={() => handleDragStart(date, period, slot.class, slot.subject)}
                         onDragOver={e => handleDragOver(e, date, period)}
                         onDrop={e => handleDrop(e, date, period)}
                         onDragEnd={handleDragEnd}
+                        onTouchStart={e => handleTouchStart(
+                          e, date, period, slot.class, slot.subject,
+                          touchLabel, touchLabelSub,
+                          cellColors?.bg, cellColors?.text
+                        )}
                         className={cn(
-                          "period-cell rounded border cursor-pointer px-2 py-1 flex flex-col justify-between",
+                          "period-cell rounded border cursor-pointer px-2 py-1 flex flex-col justify-between select-none",
                           showSubject ? "h-[60px]" : "h-[52px]",
                           isSelected && "ring-2 ring-primary ring-inset",
-                          isDragSrc && "opacity-40",
+                          (isDragSrc || isTouchDragSrc) && "opacity-40 scale-95",
                           isDragOver && "ring-2 ring-green-500 ring-inset",
+                          isTouchDragOver && !isTouchDragSrc && "ring-2 ring-blue-500 ring-inset",
                           !cellColors && "hover:bg-muted/50",
                           cellColors && "hover:brightness-95",
                           isFiltered && "opacity-20",
@@ -615,9 +776,11 @@ export function WeekGrid() {
                         )}
                         style={isDragOver
                           ? { backgroundColor: '#f0fdf4', borderColor: '#22c55e' }
-                          : cellColors
-                            ? { backgroundColor: cellColors.bg, borderColor: cellColors.border }
-                            : undefined
+                          : isTouchDragOver && !isTouchDragSrc
+                            ? { backgroundColor: '#eff6ff', borderColor: '#3b82f6' }
+                            : cellColors
+                              ? { backgroundColor: cellColors.bg, borderColor: cellColors.border }
+                              : undefined
                         }
                       >
                         {/* Cell content */}
@@ -727,8 +890,49 @@ export function WeekGrid() {
           <div className="w-3 h-3 rounded border bg-muted border-border" />
           <span>空き</span>
         </div>
-        <span className="ml-2 text-muted-foreground/60">ドラッグ＆ドロップで交換</span>
+        <span className="ml-2 text-muted-foreground/60 hidden sm:inline">ドラッグ＆ドロップで交換</span>
+        <span className="ml-2 text-muted-foreground/60 sm:hidden">長押しでドラッグ交換</span>
       </div>
+
+      {/* タッチドラッグゴースト */}
+      {touchDrag && (
+        <div
+          className="fixed z-[300] pointer-events-none"
+          style={{
+            left: touchDrag.currentX - 40,
+            top: touchDrag.currentY - 40,
+            transform: "scale(1.15)",
+            transition: "transform 0.1s ease",
+          }}
+        >
+          <div
+            className="w-20 rounded-lg border-2 shadow-2xl px-2 py-2 flex flex-col items-center justify-center gap-0.5"
+            style={{
+              backgroundColor: touchDrag.bgColor ?? '#ffffff',
+              borderColor: '#3b82f6',
+              boxShadow: '0 8px 32px rgba(59,130,246,0.35), 0 2px 8px rgba(0,0,0,0.2)',
+              minHeight: 52,
+            }}
+          >
+            <span className="text-xs font-bold leading-tight text-center" style={{ color: touchDrag.textColor ?? '#1e293b' }}>
+              {touchDrag.label}
+            </span>
+            {touchDrag.labelSub && (
+              <span className="text-[10px] leading-tight text-center" style={{ color: touchDrag.textColor ?? '#64748b', opacity: 0.7 }}>
+                {touchDrag.labelSub}
+              </span>
+            )}
+          </div>
+          {/* ドロップ先の表示 */}
+          {touchDragOver && !(touchDragOver.date === touchDrag.srcDate && touchDragOver.period === touchDrag.srcPeriod) && (
+            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
+              <span className="text-[10px] bg-blue-600 text-white rounded-full px-2 py-0.5 font-medium">
+                ↔ 交換
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       <HolidaySettingsDialog open={showHolidayDialog} onOpenChange={setShowHolidayDialog} />
       <PeriodTimesDialog open={showPeriodTimesLocal} onOpenChange={setShowPeriodTimesLocal} />
