@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, Music, FlaskConical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTimetable } from "@/contexts/TimetableContext";
-import { deserializeTimetableFile } from "@/lib/timetableFile";
+import { deserializeTimetableFile, shiftTimetableToCurrentDate } from "@/lib/timetableFile";
 
 interface SampleDef {
   id: string;
@@ -95,10 +95,12 @@ export function SamplePickerDialog({ open, onClose }: Props) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       const result = deserializeTimetableFile(text);
-      await loadTimetableFile(result.file);
+      // 現在日付に合わせて全日付をシフト（月曜→月曜で対応）
+      const shiftedFile = shiftTimetableToCurrentDate(result.file);
+      await loadTimetableFile(shiftedFile);
       result.warnings.forEach(w => toast.warning(w));
-      // 学期開始週に移動
-      const startDate = result.file.semester?.startDate;
+      // 学期開始週（シフト後）に移動
+      const startDate = shiftedFile.semester?.startDate;
       if (startDate) {
         goToDate(new Date(startDate + "T00:00:00"));
       }
@@ -117,7 +119,7 @@ export function SamplePickerDialog({ open, onClose }: Props) {
         <DialogHeader>
           <DialogTitle>サンプルデータを選択</DialogTitle>
           <DialogDescription className="text-xs">
-            デモ用のサンプルデータを読み込んで、アプリの機能を試すことができます。
+            デモ用のサンプルデータを読み込んで、アプリの機能を試すことができます。日付は現在の週に自動調整されます。
           </DialogDescription>
         </DialogHeader>
 

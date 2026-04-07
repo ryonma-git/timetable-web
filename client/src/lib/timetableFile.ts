@@ -391,3 +391,80 @@ export async function importFromZip(zipFile: File): Promise<ZipImportResult> {
     loadedFiles,
   };
 }
+
+// ─── Sample Date Shift ─────────────────────────────────────────
+
+/**
+ * サンプルデータの全日付を現在日付に合わせてシフトする。
+ *
+ * アルゴリズム:
+ * 1. サンプルの startDate の月曜日を基準週とする
+ * 2. 現在日付の月曜日を基準週とする
+ * 3. 差分（週数）を計算して全 base エントリと ops の日付を移動する
+ * 4. semester の startDate / endDate も同様にシフトする
+ *
+ * 月曜→月曜で対応させるため曜日のズレは生じない。
+ */
+export function shiftTimetableToCurrentDate(file: TimetableFile): TimetableFile {
+  const sem = file.semester;
+  if (!sem?.startDate) return file;
+
+  // サンプルの startDate の月曜日を求める
+  const sampleStart = new Date(sem.startDate + "T00:00:00");
+  const sampleMonday = getMondayLocal(sampleStart);
+
+  // 現在日付の月曜日を求める
+  const today = new Date();
+  const todayMonday = getMondayLocal(today);
+
+  // 差分日数
+  const diffMs = todayMonday.getTime() - sampleMonday.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return file; // シフト不要
+
+  const shiftDate = (dateStr: string): string => {
+    const d = new Date(dateStr + "T00:00:00");
+    d.setDate(d.getDate() + diffDays);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  // base エントリの日付をシフト
+  const newBase: TimetableEntry[] = file.base.map(entry => ({
+    ...entry,
+    date: shiftDate(entry.date),
+  }));
+
+  // ops の日付をシフト
+  const newOps: import("./timetable").OverrideOp[] = (file.ops ?? []).map(op => ({
+    ...op,
+    date: shiftDate(op.date),
+  }));
+
+  // semester の startDate / endDate をシフト
+  const newSemester: SemesterMeta = {
+    ...sem,
+    startDate: shiftDate(sem.startDate),
+    endDate: shiftDate(sem.endDate),
+  };
+
+  return {
+    ...file,
+    semester: newSemester,
+    base: newBase,
+    ops: newOps,
+  };
+}
+
+/** ローカルタイムゾーンで月曜日を返す（UTC変換なし） */
+function getMondayLocal(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}

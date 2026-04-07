@@ -108,34 +108,31 @@ export default function Home() {
     <div className="flex h-screen overflow-hidden bg-background">
       <AutoRestoreDialog />
 
-      {/* ファイル未保存リマインダー（30分以上未保存時） */}
+      {/* ファイル未保存リマインダー（30分以上未保存時）z-[9999]で全要素の上に表示 */}
       {showSaveReminder && isLoaded && (
-        <div className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between gap-2 px-4 py-2.5 bg-amber-500 text-white text-sm shadow-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-base">⚠️</span>
-            <span className="font-medium">
-              {unsavedMinutes === -1
-                ? "まだファイルに保存されていません。"
-                : unsavedMinutes >= 60
-                ? "長期間ファイル保存されていません。"
-                : `${unsavedMinutes}分以上ファイル保存されていません。`
-              }ブラウザを閉じるとデータが失われる可能性があります。
-            </span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => { saveFile(); }}
-              className="px-3 py-1 bg-white text-amber-700 rounded text-xs font-bold hover:bg-amber-50 transition-colors"
-            >
-              今すぐ保存
-            </button>
-            <button
-              onClick={() => { setShowSaveReminder(false); setReminderDismissed(true); }}
-              className="px-2 py-1 text-white/80 hover:text-white text-xs transition-colors"
-            >
-              後で
-            </button>
-          </div>
+        <div className="fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-3 py-2 bg-background/95 backdrop-blur-sm border border-amber-300/60 text-amber-700 dark:text-amber-400 text-xs rounded-lg shadow-md max-w-xs">
+          <span className="text-sm shrink-0">💾</span>
+          <span className="flex-1 leading-snug">
+            {unsavedMinutes === -1
+              ? "未保存"
+              : unsavedMinutes >= 60
+              ? `${Math.floor(unsavedMinutes / 60)}時間以上未保存`
+              : `${unsavedMinutes}分以上未保存`
+            }
+          </span>
+          <button
+            onClick={() => { saveFile(); }}
+            className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded text-[11px] font-bold hover:bg-amber-200 dark:hover:bg-amber-800/60 transition-colors shrink-0"
+          >
+            保存
+          </button>
+          <button
+            onClick={() => { setShowSaveReminder(false); setReminderDismissed(true); }}
+            className="text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 transition-colors shrink-0 leading-none"
+            aria-label="閉じる"
+          >
+            ✕
+          </button>
         </div>
       )}
       <PrintPreviewDialog open={showPrintPreview} onClose={() => setShowPrintPreview(false)} />

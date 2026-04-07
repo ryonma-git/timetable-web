@@ -8,6 +8,18 @@ import { TimetableProvider } from "./contexts/TimetableContext";
 import { GradeColorProvider } from "./contexts/GradeColorContext";
 import Home from "./pages/Home";
 import { InstallBanner } from "./components/InstallBanner";
+import React from "react";
+import { SidebarStyleContext, useSidebarStyleState } from "./hooks/useSidebarStyle";
+
+/** SidebarStyleProviderはコンテキスト共有のためのラッパー */
+function SidebarStyleProvider({ children }: { children: React.ReactNode }) {
+  const value = useSidebarStyleState();
+  return (
+    <SidebarStyleContext.Provider value={value}>
+      {children}
+    </SidebarStyleContext.Provider>
+  );
+}
 
 function Router() {
   return (
@@ -25,11 +37,13 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <GradeColorProvider>
           <TimetableProvider>
-            <TooltipProvider>
-              <Toaster richColors position="top-right" />
-              <Router />
-              <InstallBanner />
-            </TooltipProvider>
+            <SidebarStyleProvider>
+              <TooltipProvider>
+                <Toaster richColors position="top-right" />
+                <Router />
+                <InstallBanner />
+              </TooltipProvider>
+            </SidebarStyleProvider>
           </TimetableProvider>
         </GradeColorProvider>
       </ThemeProvider>
