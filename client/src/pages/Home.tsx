@@ -108,33 +108,7 @@ export default function Home() {
     <div className="flex h-screen overflow-hidden bg-background">
       <AutoRestoreDialog />
 
-      {/* ファイル未保存リマインダー（30分以上未保存時）z-[9999]で全要素の上に表示 */}
-      {showSaveReminder && isLoaded && (
-        <div className="fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-3 py-2 bg-background/95 backdrop-blur-sm border border-amber-300/60 text-amber-700 dark:text-amber-400 text-xs rounded-lg shadow-md max-w-xs">
-          <span className="text-sm shrink-0">💾</span>
-          <span className="flex-1 leading-snug">
-            {unsavedMinutes === -1
-              ? "未保存"
-              : unsavedMinutes >= 60
-              ? `${Math.floor(unsavedMinutes / 60)}時間以上未保存`
-              : `${unsavedMinutes}分以上未保存`
-            }
-          </span>
-          <button
-            onClick={() => { saveFile(); }}
-            className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded text-[11px] font-bold hover:bg-amber-200 dark:hover:bg-amber-800/60 transition-colors shrink-0"
-          >
-            保存
-          </button>
-          <button
-            onClick={() => { setShowSaveReminder(false); setReminderDismissed(true); }}
-            className="text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 transition-colors shrink-0 leading-none"
-            aria-label="閉じる"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      {/* 未保存リマインダーはトップバーの未保存バッジに統合 */}
       <PrintPreviewDialog open={showPrintPreview} onClose={() => setShowPrintPreview(false)} />
       <ExportDialog open={showExportDialog} onClose={() => setShowExportDialog(false)} />
       <PatchImportDialog open={showPatchImport} onClose={() => setShowPatchImport(false)} />
@@ -204,32 +178,35 @@ export default function Home() {
               </span>
             )}
             {isDirty && (
-              <span
-                className={`text-xs rounded px-1.5 py-0.5 border shrink-0 ${
+              <button
+                onClick={saveFile}
+                title="クリックして保存"
+                className={`flex items-center gap-1 text-xs rounded px-1.5 py-0.5 border shrink-0 transition-colors hover:opacity-80 ${
                   unsavedMinutes >= 30
-                    ? "bg-red-100 text-red-700 border-red-300 font-bold"
+                    ? "bg-red-50 text-red-600 border-red-200 font-medium"
                     : unsavedMinutes >= 10
-                    ? "bg-orange-100 text-orange-700 border-orange-200"
-                    : "bg-amber-100 text-amber-700 border-amber-200"
+                    ? "bg-orange-50 text-orange-600 border-orange-200"
+                    : "bg-amber-50 text-amber-600 border-amber-200"
                 }`}
               >
-                {unsavedMinutes === -1 ? "未保存" : unsavedMinutes >= 60 ? "未保存（長時間）" : unsavedMinutes >= 1 ? `未保存 ${unsavedMinutes}m` : "未保存"}
-              </span>
+                <Save size={10} className="shrink-0" />
+                <span>{unsavedMinutes === -1 ? "未保存" : unsavedMinutes >= 60 ? `${Math.floor(unsavedMinutes / 60)}h未保存` : unsavedMinutes >= 1 ? `${unsavedMinutes}m未保存` : "未保存"}</span>
+              </button>
             )}
           </div>
 
           {isLoaded && (
             <div className="flex items-center gap-1.5 shrink-0">
-              {/* Save button */}
+              {/* Save button: モバイルのみ表示（デスクトップは未保存バッジがクリック可能） */}
               {isDirty && (
                 <Button
                   variant="default"
                   size="sm"
                   onClick={saveFile}
-                  className="h-7 gap-1.5 text-xs"
+                  className="h-7 gap-1.5 text-xs sm:hidden"
                 >
                   <Save size={12} />
-                  <span className="hidden sm:inline">保存</span>
+                  保存
                 </Button>
               )}
 

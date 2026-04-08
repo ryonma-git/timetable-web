@@ -1,6 +1,7 @@
 // SamplePickerDialog.tsx
 // Design: Swiss Grid × Japanese Functional Design
 // サンプルデータ選択ダイアログ（3種類のモードのデモデータを提供）
+// 通年度サンプル：年度のみ現在年に置き換え、今日の属する学期に自動ジャンプ
 
 import { useState } from "react";
 import {
@@ -14,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, Music, FlaskConical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTimetable } from "@/contexts/TimetableContext";
-import { deserializeTimetableFile, shiftTimetableToCurrentDate } from "@/lib/timetableFile";
+import { deserializeTimetableFile } from "@/lib/timetableFile";
+import type { TimetableFile } from "@/lib/timetableFile";
 
 interface SampleDef {
   id: string;
@@ -28,53 +30,69 @@ interface SampleDef {
   details: string[];
 }
 
+// 現在の年度を取得（4月以降なら当年、1〜3月なら前年）
+function getCurrentFiscalYear(): number {
+  const today = new Date();
+  return today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+}
+
+// 今日が属する学期の開始日を返す（第1:4〜7月、第2:9〜12月、第3:1〜3月）
+function getCurrentSemesterStart(fiscalYear: number): string {
+  const today = new Date();
+  const m = today.getMonth() + 1; // 1-indexed
+  if (m >= 4 && m <= 7) return `${fiscalYear}-04-07`;
+  if (m >= 9 && m <= 12) return `${fiscalYear}-09-01`;
+  // 1〜3月は第3学期（翌年）
+  return `${fiscalYear + 1}-01-08`;
+}
+
 const SAMPLES: SampleDef[] = [
   {
     id: "homeroom",
-    title: "2年1組 第3学期 時間割",
-    description: "担任モードのデモデータです。",
+    title: "担任サンプル（4年1組）",
+    description: "担任モードのデモデータです。1年間の時間割が入っています。",
     mode: "homeroom",
     modeLabel: "担任モード",
     modeColor: "bg-amber-500/15 text-amber-600 border-amber-200",
     icon: <BookOpen size={20} className="text-amber-500" />,
-    filename: "/samples/sample_homeroom.99c34a39.timetable",
+    filename: "/samples/sample_homeroom.timetable",
     details: [
-      "担任クラス: 2年1組",
-      "教科: 国語・算数・生活・音楽・図工・体育・道徳・学活",
-      "期間: 2026年1月8日〜3月24日（第3学期）",
-      "授業変更操作: 6件（体育入れ替え・図工追加など）",
+      "担任クラス: 4年1組",
+      "教科: 国語・算数・理科・社会・道徳・体育・図工・音楽・外国語",
+      "期間: 通年（第1〜3学期）",
+      "読み込み後、今日の学期に自動ジャンプします",
     ],
   },
   {
     id: "single",
-    title: "理科専科 3学期 時間割",
-    description: "単一教科モードのデモデータです。実際の理科専科の時間割データです。",
+    title: "理科専科サンプル",
+    description: "単一教科モードのデモデータです。4〜6年生の理科を担当する専科教員の例です。",
     mode: "single_subject",
     modeLabel: "単一教科モード",
     modeColor: "bg-blue-500/15 text-blue-600 border-blue-200",
     icon: <FlaskConical size={20} className="text-blue-500" />,
-    filename: "/samples/sample_single.91643cd5.timetable",
+    filename: "/samples/sample_single.timetable",
     details: [
-      "担当クラス: 4〜6年生 10クラス（4年3・5年4・6年3）",
+      "担当クラス: 4〜6年生 10クラス",
       "教科: 理科",
-      "期間: 2026年1月8日〜3月27日（第3学期）",
-      "授業変更操作: 28件（振替・時間割変更・行事など）",
+      "期間: 通年（第1〜3学期）",
+      "読み込み後、今日の学期に自動ジャンプします",
     ],
   },
   {
     id: "multi",
-    title: "音楽・体育専科 3学期 時間割",
-    description: "複数教科モードのデモデータです。音楽と体育の2教科を担当する専科教員の例です。",
+    title: "複数教科サンプル（音楽・家庭科）",
+    description: "複数教科モードのデモデータです。音楽（3・4年）と家庭科（5・6年）を担当する専科教員の例です。",
     mode: "multi_subject",
     modeLabel: "複数教科モード",
     modeColor: "bg-purple-500/15 text-purple-600 border-purple-200",
     icon: <Music size={20} className="text-purple-500" />,
-    filename: "/samples/sample_multi.52a25183.timetable",
+    filename: "/samples/sample_multi.timetable",
     details: [
-      "担当クラス: 4〜6年生 8クラス（4年3・5年3・6年2）",
-      "教科: 音楽（4・6年担当）・体育（5年担当）",
-      "期間: 2026年1月8日〜3月27日（第3学期）",
-      "授業変更操作: 12件（振替・行事・卒業式練習など）",
+      "担当クラス: 3〜6年生 8クラス",
+      "教科: 音楽（3・4年）・家庭科（5・6年）",
+      "期間: 通年（第1〜3学期）",
+      "読み込み後、今日の学期に自動ジャンプします",
     ],
   },
 ];
@@ -95,15 +113,18 @@ export function SamplePickerDialog({ open, onClose }: Props) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       const result = deserializeTimetableFile(text);
-      // 現在日付に合わせて全日付をシフト（月曜→月曜で対応）
-      const shiftedFile = shiftTimetableToCurrentDate(result.file);
-      await loadTimetableFile(shiftedFile);
+
+      // 年度のみ現在年度に置き換え（日付はそのまま、年だけ差し替え）
+      const fiscalYear = getCurrentFiscalYear();
+      const file = shiftFiscalYear(result.file, fiscalYear);
+
+      await loadTimetableFile(file);
       result.warnings.forEach(w => toast.warning(w));
-      // 学期開始週（シフト後）に移動
-      const startDate = shiftedFile.semester?.startDate;
-      if (startDate) {
-        goToDate(new Date(startDate + "T00:00:00"));
-      }
+
+      // 今日が属する学期の開始日にジャンプ
+      const jumpDate = getCurrentSemesterStart(fiscalYear);
+      goToDate(new Date(jumpDate + "T00:00:00"));
+
       toast.success(`サンプル読み込み完了: ${sample.title}`);
       onClose();
     } catch (err) {
@@ -119,7 +140,7 @@ export function SamplePickerDialog({ open, onClose }: Props) {
         <DialogHeader>
           <DialogTitle>サンプルデータを選択</DialogTitle>
           <DialogDescription className="text-xs">
-            デモ用のサンプルデータを読み込んで、アプリの機能を試すことができます。日付は現在の週に自動調整されます。
+            デモ用の通年サンプルデータを読み込めます。年度は現在の年度（{getCurrentFiscalYear()}年度）に自動調整されます。
           </DialogDescription>
         </DialogHeader>
 
@@ -174,4 +195,61 @@ export function SamplePickerDialog({ open, onClose }: Props) {
       </DialogContent>
     </Dialog>
   );
+}
+
+/**
+ * サンプルファイルの年度を指定の年度に置き換える。
+ * 日付の月日はそのまま、年のみを差し替える。
+ * 第1・2学期は fiscalYear 年、第3学期は fiscalYear+1 年になる。
+ */
+function shiftFiscalYear(file: TimetableFile, fiscalYear: number): TimetableFile {
+  const sem = file.semester;
+  if (!sem?.startDate) return file;
+
+  // サンプルの年度を検出（startDateの年が4〜12月なら第1/2学期、1〜3月なら第3学期）
+  const sampleStartYear = parseInt(sem.startDate.slice(0, 4), 10);
+  const sampleStartMonth = parseInt(sem.startDate.slice(5, 7), 10);
+  const sampleFiscalYear = sampleStartMonth >= 4 ? sampleStartYear : sampleStartYear - 1;
+
+  if (sampleFiscalYear === fiscalYear) return file; // 既に同じ年度
+
+  const yearDiff = fiscalYear - sampleFiscalYear;
+
+  const shiftDate = (dateStr: string): string => {
+    const year = parseInt(dateStr.slice(0, 4), 10);
+    return `${year + yearDiff}${dateStr.slice(4)}`;
+  };
+
+  const newBase = file.base.map(entry => ({
+    ...entry,
+    date: shiftDate(entry.date),
+  }));
+
+  const newOps = (file.ops ?? []).map(op => ({
+    ...op,
+    date: shiftDate(op.date),
+  }));
+
+  const newSemester = {
+    ...sem,
+    startDate: shiftDate(sem.startDate),
+    endDate: shiftDate(sem.endDate),
+    holidays: (sem.holidays ?? []).map((h: { date: string; name?: string }) => ({
+      ...h,
+      date: shiftDate(h.date),
+    })),
+  };
+
+  const newMeta = {
+    ...file.meta,
+    year: `${fiscalYear}年度`,
+  };
+
+  return {
+    ...file,
+    meta: newMeta,
+    semester: newSemester,
+    base: newBase,
+    ops: newOps,
+  };
 }
