@@ -98,8 +98,9 @@ export function WeekGrid() {
   const isHomeroomMode = mode === 'homeroom';
   const isMultiSubjectMode = mode === 'multi_subject';
   const isSingleSubjectMode = mode === 'single_subject';
-  // 教科情報がある場合は常に表示切り替えボタンを出す
-  const showSubject = subjects.length > 0;
+  // 教科情報がある場合、またはsingle_subject/homeroomモードでは切り替えボタンを表示
+  // （single_subjectやhomeroomはsubjects配列が空でも各コマに教科が記録される）
+  const showSubject = subjects.length > 0 || isSingleSubjectMode || isHomeroomMode;
 
   // クラス/教科ビュー切替（デフォルト: homeroomモードは教科ビュー、それ以外はクラスビュー）
   const [subjectFirst, setSubjectFirst] = useState<boolean>(isHomeroomMode);
