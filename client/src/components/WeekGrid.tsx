@@ -12,7 +12,8 @@ import { useGradeColors } from "@/contexts/GradeColorContext";
 import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
-import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays, Clock, Bot, FileJson } from "lucide-react";
+import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays, Clock, Bot, FileJson, RotateCcw } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -67,6 +68,7 @@ export function WeekGrid() {
     navigateWeek,
     goToToday,
     goToDate,
+    updateWeekPatternOverride,
   } = useTimetable();
 
   // classListが空の場合はフォールバック
@@ -348,20 +350,29 @@ export function WeekGrid() {
 
         // 複週バッジ: A週/B週を計算
         let weekPatternLabel: string | null = null;
+        let weekPatternIdx: number | null = null;
+        let weekPatternCount = 1;
+        const mondayStr = formatDate(currentWeekMonday);
         if (semester.baseSchedules && semester.baseSchedules.length > 1) {
           const WEEK_LABELS_GRID = ["A週", "B週", "C週", "D週"];
-          const refDateStr = semester.weekCycleStart ?? semester.startDate;
-          const refDate = new Date(refDateStr + "T00:00:00");
-          const refDow = refDate.getDay();
-          const refDiff = refDow === 0 ? -6 : 1 - refDow;
-          const cycleBaseMonday = new Date(refDate);
-          cycleBaseMonday.setDate(cycleBaseMonday.getDate() + refDiff);
-          cycleBaseMonday.setHours(0, 0, 0, 0);
-          const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-          const weeksDiff = Math.round((currentWeekMonday.getTime() - cycleBaseMonday.getTime()) / msPerWeek);
-          const n = semester.baseSchedules.length;
-          const idx = ((weeksDiff % n) + n) % n;
-          weekPatternLabel = WEEK_LABELS_GRID[idx] ?? null;
+          weekPatternCount = semester.baseSchedules.length;
+          // 手動上書きがあればそちらを優先
+          if (semester.weekPatternOverrides?.[mondayStr] !== undefined) {
+            weekPatternIdx = semester.weekPatternOverrides[mondayStr];
+          } else {
+            const refDateStr = semester.weekCycleStart ?? semester.startDate;
+            const refDate = new Date(refDateStr + "T00:00:00");
+            const refDow = refDate.getDay();
+            const refDiff = refDow === 0 ? -6 : 1 - refDow;
+            const cycleBaseMonday = new Date(refDate);
+            cycleBaseMonday.setDate(cycleBaseMonday.getDate() + refDiff);
+            cycleBaseMonday.setHours(0, 0, 0, 0);
+            const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+            const weeksDiff = Math.round((currentWeekMonday.getTime() - cycleBaseMonday.getTime()) / msPerWeek);
+            const n = semester.baseSchedules.length;
+            weekPatternIdx = ((weeksDiff % n) + n) % n;
+          }
+          weekPatternLabel = WEEK_LABELS_GRID[weekPatternIdx] ?? null;
         }
 
         return (
@@ -370,10 +381,54 @@ export function WeekGrid() {
             <div className="flex items-center gap-2">
               <span className="text-base font-bold text-foreground">{academicYear}年度</span>
               <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">{semLabel}</span>
-              {weekPatternLabel && (
-                <span className="text-xs bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 font-bold">
-                  {weekPatternLabel}
-                </span>
+              {weekPatternLabel && weekPatternIdx !== null && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      className={cn(
+                        "text-xs rounded-full px-2 py-0.5 font-bold transition-colors",
+                        semester.weekPatternOverrides?.[mondayStr] !== undefined
+                          ? "bg-orange-100 text-orange-700 ring-1 ring-orange-400"
+                          : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      )}
+                      title="タップして週パターンを変更"
+                    >
+                      {weekPatternLabel}
+                      {semester.weekPatternOverrides?.[mondayStr] !== undefined && " ✎"}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-52 p-3" align="start">
+                    <p className="text-xs font-semibold text-foreground mb-2">この週のパターンを変更</p>
+                    <div className="flex flex-col gap-1">
+                      {Array.from({ length: weekPatternCount }, (_, i) => {
+                        const labels = ["A週", "B週", "C週", "D週"];
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => updateWeekPatternOverride(mondayStr, i)}
+                            className={cn(
+                              "text-left text-sm px-3 py-1.5 rounded-md transition-colors",
+                              weekPatternIdx === i
+                                ? "bg-blue-600 text-white font-semibold"
+                                : "hover:bg-accent text-foreground"
+                            )}
+                          >
+                            {labels[i]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {semester.weekPatternOverrides?.[mondayStr] !== undefined && (
+                      <button
+                        onClick={() => updateWeekPatternOverride(mondayStr, null)}
+                        className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        自動計算に戻す
+                      </button>
+                    )}
+                  </PopoverContent>
+                </Popover>
               )}
               {isHomeroomMode && homeroomClass && (
                 <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 font-medium">

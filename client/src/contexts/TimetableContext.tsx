@@ -126,6 +126,8 @@ interface TimetableContextValue {
 
   // Settings
   updateSettings: (newSemester: SemesterMeta, applyFrom?: string, newMode?: TimetableMode) => void;
+  /** 特定週のA週/B週を手勑上書きする。mondayStr: YYYY-MM-DD, idx: 0=A週 1=B週... nullで上書きをリセット */
+  updateWeekPatternOverride: (mondayStr: string, idx: number | null) => void;
 
   // Custom classes
   customClasses: string[];
@@ -622,6 +624,25 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     };
   }, [isLoaded, currentFile, allOps, loadedFileName]);
 
+  // ─── Update week pattern override ──────────────────────────
+  const updateWeekPatternOverride = useCallback((mondayStr: string, idx: number | null) => {
+    if (!currentFile || !currentFile.semester) return;
+    const overrides = { ...(currentFile.semester.weekPatternOverrides ?? {}) };
+    if (idx === null) {
+      delete overrides[mondayStr];
+    } else {
+      overrides[mondayStr] = idx;
+    }
+    const updatedSemester: SemesterMeta = { ...currentFile.semester, weekPatternOverrides: overrides };
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      semester: updatedSemester,
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    setCurrentFile(updatedFile);
+    setIsDirty(true);
+  }, [currentFile]);
+
   // ─── Update holidays ──────────────────────────────────────
   const updateHolidays = useCallback((newHolidays: import("@/lib/timetableFile").HolidayEntry[]) => {
     if (!currentFile) return;
@@ -656,6 +677,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       applyOps,
       exportEffective, exportOverride, exportCSV,
       updateSettings,
+      updateWeekPatternOverride,
       customClasses,
       classList,
       holidays,

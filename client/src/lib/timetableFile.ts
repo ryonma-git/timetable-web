@@ -80,6 +80,12 @@ export interface SemesterMeta {
    * 未設定の場合は startDate を基準にする
    */
   weekCycleStart?: string;
+  /**
+   * 週パターンの手動上書き（特定週のみA週/B週を変更する場合）
+   * key: YYYY-MM-DD（その週の月曜日）, value: 週インデックス（0=A週, 1=B週...）
+   * この設定があれば自動計算より優先される
+   */
+  weekPatternOverrides?: Record<string, number>;
   /** カスタムクラスラベル（標準クラス以外に追加したもの） */
   customClasses?: string[];
   /** 学校種別 */

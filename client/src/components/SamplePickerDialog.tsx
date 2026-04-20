@@ -12,7 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Music, FlaskConical, Loader2 } from "lucide-react";
+import { BookOpen, Music, FlaskConical, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { deserializeTimetableFile } from "@/lib/timetableFile";
@@ -89,10 +89,27 @@ const SAMPLES: SampleDef[] = [
     icon: <Music size={20} className="text-purple-500" />,
     filename: "/samples/sample_multi.timetable",
     details: [
-      "担当クラス: 3〜6年生 8クラス",
+      "担当クラス: 3ー6年生 8クラス",
       "教科: 音楽（3・4年）・家庭科（5・6年）",
-      "期間: 通年（第1〜3学期）",
+      "期間: 通年（第1ー3学期）",
       "読み込み後、今日の学期に自動ジャンプします",
+    ],
+  },
+  {
+    id: "ab_week",
+    title: "A週・B週サンプル（理科専科）",
+    description: "A週・B週の2週ローテーションのデモデータです。週ごとに授業クラスが切り替わる時間割の例です。",
+    mode: "single_subject",
+    modeLabel: "単一教科モード",
+    modeColor: "bg-green-500/15 text-green-600 border-green-200",
+    icon: <RefreshCw size={20} className="text-green-500" />,
+    filename: "/samples/sample_ab.timetable",
+    details: [
+      "担当クラス: 4ー6年生 12クラス",
+      "教科: 理科",
+      "A週: 月・水・金中心の授業パターン",
+      "B週: 火・木中心の授業パターン",
+      "週ヘッダーのA週/B週バッジをタップして手動変更も可能",
     ],
   },
 ];

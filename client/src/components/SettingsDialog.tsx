@@ -174,6 +174,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       return next;
     });
   };
+  const [weekCycleStartInput, setWeekCycleStartInput] = useState(""); // 手動入力用基準日
   const handleWeekCountChangeS = (n: 1 | 2 | 3 | 4) => {
     setWeekCount(n);
     setActiveWeekTab(prev => Math.min(prev, n - 1));
@@ -245,6 +246,8 @@ export function SettingsDialog({ open, onClose }: Props) {
           WEEKDAYS.forEach(d => { s[d.key] = {}; PERIODS.forEach(p => { s[d.key][p] = ws.schedule[d.key]?.[p] ?? null; }); });
           return s;
         }));
+        // weekCycleStartを読み込む
+        setWeekCycleStartInput(semester.weekCycleStart ?? "");
       } else {
         // 単週データを読み込む
         setWeekCount(1);
@@ -350,8 +353,16 @@ export function SettingsDialog({ open, onClose }: Props) {
         label: WEEK_LABELS_S[idx],
         schedule: sched,
       }));
-      // weekCycleStart: 学期開始日の月曜日を基準日に設定
-      if (startDate) {
+      // weekCycleStart: 手動入力があればそれを優先、なければ学期開始日の月曜日を自動設定
+      if (weekCycleStartInput) {
+        // 手動入力値を月曜日に調整
+        const inputD = new Date(weekCycleStartInput + "T00:00:00");
+        const inputDow = inputD.getDay();
+        const inputDiff = inputDow === 0 ? -6 : 1 - inputDow;
+        const inputMonday = new Date(inputD);
+        inputMonday.setDate(inputMonday.getDate() + inputDiff);
+        effectiveWeekCycleStart = `${inputMonday.getFullYear()}-${String(inputMonday.getMonth() + 1).padStart(2, '0')}-${String(inputMonday.getDate()).padStart(2, '0')}`;
+      } else if (startDate) {
         const startD = new Date(startDate + "T00:00:00");
         const dow = startD.getDay();
         const diff = dow === 0 ? -6 : 1 - dow;
@@ -730,6 +741,30 @@ export function SettingsDialog({ open, onClose }: Props) {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* A週/B週基準日手動入力（2週以上の場合のみ表示） */}
+            {selectedMode !== 'homeroom' && weekCount > 1 && (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-blue-200 bg-blue-50/50">
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-blue-800 mb-0.5">A週の開始日（基準日）</p>
+                  <p className="text-[11px] text-blue-600/80">A週に当たる月曜日を指定します。空白の場合は学期開始日の週をA週として自動設定します。</p>
+                </div>
+                <input
+                  type="date"
+                  value={weekCycleStartInput}
+                  onChange={e => setWeekCycleStartInput(e.target.value)}
+                  className="text-xs bg-white border border-blue-300 rounded px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
+                />
+                {weekCycleStartInput && (
+                  <button
+                    onClick={() => setWeekCycleStartInput("")}
+                    className="text-[11px] text-blue-500 hover:text-blue-700 underline shrink-0"
+                  >
+                    自動設定に戻す
+                  </button>
+                )}
               </div>
             )}
 
