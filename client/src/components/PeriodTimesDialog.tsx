@@ -132,6 +132,39 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
   const [byDayTimes, setByDayTimes] = useState<PeriodTimeByDayMap>({});
   const [selectedDay, setSelectedDay] = useState("mon");
   const [isDirty, setIsDirty] = useState(false);
+  // 逆算補助
+  const [showCalcHelper, setShowCalcHelper] = useState(false);
+  const [calcStart, setCalcStart] = useState("08:50");
+  const [calcPeriodMin, setCalcPeriodMin] = useState(45);
+  const [calcBreakMin, setCalcBreakMin] = useState(10);
+  const [calcLunchAfter, setCalcLunchAfter] = useState(4);
+  const [calcLunchMin, setCalcLunchMin] = useState(60);
+  const [calcPeriodCount, setCalcPeriodCount] = useState(6);
+
+  const handleCalcApply = () => {
+    const [h, m] = calcStart.split(":").map(Number);
+    let cursor = h * 60 + m;
+    const result: PeriodTimeMap = {};
+    const toHHMM = (mins: number) => {
+      const hh = Math.floor(mins / 60).toString().padStart(2, "0");
+      const mm = (mins % 60).toString().padStart(2, "0");
+      return `${hh}:${mm}`;
+    };
+    for (let i = 1; i <= calcPeriodCount; i++) {
+      const startMin = cursor;
+      const endMin = cursor + calcPeriodMin;
+      result[i] = { start: toHHMM(startMin), end: toHHMM(endMin) };
+      cursor = endMin;
+      if (i === calcLunchAfter) {
+        cursor += calcLunchMin;
+      } else if (i < calcPeriodCount) {
+        cursor += calcBreakMin;
+      }
+    }
+    setSharedTimes(result);
+    setIsDirty(true);
+    setShowCalcHelper(false);
+  };
 
   useEffect(() => {
     // 初期値をセット
@@ -260,11 +293,60 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-xs text-muted-foreground font-medium">全曜日共通の時程</p>
-            <Button variant="ghost" size="sm" className="text-xs gap-1 h-6" onClick={handleResetShared}>
-              <RotateCcw size={10} />
-              デフォルトに戻す
-            </Button>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="sm" className="text-xs gap-1 h-6" onClick={() => setShowCalcHelper(v => !v)}>
+                <Clock size={10} />
+                逆算入力
+              </Button>
+              <Button variant="ghost" size="sm" className="text-xs gap-1 h-6" onClick={handleResetShared}>
+                <RotateCcw size={10} />
+                デフォルト
+              </Button>
+            </div>
           </div>
+          {/* 逆算補助パネル */}
+          {showCalcHelper && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3 space-y-3">
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">⏱ 逆算入力 — 開始時刻と授業時間から自動計算</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">1限開始時刻</label>
+                  <input type="time" value={calcStart} onChange={e => setCalcStart(e.target.value)}
+                    className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">授業時間（分）</label>
+                  <input type="number" min={20} max={90} value={calcPeriodMin} onChange={e => setCalcPeriodMin(Number(e.target.value))}
+                    className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">休憩時間（分）</label>
+                  <input type="number" min={0} max={60} value={calcBreakMin} onChange={e => setCalcBreakMin(Number(e.target.value))}
+                    className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">授業コマ数</label>
+                  <input type="number" min={1} max={10} value={calcPeriodCount} onChange={e => setCalcPeriodCount(Number(e.target.value))}
+                    className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">昼休み（n限後）</label>
+                  <input type="number" min={1} max={calcPeriodCount - 1} value={calcLunchAfter} onChange={e => setCalcLunchAfter(Number(e.target.value))}
+                    className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground">昼休み時間（分）</label>
+                  <input type="number" min={0} max={120} value={calcLunchMin} onChange={e => setCalcLunchMin(Number(e.target.value))}
+                    className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
+                </div>
+              </div>
+              <Button size="sm" className="w-full gap-1.5 text-xs h-7" onClick={handleCalcApply}>
+                <Check size={12} />
+                この設定で時程を自動入力する
+              </Button>
+              <p className="text-[10px] text-amber-700 dark:text-amber-400">※ 入力後も各コマの時刻を個別に修正できます</p>
+            </div>
+          )}
           <PeriodGrid times={sharedTimes} onChange={handleSharedChange} />
         </div>
       ) : (

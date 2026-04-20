@@ -1633,31 +1633,56 @@ export function NewFileWizard({ open, onClose }: Props) {
 
                 {/* A週/B週タブ（2週以上の場合のみ表示） */}
                 {weekCount > 1 && (
-                  <div className="flex gap-1 border-b border-border">
-                    {WEEK_LABELS.slice(0, weekCount).map((label, idx) => {
-                      const weekFilled = Object.values(baseSchedulesArr[idx] ?? {}).reduce(
-                        (sum, day) => sum + Object.values(day).filter(v => v !== null).length, 0
-                      );
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setActiveWeekTab(idx)}
-                          className={cn(
-                            "px-4 py-2 text-sm font-semibold border-b-2 transition-all -mb-px",
-                            activeWeekTab === idx
-                              ? "border-primary text-primary"
-                              : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                          )}
-                        >
-                          {label}
-                          {weekFilled > 0 && (
-                            <span className="ml-1.5 text-[10px] bg-primary/10 text-primary rounded-full px-1.5 py-0.5">
-                              {weekFilled}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
+                  <div className="flex items-center justify-between border-b border-border">
+                    <div className="flex gap-1">
+                      {WEEK_LABELS.slice(0, weekCount).map((label, idx) => {
+                        const weekFilled = Object.values(baseSchedulesArr[idx] ?? {}).reduce(
+                          (sum, day) => sum + Object.values(day).filter(v => v !== null).length, 0
+                        );
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setActiveWeekTab(idx)}
+                            className={cn(
+                              "px-4 py-2 text-sm font-semibold border-b-2 transition-all -mb-px",
+                              activeWeekTab === idx
+                                ? "border-primary text-primary"
+                                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                            )}
+                          >
+                            {label}
+                            {weekFilled > 0 && (
+                              <span className="ml-1.5 text-[10px] bg-primary/10 text-primary rounded-full px-1.5 py-0.5">
+                                {weekFilled}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* 他の週からコピーボタン */}
+                    <div className="flex items-center gap-1 pr-2 pb-1">
+                      <span className="text-[10px] text-muted-foreground">コピー元:</span>
+                      {WEEK_LABELS.slice(0, weekCount)
+                        .map((label, srcIdx) => ({ label, srcIdx }))
+                        .filter(({ srcIdx }) => srcIdx !== activeWeekTab)
+                        .map(({ label, srcIdx }) => (
+                          <button
+                            key={srcIdx}
+                            onClick={() => {
+                              setBaseSchedulesArr(prev => {
+                                const next = [...prev];
+                                next[activeWeekTab] = JSON.parse(JSON.stringify(next[srcIdx] ?? makeEmptySchedule()));
+                                return next;
+                              });
+                            }}
+                            className="px-2 py-0.5 text-[11px] font-medium rounded border border-border bg-muted hover:bg-primary/10 hover:border-primary/40 transition-colors"
+                            title={`${label}の内容を現在のタブにコピー`}
+                          >
+                            [{label}]
+                          </button>
+                        ))}
+                    </div>
                   </div>
                 )}
 
