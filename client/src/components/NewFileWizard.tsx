@@ -242,15 +242,39 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [wizardPeriodLLMTemplateCopied, setWizardPeriodLLMTemplateCopied] = useState(false);
   const [wizardPeriodLLMError, setWizardPeriodLLMError] = useState<string | null>(null);
 
-  // Step 3: Base schedule (for single_subject mode: class per slot; for homeroom: on/off per slot)
-  const [baseSchedule, setBaseSchedule] = useState<Record<string, Record<number, string | null>>>(() => {
-    const schedule: Record<string, Record<number, string | null>> = {};
-    WEEKDAYS.forEach(d => {
-      schedule[d.key] = {};
-      PERIODS.forEach(p => { schedule[d.key][p] = null; });
+  // Step 3: 複週設定
+  const [weekCount, setWeekCount] = useState<1 | 2 | 3 | 4>(1);
+  const [activeWeekTab, setActiveWeekTab] = useState(0);
+  const WEEK_LABELS = ["A週", "B週", "C週", "D週"];
+
+  // 複数週のbaseSchedule配列（weekCount分）
+  const makeEmptySchedule = () => {
+    const s: Record<string, Record<number, string | null>> = {};
+    WEEKDAYS.forEach(d => { s[d.key] = {}; PERIODS.forEach(p => { s[d.key][p] = null; }); });
+    return s;
+  };
+  const [baseSchedulesArr, setBaseSchedulesArr] = useState<Record<string, Record<number, string | null>>[]>(() => [makeEmptySchedule()]);
+
+  // 現在のタブのbaseSchedule（後方互換用）
+  const baseSchedule = baseSchedulesArr[activeWeekTab] ?? makeEmptySchedule();
+  const setBaseSchedule = (updater: Record<string, Record<number, string | null>> | ((prev: Record<string, Record<number, string | null>>) => Record<string, Record<number, string | null>>)) => {
+    setBaseSchedulesArr(prev => {
+      const next = [...prev];
+      next[activeWeekTab] = typeof updater === 'function' ? updater(next[activeWeekTab] ?? makeEmptySchedule()) : updater;
+      return next;
     });
-    return schedule;
-  });
+  };
+
+  // weekCount変更時に配列を拡張/縮小
+  const handleWeekCountChange = (n: 1 | 2 | 3 | 4) => {
+    setWeekCount(n);
+    setActiveWeekTab(prev => Math.min(prev, n - 1));
+    setBaseSchedulesArr(prev => {
+      const next = [...prev];
+      while (next.length < n) next.push(makeEmptySchedule());
+      return next.slice(0, n);
+    });
+  };
 
   // Step 3 (homeroom mode): which slots have class (true = homeroomClass, false = null)
   const [homeroomSlots, setHomeroomSlots] = useState<Record<string, Record<number, boolean>>>(() => {
@@ -724,11 +748,33 @@ export function NewFileWizard({ open, onClose }: Props) {
         effectiveBaseSchedule = baseSchedule;
       }
 
+      // 複週対応: weekCount > 1の場合はbaseSchedulesを構築
+      let effectiveBaseSchedules: Array<{ label: string; schedule: Record<string, Record<number, string | null>>; subjectSchedule?: Record<string, Record<number, string | null>>; }> | undefined;
+      let effectiveWeekCycleStart: string | undefined;
+      if (weekCount > 1) {
+        effectiveBaseSchedules = baseSchedulesArr.slice(0, weekCount).map((sched, idx) => ({
+          label: WEEK_LABELS[idx],
+          schedule: sched,
+          subjectSchedule: subjectTeacherSubjects.length === 1
+            ? Object.fromEntries(WEEKDAYS.map(d => [d.key, Object.fromEntries(PERIODS.map(p => [p, sched[d.key]?.[p] ? subjectTeacherSubjects[0].name : null]))]))
+            : idx === 0 ? effectiveSubjectSchedule : undefined,
+        }));
+        // weekCycleStart: 学期開始日の月曜日を基準日に設定
+        const startD = new Date(startDate + "T00:00:00");
+        const dow = startD.getDay();
+        const diff = dow === 0 ? -6 : 1 - dow;
+        const monday = new Date(startD);
+        monday.setDate(monday.getDate() + diff);
+        effectiveWeekCycleStart = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+      }
+
       const base = generateBaseEntries(startDate, endDate, {
         hasSaturday,
         hasSunday,
-        baseSchedule: effectiveBaseSchedule,
-        subjectSchedule: effectiveSubjectSchedule,
+        baseSchedule: weekCount === 1 ? effectiveBaseSchedule : undefined,
+        subjectSchedule: weekCount === 1 ? effectiveSubjectSchedule : undefined,
+        baseSchedules: effectiveBaseSchedules,
+        weekCycleStart: effectiveWeekCycleStart,
       });
 
       const file = createNewTimetableFile(title, school || undefined, `${academicYear}年度`);
@@ -1546,9 +1592,10 @@ export function NewFileWizard({ open, onClose }: Props) {
               </>
             ) : (
               <>
+                {/* 週数選択 + 説明 */}
                 <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <span>基本時間割を入力します。ここで設定した内容が学期期間の各週に自動展開されます。</span>
                       <span className="block mt-1 text-xs">空欄のままでも作成できます（後から週間グリッドで編集可能）</span>
                     </div>
@@ -1563,6 +1610,58 @@ export function NewFileWizard({ open, onClose }: Props) {
                   </div>
                 </div>
 
+                {/* 複週設定：週数選択 */}
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+                  <span className="text-sm font-medium shrink-0">時間割の週パターン数</span>
+                  <div className="flex gap-1.5">
+                    {([1, 2, 3, 4] as const).map(n => (
+                      <button
+                        key={n}
+                        onClick={() => handleWeekCountChange(n)}
+                        className={cn(
+                          "px-3 py-1 rounded text-xs font-semibold border transition-all",
+                          weekCount === n
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                        )}
+                      >
+                        {n === 1 ? "1週（通常）" : `${n}週（${WEEK_LABELS.slice(0, n).join("/")}）`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* A週/B週タブ（2週以上の場合のみ表示） */}
+                {weekCount > 1 && (
+                  <div className="flex gap-1 border-b border-border">
+                    {WEEK_LABELS.slice(0, weekCount).map((label, idx) => {
+                      const weekFilled = Object.values(baseSchedulesArr[idx] ?? {}).reduce(
+                        (sum, day) => sum + Object.values(day).filter(v => v !== null).length, 0
+                      );
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setActiveWeekTab(idx)}
+                          className={cn(
+                            "px-4 py-2 text-sm font-semibold border-b-2 transition-all -mb-px",
+                            activeWeekTab === idx
+                              ? "border-primary text-primary"
+                              : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                          )}
+                        >
+                          {label}
+                          {weekFilled > 0 && (
+                            <span className="ml-1.5 text-[10px] bg-primary/10 text-primary rounded-full px-1.5 py-0.5">
+                              {weekFilled}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* グリッド本体 */}
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-sm">
                     <thead>
@@ -1619,8 +1718,19 @@ export function NewFileWizard({ open, onClose }: Props) {
 
                 {filledCells > 0 && (
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
-                    <span className="font-medium text-primary">{filledCells}</span> コマの授業が設定されています
-                    （週あたり {filledCells} コマ × 学期期間の週数 で自動展開されます）
+                    {weekCount === 1 ? (
+                      <><span className="font-medium text-primary">{filledCells}</span> コマの授業が設定されています（週あたり {filledCells} コマ × 学期期間の週数 で自動展開されます）</>
+                    ) : (
+                      <>
+                        {WEEK_LABELS.slice(0, weekCount).map((label, idx) => {
+                          const n = Object.values(baseSchedulesArr[idx] ?? {}).reduce(
+                            (sum, day) => sum + Object.values(day).filter(v => v !== null).length, 0
+                          );
+                          return <span key={idx} className="mr-3">{label}: <span className="font-medium text-primary">{n}</span>コマ</span>;
+                        })}
+                        <span className="text-muted-foreground/70">（{WEEK_LABELS.slice(0, weekCount).join("→")}→{WEEK_LABELS[0]}... の順で交互展開）</span>
+                      </>
+                    )}
                   </div>
                 )}
               </>

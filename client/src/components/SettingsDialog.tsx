@@ -156,15 +156,34 @@ export function SettingsDialog({ open, onClose }: Props) {
   const [endDate, setEndDate] = useState("");
   const [hasSaturday, setHasSaturday] = useState(false);
   const [hasSunday, setHasSunday] = useState(false);
-
-  // ── Step 3: Base schedule ───────────────────────────────────
-  const [baseSchedule, setBaseSchedule] = useState<Record<string, Record<number, string | null>>>(() => {
+  // ── Step 3: Base schedule (複週対応) ────────────────────────────────────────
+  const WEEK_LABELS_S = ["A週", "B週", "C週", "D週"];
+  const [weekCount, setWeekCount] = useState<1 | 2 | 3 | 4>(1);
+  const [activeWeekTab, setActiveWeekTab] = useState(0);
+  const makeEmptyScheduleS = () => {
     const s: Record<string, Record<number, string | null>> = {};
     WEEKDAYS.forEach(d => { s[d.key] = {}; PERIODS.forEach(p => { s[d.key][p] = null; }); });
     return s;
-  });
-
-  // ── Step 4: Apply mode ──────────────────────────────────────
+  };
+  const [baseSchedulesArr, setBaseSchedulesArr] = useState<Record<string, Record<number, string | null>>[]>(() => [makeEmptyScheduleS()]);
+  const baseSchedule = baseSchedulesArr[activeWeekTab] ?? makeEmptyScheduleS();
+  const setBaseSchedule = (updater: Record<string, Record<number, string | null>> | ((prev: Record<string, Record<number, string | null>>) => Record<string, Record<number, string | null>>)) => {
+    setBaseSchedulesArr(prev => {
+      const next = [...prev];
+      next[activeWeekTab] = typeof updater === 'function' ? updater(next[activeWeekTab] ?? makeEmptyScheduleS()) : updater;
+      return next;
+    });
+  };
+  const handleWeekCountChangeS = (n: 1 | 2 | 3 | 4) => {
+    setWeekCount(n);
+    setActiveWeekTab(prev => Math.min(prev, n - 1));
+    setBaseSchedulesArr(prev => {
+      const next = [...prev];
+      while (next.length < n) next.push(makeEmptyScheduleS());
+      return next.slice(0, n);
+    });
+  };
+  // ── Step 4: Apply mode ──────────────────────────────────────────────
   const [applyMode, setApplyMode] = useState<"all" | "from">("all");
   const [applyFromDate, setApplyFromDate] = useState("");
 
@@ -215,13 +234,28 @@ export function SettingsDialog({ open, onClose }: Props) {
       setSelectedMode(currentFile?.meta.mode ?? 'single_subject');
       setHomeroomClass(semester.homeroomClass ?? "");
 
-      // Populate base schedule
-      const s: Record<string, Record<number, string | null>> = {};
-      WEEKDAYS.forEach(d => {
-        s[d.key] = {};
-        PERIODS.forEach(p => { s[d.key][p] = semester.baseSchedule?.[d.key]?.[p] ?? null; });
-      });
-      setBaseSchedule(s);
+      // Populate base schedule (複週対応)
+      if (semester.baseSchedules && semester.baseSchedules.length > 1) {
+        // 複週データを読み込む
+        const wc = Math.min(4, semester.baseSchedules.length) as 1 | 2 | 3 | 4;
+        setWeekCount(wc);
+        setActiveWeekTab(0);
+        setBaseSchedulesArr(semester.baseSchedules.map(ws => {
+          const s: Record<string, Record<number, string | null>> = {};
+          WEEKDAYS.forEach(d => { s[d.key] = {}; PERIODS.forEach(p => { s[d.key][p] = ws.schedule[d.key]?.[p] ?? null; }); });
+          return s;
+        }));
+      } else {
+        // 単週データを読み込む
+        setWeekCount(1);
+        setActiveWeekTab(0);
+        const s: Record<string, Record<number, string | null>> = {};
+        WEEKDAYS.forEach(d => {
+          s[d.key] = {};
+          PERIODS.forEach(p => { s[d.key][p] = semester.baseSchedule?.[d.key]?.[p] ?? null; });
+        });
+        setBaseSchedulesArr([s]);
+      }
       setStep(1);
       setApplyMode("all");
       setApplyFromDate(semester.startDate);
@@ -307,6 +341,27 @@ export function SettingsDialog({ open, onClose }: Props) {
   };
 
   const handleApply = () => {
+    // 複週対応: weekCount > 1の場合はbaseSchedulesを構築
+    let effectiveBaseSchedule: Record<string, Record<number, string | null>> | undefined;
+    let effectiveBaseSchedules: Array<{ label: string; schedule: Record<string, Record<number, string | null>>; }> | undefined;
+    let effectiveWeekCycleStart: string | undefined;
+    if (weekCount > 1) {
+      effectiveBaseSchedules = baseSchedulesArr.slice(0, weekCount).map((sched, idx) => ({
+        label: WEEK_LABELS_S[idx],
+        schedule: sched,
+      }));
+      // weekCycleStart: 学期開始日の月曜日を基準日に設定
+      if (startDate) {
+        const startD = new Date(startDate + "T00:00:00");
+        const dow = startD.getDay();
+        const diff = dow === 0 ? -6 : 1 - dow;
+        const monday = new Date(startD);
+        monday.setDate(monday.getDate() + diff);
+        effectiveWeekCycleStart = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+      }
+    } else {
+      effectiveBaseSchedule = baseSchedule;
+    }
     const newSemester: SemesterMeta = {
       semesterNumber,
       semesterSystem,
@@ -314,7 +369,9 @@ export function SettingsDialog({ open, onClose }: Props) {
       endDate,
       hasSaturday,
       hasSunday,
-      baseSchedule,
+      baseSchedule: effectiveBaseSchedule,
+      baseSchedules: effectiveBaseSchedules,
+      weekCycleStart: effectiveWeekCycleStart,
       schoolType,
       gradeClassCounts: gradeClassCounts.slice(0, grades),
       classList: allClasses,
@@ -643,7 +700,7 @@ export function SettingsDialog({ open, onClose }: Props) {
           </div>
         )}
 
-        {/* ─── Step 3: Base Schedule Grid ──────────────────────── */}
+          {/* ─── Step 3: Base Schedule Grid ──────────────────── */}
         {step === 3 && (
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
@@ -652,6 +709,59 @@ export function SettingsDialog({ open, onClose }: Props) {
                 : "基本時間割を変更します。各コマに担当クラスを設定してください。"
               }
             </div>
+
+            {/* 複週設定: 週数選択 */}
+            {selectedMode !== 'homeroom' && (
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
+                <span className="text-sm font-medium shrink-0">週パターン数</span>
+                <div className="flex gap-1.5">
+                  {([1, 2, 3, 4] as const).map(n => (
+                    <button
+                      key={n}
+                      onClick={() => handleWeekCountChangeS(n)}
+                      className={cn(
+                        "px-3 py-1 rounded text-xs font-semibold border transition-all",
+                        weekCount === n
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                      )}
+                    >
+                      {n === 1 ? "1週（通常）" : `${n}週（${WEEK_LABELS_S.slice(0, n).join("/")}）`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* A週/B週タブ（2週以上の場合のみ表示） */}
+            {selectedMode !== 'homeroom' && weekCount > 1 && (
+              <div className="flex gap-1 border-b border-border">
+                {WEEK_LABELS_S.slice(0, weekCount).map((label, idx) => {
+                  const weekFilled = Object.values(baseSchedulesArr[idx] ?? {}).reduce(
+                    (sum, day) => sum + Object.values(day).filter(v => v !== null).length, 0
+                  );
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveWeekTab(idx)}
+                      className={cn(
+                        "px-4 py-2 text-sm font-semibold border-b-2 transition-all -mb-px",
+                        activeWeekTab === idx
+                          ? "border-primary text-primary"
+                          : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                      )}
+                    >
+                      {label}
+                      {weekFilled > 0 && (
+                        <span className="ml-1.5 text-[10px] bg-primary/10 text-primary rounded-full px-1.5 py-0.5">
+                          {weekFilled}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">

@@ -62,8 +62,24 @@ export interface SemesterMeta {
   hasSaturday: boolean;
   /** 日曜授業 */
   hasSunday: boolean;
-  /** 基本時間割 (曜日 -> 時限 -> クラス) */
+  /** 基本時間割 (曜日 -> 時限 -> クラス) - 後方互換用（単週の場合はこちらを使用） */
   baseSchedule?: Record<string, Record<number, string | null>>;
+  /**
+   * 複週基本時間割（A週・B週など、最大4週のローテーション）
+   * 設定されている場合は baseSchedule より優先される
+   * 例: [{label:"A週", schedule:{...}}, {label:"B週", schedule:{...}}]
+   */
+  baseSchedules?: Array<{
+    label: string;  // "A週" | "B週" | "C週" | "D週"
+    schedule: Record<string, Record<number, string | null>>;
+    subjectSchedule?: Record<string, Record<number, string | null>>;
+  }>;
+  /**
+   * 複週ローテーションの基準日（YYYY-MM-DD）
+   * この日が属する月曜日の週を「第0週（A週）」として計算する
+   * 未設定の場合は startDate を基準にする
+   */
+  weekCycleStart?: string;
   /** カスタムクラスラベル（標準クラス以外に追加したもの） */
   customClasses?: string[];
   /** 学校種別 */
@@ -205,13 +221,31 @@ export function generateBaseEntries(
     baseSchedule?: Record<string, Record<number, string | null>>;
     /** 教科基礎時間割（homeroomモード用） */
     subjectSchedule?: Record<string, Record<number, string | null>>;
+    /** 複週基本時間割（A週・B週など） */
+    baseSchedules?: Array<{
+      label: string;
+      schedule: Record<string, Record<number, string | null>>;
+      subjectSchedule?: Record<string, Record<number, string | null>>;
+    }>;
+    /** 複週ローテーション基準日（未設定時は startDate を使用） */
+    weekCycleStart?: string;
     /** 担任クラスの授業基本時間割（二重レイヤー管理 / C案用） */
     homeroomSubjectSchedule?: Record<string, Record<number, string | null>>;
     /** 担任クラスの担当教員基本設定（二重レイヤー管理 / C案用） */
     homeroomTeacherSchedule?: Record<string, Record<number, string | null>>;
   } = {}
 ): TimetableEntry[] {
-  const { periodsPerDay = 6, hasSaturday = false, hasSunday = false, baseSchedule, subjectSchedule, homeroomSubjectSchedule, homeroomTeacherSchedule } = options;
+  const { periodsPerDay = 6, hasSaturday = false, hasSunday = false, baseSchedule, subjectSchedule, baseSchedules, weekCycleStart, homeroomSubjectSchedule, homeroomTeacherSchedule } = options;
+  // 複週ローテーションの基準月曜日を決定
+  const cycleBaseMonday: Date | null = (baseSchedules && baseSchedules.length > 1) ? (() => {
+    const ref = new Date((weekCycleStart ?? startDate) + "T00:00:00");
+    const day = ref.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const mon = new Date(ref);
+    mon.setDate(mon.getDate() + diff);
+    mon.setHours(0, 0, 0, 0);
+    return mon;
+  })() : null;
   const entries: TimetableEntry[] = [];
   const start = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
@@ -227,9 +261,25 @@ export function generateBaseEntries(
     const weekday = weekdayNames[dayOfWeek];
     const weekday_jp = WEEKDAY_JP[weekday] ?? weekday;
 
+    // 複週ローテーション: 今日が何週目かを計算してスケジュールを選択
+    let resolvedBaseSchedule = baseSchedule;
+    let resolvedSubjectSchedule = subjectSchedule;
+    if (cycleBaseMonday && baseSchedules && baseSchedules.length > 1) {
+      // 今日の月曜日を求める
+      const thisDayOfWeek = d.getDay();
+      const thisDiff = thisDayOfWeek === 0 ? -6 : 1 - thisDayOfWeek;
+      const thisMonday = new Date(d);
+      thisMonday.setDate(thisMonday.getDate() + thisDiff);
+      thisMonday.setHours(0, 0, 0, 0);
+      // 基準月曜日からの週数
+      const weeksDiff = Math.round((thisMonday.getTime() - cycleBaseMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      const weekIndex = ((weeksDiff % baseSchedules.length) + baseSchedules.length) % baseSchedules.length;
+      resolvedBaseSchedule = baseSchedules[weekIndex].schedule;
+      resolvedSubjectSchedule = baseSchedules[weekIndex].subjectSchedule;
+    }
     // Apply base schedule if provided
-    const daySchedule = baseSchedule?.[weekday];
-    const daySubjectSchedule = subjectSchedule?.[weekday];
+    const daySchedule = resolvedBaseSchedule?.[weekday];
+    const daySubjectSchedule = resolvedSubjectSchedule?.[weekday];
     const dayHomeroomSubjectSchedule = homeroomSubjectSchedule?.[weekday];
     const dayHomeroomTeacherSchedule = homeroomTeacherSchedule?.[weekday];
     entries.push({

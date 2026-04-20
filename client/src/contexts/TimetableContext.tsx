@@ -392,6 +392,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
         hasSunday: newSemester.hasSunday,
         baseSchedule: newSemester.baseSchedule,
         subjectSchedule: newSemester.subjectSchedule,
+        baseSchedules: newSemester.baseSchedules,
+        weekCycleStart: newSemester.weekCycleStart,
       });
       newOps = allOps; // keep existing ops
     } else {
@@ -402,6 +404,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
         hasSunday: newSemester.hasSunday,
         baseSchedule: newSemester.baseSchedule,
         subjectSchedule: newSemester.subjectSchedule,
+        baseSchedules: newSemester.baseSchedules,
+        weekCycleStart: newSemester.weekCycleStart,
       });
       newBase = [...beforeEntries, ...newEntries];
       // Remove ops that are on or after applyFrom

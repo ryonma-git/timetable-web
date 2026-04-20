@@ -345,12 +345,36 @@ export function WeekGrid() {
         const fmt = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
         const weekRangeLabel = `${fmt(currentWeekMonday)}～${fmt(weekEnd)}`;
         const isCurrentWeek = formatDate(currentWeekMonday) === formatDate(new Date(today));
+
+        // 複週バッジ: A週/B週を計算
+        let weekPatternLabel: string | null = null;
+        if (semester.baseSchedules && semester.baseSchedules.length > 1) {
+          const WEEK_LABELS_GRID = ["A週", "B週", "C週", "D週"];
+          const refDateStr = semester.weekCycleStart ?? semester.startDate;
+          const refDate = new Date(refDateStr + "T00:00:00");
+          const refDow = refDate.getDay();
+          const refDiff = refDow === 0 ? -6 : 1 - refDow;
+          const cycleBaseMonday = new Date(refDate);
+          cycleBaseMonday.setDate(cycleBaseMonday.getDate() + refDiff);
+          cycleBaseMonday.setHours(0, 0, 0, 0);
+          const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+          const weeksDiff = Math.round((currentWeekMonday.getTime() - cycleBaseMonday.getTime()) / msPerWeek);
+          const n = semester.baseSchedules.length;
+          const idx = ((weeksDiff % n) + n) % n;
+          weekPatternLabel = WEEK_LABELS_GRID[idx] ?? null;
+        }
+
         return (
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             {/* Meta badges */}
             <div className="flex items-center gap-2">
               <span className="text-base font-bold text-foreground">{academicYear}年度</span>
               <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">{semLabel}</span>
+              {weekPatternLabel && (
+                <span className="text-xs bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 font-bold">
+                  {weekPatternLabel}
+                </span>
+              )}
               {isHomeroomMode && homeroomClass && (
                 <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 font-medium">
                   担任: {homeroomClass}
