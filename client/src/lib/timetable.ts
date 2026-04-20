@@ -10,6 +10,19 @@ export interface PeriodSlot {
   class: string | null; // null = no class
   subject?: string | null; // 教科名（Phase 2〜4で使用）
   reason?: string;
+  /**
+   * 担任クラスがこのコマに受けている教科（二重レイヤー管理 / C案用）
+   * - undefined / null: 未記入（既存の動作に影響しない）
+   * - string: 担任クラスの教科名（例: "国語", "算数"）
+   * 将来的に WeekGrid でセカンドレイヤーとして表示する予定
+   */
+  homeroomSubject?: string | null;
+  /**
+   * 担任クラスを教えている教員名（二重レイヤー管理 / C案用）
+   * - undefined / null: 未記入
+   * - string: 担当教員名（例: "田中先生"）
+   */
+  homeroomTeacher?: string | null;
 }
 
 export interface TimetableEntry {
@@ -42,6 +55,16 @@ export interface OverrideOp {
   replace?: boolean;
   clear_all_classes?: boolean;
   applied_at?: string;
+  /**
+   * 担任クラスの教科（二重レイヤー管理 / C案用）
+   * set_period_class op で homeroomSubject を同時に更新する際に使用
+   * undefined の場合は既存の homeroomSubject を変更しない
+   */
+  homeroomSubject?: string | null;
+  /**
+   * 担任クラスの担当教員（二重レイヤー管理 / C案用）
+   */
+  homeroomTeacher?: string | null;
 }
 
 export interface OverrideBundle {
@@ -239,6 +262,13 @@ export function applyOverrides(
         // 教科も同時に更新（op.subjectが指定されている場合）
         if (op.subject !== undefined) {
           entries[idx].periods[slotIdx].subject = op.subject;
+        }
+        // 担任クラス教科・教員も同時に更新（未指定の場合は既存値を保持）
+        if (op.homeroomSubject !== undefined) {
+          entries[idx].periods[slotIdx].homeroomSubject = op.homeroomSubject;
+        }
+        if (op.homeroomTeacher !== undefined) {
+          entries[idx].periods[slotIdx].homeroomTeacher = op.homeroomTeacher;
         }
         if (op.reason) entries[idx].periods[slotIdx].reason = op.reason;
         audit.push({

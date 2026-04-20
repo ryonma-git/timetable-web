@@ -94,6 +94,23 @@ export interface SemesterMeta {
    * weekdayは "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"
    */
   periodTimesByDay?: Record<string, Record<number, { start: string; end: string }>>;
+
+  // ─── 二重レイヤー管理（C案土台） ─────────────────────────────────────
+  /**
+   * 担任クラスの基本時間割（二重レイヤー管理 / C案用）
+   * 自分が授業しない時間に、担任クラスが他の教員から受けている授業を記録する
+   * 構造: 曜日 -> 時限 -> 教科名（null = 未設定）
+   * 例: { "mon": { 1: "国語", 2: "算数" }, "tue": { 1: "体育" } }
+   * 未記入の場合は既存の動作に影響しない
+   */
+  homeroomSubjectSchedule?: Record<string, Record<number, string | null>>;
+
+  /**
+   * 担任クラスの担当教員基本設定（二重レイヤー管理 / C案用）
+   * 構造: 曜日 -> 時限 -> 教員名（null = 未設定）
+   * 例: { "mon": { 1: "田中先生", 2: "山田先生" } }
+   */
+  homeroomTeacherSchedule?: Record<string, Record<number, string | null>>;
 }
 
 /** 複数学期の1学期分のデータ */
@@ -188,9 +205,13 @@ export function generateBaseEntries(
     baseSchedule?: Record<string, Record<number, string | null>>;
     /** 教科基礎時間割（homeroomモード用） */
     subjectSchedule?: Record<string, Record<number, string | null>>;
+    /** 担任クラスの授業基本時間割（二重レイヤー管理 / C案用） */
+    homeroomSubjectSchedule?: Record<string, Record<number, string | null>>;
+    /** 担任クラスの担当教員基本設定（二重レイヤー管理 / C案用） */
+    homeroomTeacherSchedule?: Record<string, Record<number, string | null>>;
   } = {}
 ): TimetableEntry[] {
-  const { periodsPerDay = 6, hasSaturday = false, hasSunday = false, baseSchedule, subjectSchedule } = options;
+  const { periodsPerDay = 6, hasSaturday = false, hasSunday = false, baseSchedule, subjectSchedule, homeroomSubjectSchedule, homeroomTeacherSchedule } = options;
   const entries: TimetableEntry[] = [];
   const start = new Date(startDate + "T00:00:00");
   const end = new Date(endDate + "T00:00:00");
@@ -209,7 +230,8 @@ export function generateBaseEntries(
     // Apply base schedule if provided
     const daySchedule = baseSchedule?.[weekday];
     const daySubjectSchedule = subjectSchedule?.[weekday];
-
+    const dayHomeroomSubjectSchedule = homeroomSubjectSchedule?.[weekday];
+    const dayHomeroomTeacherSchedule = homeroomTeacherSchedule?.[weekday];
     entries.push({
       date: dateStr,
       weekday,
@@ -218,10 +240,15 @@ export function generateBaseEntries(
         const period = i + 1;
         const cls = daySchedule?.[period] ?? null;
         const subj = daySubjectSchedule?.[period] ?? null;
+        const homeroomSubj = dayHomeroomSubjectSchedule?.[period] ?? null;
+        const homeroomTeacher = dayHomeroomTeacherSchedule?.[period] ?? null;
         return {
           period,
           class: cls,
           ...(subj !== null ? { subject: subj } : {}),
+          // 担任クラス授業情報（未設定の場合はフィールド自体を省略しファイルサイズを小さく保つ）
+          ...(homeroomSubj !== null ? { homeroomSubject: homeroomSubj } : {}),
+          ...(homeroomTeacher !== null ? { homeroomTeacher: homeroomTeacher } : {}),
         };
       }),
     });
