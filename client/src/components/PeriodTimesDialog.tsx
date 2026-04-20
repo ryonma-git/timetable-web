@@ -140,6 +140,17 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
   const [calcLunchAfter, setCalcLunchAfter] = useState(4);
   const [calcLunchMin, setCalcLunchMin] = useState(60);
   const [calcPeriodCount, setCalcPeriodCount] = useState(6);
+  // 業間休み（複数設定可能）
+  const [calcExtraBreaks, setCalcExtraBreaks] = useState<{ afterPeriod: number; minutes: number }[]>([]);
+  const handleAddExtraBreak = () => {
+    setCalcExtraBreaks(prev => [...prev, { afterPeriod: 2, minutes: 20 }]);
+  };
+  const handleRemoveExtraBreak = (idx: number) => {
+    setCalcExtraBreaks(prev => prev.filter((_, i) => i !== idx));
+  };
+  const handleExtraBreakChange = (idx: number, field: "afterPeriod" | "minutes", value: number) => {
+    setCalcExtraBreaks(prev => prev.map((b, i) => i === idx ? { ...b, [field]: value } : b));
+  };
 
   const handleCalcApply = () => {
     const [h, m] = calcStart.split(":").map(Number);
@@ -155,10 +166,16 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
       const endMin = cursor + calcPeriodMin;
       result[i] = { start: toHHMM(startMin), end: toHHMM(endMin) };
       cursor = endMin;
-      if (i === calcLunchAfter) {
-        cursor += calcLunchMin;
-      } else if (i < calcPeriodCount) {
-        cursor += calcBreakMin;
+      if (i < calcPeriodCount) {
+        // 業間休みと昔食・昼休みは互いに排他（同じ限後に設定された場合は昔食・昼休みを優先）
+        const extraBreak = calcExtraBreaks.find(b => b.afterPeriod === i);
+        if (i === calcLunchAfter) {
+          cursor += calcLunchMin;
+        } else if (extraBreak) {
+          cursor += extraBreak.minutes;
+        } else {
+          cursor += calcBreakMin;
+        }
       }
     }
     setSharedTimes(result);
@@ -330,15 +347,52 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
                     className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] text-muted-foreground">昼休み（n限後）</label>
+                  <label className="text-[10px] text-muted-foreground">給食・昼休み等（n限後）</label>
                   <input type="number" min={1} max={calcPeriodCount - 1} value={calcLunchAfter} onChange={e => setCalcLunchAfter(Number(e.target.value))}
                     className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] text-muted-foreground">昼休み時間（分）</label>
+                  <label className="text-[10px] text-muted-foreground">給食・昼休み等の時間（分）</label>
                   <input type="number" min={0} max={120} value={calcLunchMin} onChange={e => setCalcLunchMin(Number(e.target.value))}
                     className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
                 </div>
+              </div>
+              {/* 業間休み設定 */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-300">業間休み（通常の休憩より長い休み）</p>
+                  <button
+                    onClick={handleAddExtraBreak}
+                    className="flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-medium rounded border border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors text-amber-800 dark:text-amber-300"
+                  >
+                    <span className="text-xs">+</span> 追加
+                  </button>
+                </div>
+                {calcExtraBreaks.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground">「追加」を押すと業間休みを設定できます（例：2限後に20分の業間休み）</p>
+                )}
+                {calcExtraBreaks.map((b, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-2 rounded border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/10">
+                    <div className="flex items-center gap-1 flex-1">
+                      <input
+                        type="number" min={1} max={calcPeriodCount - 1} value={b.afterPeriod}
+                        onChange={e => handleExtraBreakChange(idx, "afterPeriod", Number(e.target.value))}
+                        className="w-12 h-6 rounded border border-input bg-background px-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                      <span className="text-[10px] text-muted-foreground">限後に</span>
+                      <input
+                        type="number" min={1} max={120} value={b.minutes}
+                        onChange={e => handleExtraBreakChange(idx, "minutes", Number(e.target.value))}
+                        className="w-14 h-6 rounded border border-input bg-background px-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                      <span className="text-[10px] text-muted-foreground">分の業間休み</span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveExtraBreak(idx)}
+                      className="text-muted-foreground hover:text-destructive transition-colors text-xs px-1"
+                    >×</button>
+                  </div>
+                ))}
               </div>
               <Button size="sm" className="w-full gap-1.5 text-xs h-7" onClick={handleCalcApply}>
                 <Check size={12} />
