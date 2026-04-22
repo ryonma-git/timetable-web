@@ -245,6 +245,7 @@ export function NewFileWizard({ open, onClose }: Props) {
   // Step 3: 複週設定
   const [weekCount, setWeekCount] = useState<1 | 2 | 3 | 4>(1);
   const [activeWeekTab, setActiveWeekTab] = useState(0);
+  const [customWeekCycleStart, setCustomWeekCycleStart] = useState(""); // 基準日手動入力
   const WEEK_LABELS = ["A週", "B週", "C週", "D週"];
 
   // 複数週のbaseSchedule配列（weekCount分）
@@ -759,13 +760,18 @@ export function NewFileWizard({ open, onClose }: Props) {
             ? Object.fromEntries(WEEKDAYS.map(d => [d.key, Object.fromEntries(PERIODS.map(p => [p, sched[d.key]?.[p] ? subjectTeacherSubjects[0].name : null]))]))
             : idx === 0 ? effectiveSubjectSchedule : undefined,
         }));
-        // weekCycleStart: 学期開始日の月曜日を基準日に設定
-        const startD = new Date(startDate + "T00:00:00");
-        const dow = startD.getDay();
-        const diff = dow === 0 ? -6 : 1 - dow;
-        const monday = new Date(startD);
-        monday.setDate(monday.getDate() + diff);
-        effectiveWeekCycleStart = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+        // weekCycleStart: 手動入力があればそれを優先、なければ学期開始日の月曜日を自動設定
+        if (customWeekCycleStart) {
+          // 手動入力値をそのまま使用（月曜日でなくても許容）
+          effectiveWeekCycleStart = customWeekCycleStart;
+        } else {
+          const startD = new Date(startDate + "T00:00:00");
+          const dow = startD.getDay();
+          const diff = dow === 0 ? -6 : 1 - dow;
+          const monday = new Date(startD);
+          monday.setDate(monday.getDate() + diff);
+          effectiveWeekCycleStart = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+        }
       }
 
       const base = generateBaseEntries(startDate, endDate, {
@@ -1630,6 +1636,30 @@ export function NewFileWizard({ open, onClose }: Props) {
                     ))}
                   </div>
                 </div>
+
+                {/* A週/B週基準日手動入力（2週以上の場合のみ表示） */}
+                {weekCount > 1 && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg border border-blue-200 bg-blue-50/50">
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-blue-800 mb-0.5">A週の開始日（基準日）</p>
+                      <p className="text-[11px] text-blue-600/80">A週に当たる月曜日を指定します。空白の場合は学期開始日の週をA週として自動設定します。</p>
+                    </div>
+                    <input
+                      type="date"
+                      value={customWeekCycleStart}
+                      onChange={e => setCustomWeekCycleStart(e.target.value)}
+                      className="text-xs bg-white border border-blue-300 rounded px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    />
+                    {customWeekCycleStart && (
+                      <button
+                        onClick={() => setCustomWeekCycleStart("")}
+                        className="text-[11px] text-blue-500 hover:text-blue-700 underline shrink-0"
+                      >
+                        自動設定に戻す
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* A週/B週タブ（2週以上の場合のみ表示） */}
                 {weekCount > 1 && (
