@@ -450,11 +450,20 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       newOps = allOps.filter(op => op.date < applyFrom);
     }
 
+    // semesters配列も同期させる（複数学期対応）
+    let updatedSemesters = currentFile.semesters;
+    if (updatedSemesters && updatedSemesters.length > 0) {
+      const idx = activeSemesterIndex;
+      updatedSemesters = updatedSemesters.map((s, i) =>
+        i === idx ? { ...s, semester: newSemester, base: newBase, ops: newOps } : s
+      );
+    }
     const updatedFile: TimetableFile = {
       ...currentFile,
       semester: newSemester,
       base: newBase,
       ops: newOps,
+      ...(updatedSemesters ? { semesters: updatedSemesters } : {}),
       meta: { ...currentFile.meta, updatedAt: new Date().toISOString(), ...(newMode ? { mode: newMode } : {}) },
     };
 
@@ -468,7 +477,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setUndoStack([]);
     setRedoStack([]);
     setIsDirty(true);
-  }, [currentFile, baseEntries, allOps]);
+  }, [currentFile, baseEntries, allOps, activeSemesterIndex]);
 
   // ─── Mode management ────────────────────────────────────────
   const mode: TimetableMode = currentFile?.meta.mode ?? 'single_subject';
@@ -554,6 +563,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setUndoStack([]);
     setRedoStack([]);
     setActiveSemesterIndexState(idx);
+    // currentFile.semesterをアクティブ学期のデータに同期させる
+    setCurrentFile(prev => prev ? { ...prev, semester: semData.semester } : prev);
     // Navigate to start of new semester
     if (semData.semester.startDate) {
       setCurrentWeekMonday(getMondayOfWeek(new Date(semData.semester.startDate + 'T00:00:00')));

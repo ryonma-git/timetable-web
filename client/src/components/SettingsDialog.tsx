@@ -132,7 +132,11 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 
 export function SettingsDialog({ open, onClose }: Props) {
-  const { currentFile, semester, updateSettings, isLoaded, mode, setMode, classList, subjects } = useTimetable();
+  const { currentFile, semester: semesterFromCtx, updateSettings, isLoaded, mode, setMode, classList, subjects, activeSemesterIndex } = useTimetable();
+  // semesters配列形式の場合はアクティブ学期のデータを使用（単一学期の場合はレガシーフィールドを使用）
+  const semester = currentFile?.semesters && currentFile.semesters.length > 0
+    ? currentFile.semesters[activeSemesterIndex]?.semester ?? semesterFromCtx
+    : semesterFromCtx;
   const [step, setStep] = useState(1);
 
   // ── Step 1: Basic info ──────────────────────────────────────
@@ -295,7 +299,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       setApplyMode("all");
       setApplyFromDate(semester.startDate);
     }
-  }, [open, semester, currentFile]);
+  }, [open, semester, currentFile, activeSemesterIndex]);
 
   const handleSchoolTypeChange = (type: SchoolType) => {
     const info = SCHOOL_TYPES.find(s => s.value === type)!;
