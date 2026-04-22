@@ -131,7 +131,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 
 export function SettingsDialog({ open, onClose }: Props) {
-  const { currentFile, semester, updateSettings, isLoaded, mode, setMode, classList } = useTimetable();
+  const { currentFile, semester, updateSettings, isLoaded, mode, setMode, classList, subjects } = useTimetable();
   const [step, setStep] = useState(1);
 
   // ── Step 1: Basic info ──────────────────────────────────────
@@ -175,10 +175,26 @@ export function SettingsDialog({ open, onClose }: Props) {
     });
   };
   const [weekCycleStartInput, setWeekCycleStartInput] = useState(""); // 手動入力用基準日
+  // 教科設定: 週ごとの教科スケジュール配列
+  const [subjectScheduleArr, setSubjectScheduleArr] = useState<Record<string, Record<number, string | null>>[]>(() => [makeEmptyScheduleS()]);
+  const [activeSubjectTab, setActiveSubjectTab] = useState(0);
+  const currentSubjectSchedule = subjectScheduleArr[activeSubjectTab] ?? makeEmptyScheduleS();
+  const setCurrentSubjectSchedule = (updater: Record<string, Record<number, string | null>> | ((prev: Record<string, Record<number, string | null>>) => Record<string, Record<number, string | null>>)) => {
+    setSubjectScheduleArr(prev => {
+      const next = [...prev];
+      next[activeSubjectTab] = typeof updater === 'function' ? updater(next[activeSubjectTab] ?? makeEmptyScheduleS()) : updater;
+      return next;
+    });
+  };
   const handleWeekCountChangeS = (n: 1 | 2 | 3 | 4) => {
     setWeekCount(n);
     setActiveWeekTab(prev => Math.min(prev, n - 1));
     setBaseSchedulesArr(prev => {
+      const next = [...prev];
+      while (next.length < n) next.push(makeEmptyScheduleS());
+      return next.slice(0, n);
+    });
+    setSubjectScheduleArr(prev => {
       const next = [...prev];
       while (next.length < n) next.push(makeEmptyScheduleS());
       return next.slice(0, n);
@@ -241,9 +257,16 @@ export function SettingsDialog({ open, onClose }: Props) {
         const wc = Math.min(4, semester.baseSchedules.length) as 1 | 2 | 3 | 4;
         setWeekCount(wc);
         setActiveWeekTab(0);
+        setActiveSubjectTab(0);
         setBaseSchedulesArr(semester.baseSchedules.map(ws => {
           const s: Record<string, Record<number, string | null>> = {};
           WEEKDAYS.forEach(d => { s[d.key] = {}; PERIODS.forEach(p => { s[d.key][p] = ws.schedule[d.key]?.[p] ?? null; }); });
+          return s;
+        }));
+        // 教科スケジュールを読み込む
+        setSubjectScheduleArr(semester.baseSchedules.map(ws => {
+          const s: Record<string, Record<number, string | null>> = {};
+          WEEKDAYS.forEach(d => { s[d.key] = {}; PERIODS.forEach(p => { s[d.key][p] = ws.subjectSchedule?.[d.key]?.[p] ?? null; }); });
           return s;
         }));
         // weekCycleStartを読み込む
@@ -252,12 +275,20 @@ export function SettingsDialog({ open, onClose }: Props) {
         // 単週データを読み込む
         setWeekCount(1);
         setActiveWeekTab(0);
+        setActiveSubjectTab(0);
         const s: Record<string, Record<number, string | null>> = {};
         WEEKDAYS.forEach(d => {
           s[d.key] = {};
           PERIODS.forEach(p => { s[d.key][p] = semester.baseSchedule?.[d.key]?.[p] ?? null; });
         });
         setBaseSchedulesArr([s]);
+        // 教科スケジュールも初期化（単週はトップレベルのsubjectScheduleを使用）
+        const ss: Record<string, Record<number, string | null>> = {};
+        WEEKDAYS.forEach(d => {
+          ss[d.key] = {};
+          PERIODS.forEach(p => { ss[d.key][p] = semester.subjectSchedule?.[d.key]?.[p] ?? null; });
+        });
+        setSubjectScheduleArr([ss]);
       }
       setStep(1);
       setApplyMode("all");
@@ -344,15 +375,21 @@ export function SettingsDialog({ open, onClose }: Props) {
   };
 
   const handleApply = () => {
-    // 複週対応: weekCount > 1の場合はbaseSchedulesを構築
+    // 複週対応: weekCount > 1の場合はbaseSchedulesを構範
     let effectiveBaseSchedule: Record<string, Record<number, string | null>> | undefined;
-    let effectiveBaseSchedules: Array<{ label: string; schedule: Record<string, Record<number, string | null>>; }> | undefined;
+    let effectiveSubjectSchedule: Record<string, Record<number, string | null>> | undefined;
+    let effectiveBaseSchedules: Array<{ label: string; schedule: Record<string, Record<number, string | null>>; subjectSchedule?: Record<string, Record<number, string | null>>; }> | undefined;
     let effectiveWeekCycleStart: string | undefined;
     if (weekCount > 1) {
-      effectiveBaseSchedules = baseSchedulesArr.slice(0, weekCount).map((sched, idx) => ({
-        label: WEEK_LABELS_S[idx],
-        schedule: sched,
-      }));
+      effectiveBaseSchedules = baseSchedulesArr.slice(0, weekCount).map((sched, idx) => {
+        const weekSubj: Record<string, Record<number, string | null>> = {};
+        WEEKDAYS.forEach(d => {
+          weekSubj[d.key] = {};
+          PERIODS.forEach(p => { weekSubj[d.key][p] = subjectScheduleArr[idx]?.[d.key]?.[p] ?? null; });
+        });
+        const hasSubj = Object.values(weekSubj).some(day => Object.values(day).some(v => v !== null));
+        return { label: WEEK_LABELS_S[idx], schedule: sched, subjectSchedule: hasSubj ? weekSubj : undefined };
+      });
       // weekCycleStart: 手動入力があればそれを優先、なければ学期開始日の月曜日を自動設定
       if (weekCycleStartInput) {
         // 手動入力値を月曜日に調整
@@ -372,6 +409,9 @@ export function SettingsDialog({ open, onClose }: Props) {
       }
     } else {
       effectiveBaseSchedule = baseSchedule;
+      const ss = subjectScheduleArr[0] ?? makeEmptyScheduleS();
+      const hasSubj = Object.values(ss).some(day => Object.values(day).some(v => v !== null));
+      effectiveSubjectSchedule = hasSubj ? ss : undefined;
     }
     const newSemester: SemesterMeta = {
       semesterNumber,
@@ -381,6 +421,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       hasSaturday,
       hasSunday,
       baseSchedule: effectiveBaseSchedule,
+      subjectSchedule: effectiveSubjectSchedule,
       baseSchedules: effectiveBaseSchedules,
       weekCycleStart: effectiveWeekCycleStart,
       schoolType,
@@ -891,6 +932,181 @@ export function SettingsDialog({ open, onClose }: Props) {
             {selectedMode !== 'homeroom' && filledCells > 0 && (
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
                 <span className="font-medium text-primary">{filledCells}</span> コマの授業が設定されています
+              </div>
+            )}
+
+            {/* 教科設定セクション (multi_subjectモードのみ) */}
+            {selectedMode === 'multi_subject' && subjects.length >= 2 && (
+              <div className="border border-border rounded-lg p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">教科設定</span>
+                  <span className="text-xs text-muted-foreground">各コマに教科を割り当てます</span>
+                </div>
+
+                {/* A週/B週タブ (複数週のときのみ) */}
+                {weekCount > 1 && (
+                  <div className="flex items-center gap-2 border-b border-border pb-2">
+                    <span className="text-xs text-muted-foreground font-medium">週選択:</span>
+                    <div className="flex gap-1">
+                      {WEEK_LABELS_S.slice(0, weekCount).map((label, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setActiveSubjectTab(idx)}
+                          className={cn(
+                            "px-3 py-1 text-xs rounded font-medium transition-colors",
+                            activeSubjectTab === idx
+                              ? "bg-blue-600 text-white"
+                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          )}
+                        >{label}</button>
+                      ))}
+                    </div>
+                    <div className="ml-auto flex gap-1">
+                      {WEEK_LABELS_S.slice(0, weekCount).filter((_, i) => i !== activeSubjectTab).map((label) => {
+                        const srcIdx = WEEK_LABELS_S.indexOf(label);
+                        return (
+                          <button
+                            key={srcIdx}
+                            onClick={() => {
+                              const src = subjectScheduleArr[srcIdx];
+                              if (!src) return;
+                              setSubjectScheduleArr(prev => {
+                                const next = [...prev];
+                                next[activeSubjectTab] = JSON.parse(JSON.stringify(src));
+                                return next;
+                              });
+                            }}
+                            className="text-[10px] px-2 py-0.5 rounded border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                          >
+                            {label}からコピー
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 一括設定ツール */}
+                <div className="flex flex-wrap gap-2 p-2 bg-muted/20 rounded border border-border">
+                  <span className="text-xs text-muted-foreground font-medium self-center">一括:</span>
+                  {Array.from(new Set(allClasses.map(c => {
+                    const m = c.match(/(\d+)年/);
+                    return m ? parseInt(m[1]) : null;
+                  }).filter((g): g is number => g !== null))).sort().map(grade => (
+                    <div key={grade} className="flex items-center gap-1">
+                      <span className="text-xs text-muted-foreground">{grade}年:</span>
+                      {subjects.map(s => (
+                        <button
+                          key={s.name}
+                          onClick={() => {
+                            const gradeClasses = allClasses.filter(c => c.startsWith(`${grade}年`));
+                            const currentBase = baseSchedulesArr[activeSubjectTab] ?? makeEmptyScheduleS();
+                            setCurrentSubjectSchedule(prev => {
+                              const next = { ...prev };
+                              WEEKDAYS.forEach(d => {
+                                next[d.key] = { ...next[d.key] };
+                                PERIODS.forEach(p => {
+                                  const cls = currentBase[d.key]?.[p];
+                                  if (cls && gradeClasses.includes(cls)) {
+                                    next[d.key][p] = s.name;
+                                  }
+                                });
+                              });
+                              return next;
+                            });
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded border font-medium transition-colors hover:opacity-80"
+                          style={{
+                            backgroundColor: s.color ? `${s.color}20` : '#f0f0f0',
+                            color: s.color ?? '#666',
+                            borderColor: s.color ? `${s.color}50` : '#ccc',
+                          }}
+                        >
+                          {grade}年→{s.name}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setCurrentSubjectSchedule(prev => {
+                      const next = { ...prev };
+                      WEEKDAYS.forEach(d => {
+                        next[d.key] = { ...next[d.key] };
+                        PERIODS.forEach(p => { next[d.key][p] = null; });
+                      });
+                      return next;
+                    })}
+                    className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted transition-colors ml-auto"
+                  >
+                    リセット
+                  </button>
+                </div>
+
+                {/* 教科設定グリッド */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr>
+                        <th className="w-12 text-xs text-muted-foreground font-medium py-2" />
+                        {WEEKDAYS.map(d => (
+                          <th key={d.key} className="text-center text-xs font-bold py-2 px-1 min-w-[90px]">{d.label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {PERIODS.map(period => (
+                        <tr key={period}>
+                          <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{period}限</td>
+                          {WEEKDAYS.map(d => {
+                            const currentBase = baseSchedulesArr[activeSubjectTab] ?? makeEmptyScheduleS();
+                            const cls = currentBase[d.key]?.[period] ?? null;
+                            const subj = currentSubjectSchedule[d.key]?.[period] ?? null;
+                            if (!cls) {
+                              return (
+                                <td key={d.key} className="p-0.5 border-b border-r border-border/30">
+                                  <div className="h-8 text-xs px-1 flex items-center justify-center rounded bg-muted/20 text-muted-foreground/30">—</div>
+                                </td>
+                              );
+                            }
+                            return (
+                              <td key={d.key} className="p-0.5 border-b border-r border-border/30">
+                                <Select
+                                  value={subj ?? "__empty__"}
+                                  onValueChange={v => setCurrentSubjectSchedule(prev => ({
+                                    ...prev,
+                                    [d.key]: { ...prev[d.key], [period]: v === "__empty__" ? null : v }
+                                  }))}
+                                >
+                                  <SelectTrigger className={cn(
+                                    "h-8 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0",
+                                    subj ? "font-semibold text-blue-700" : "text-muted-foreground/50"
+                                  )}>
+                                    <SelectValue>
+                                      <span className={subj ? "font-semibold text-blue-700" : "text-muted-foreground/40"}>
+                                        {subj ?? cls}
+                                      </span>
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-48">
+                                    <SelectItem value="__empty__">
+                                      <span className="text-muted-foreground">— 未設定 —</span>
+                                    </SelectItem>
+                                    {subjects.map(s => (
+                                      <SelectItem key={s.name} value={s.name} className="text-xs">
+                                        <span style={{ color: s.color }}>{s.name}</span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <div className="text-[9px] text-center text-muted-foreground/50 mt-0.5">{cls}</div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

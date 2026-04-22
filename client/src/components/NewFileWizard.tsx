@@ -275,6 +275,24 @@ export function NewFileWizard({ open, onClose }: Props) {
       while (next.length < n) next.push(makeEmptySchedule());
       return next.slice(0, n);
     });
+    setSubjectScheduleArr(prev => {
+      const next = [...prev];
+      while (next.length < n) next.push(makeEmptySchedule());
+      return next.slice(0, n);
+    });
+  };
+
+  // 教科担任モード用: 週ごとの教科スケジュール配列
+  const [subjectScheduleArr, setSubjectScheduleArr] = useState<Record<string, Record<number, string | null>>[]>(() => [makeEmptySchedule()]);
+  const [activeSubjectTab, setActiveSubjectTab] = useState(0);
+  // 現在のタブの教科スケジュール
+  const currentSubjectSchedule = subjectScheduleArr[activeSubjectTab] ?? makeEmptySchedule();
+  const setCurrentSubjectSchedule = (updater: Record<string, Record<number, string | null>> | ((prev: Record<string, Record<number, string | null>>) => Record<string, Record<number, string | null>>)) => {
+    setSubjectScheduleArr(prev => {
+      const next = [...prev];
+      next[activeSubjectTab] = typeof updater === 'function' ? updater(next[activeSubjectTab] ?? makeEmptySchedule()) : updater;
+      return next;
+    });
   };
 
   // Step 3 (homeroom mode): which slots have class (true = homeroomClass, false = null)
@@ -657,8 +675,10 @@ export function NewFileWizard({ open, onClose }: Props) {
     sum + Object.values(day).filter(Boolean).length, 0
   );
 
-  // Count subject-assigned slots
-  const subjectFilledCount = Object.values(subjectSchedule).reduce((sum, day) =>
+  // Count subject-assigned slots (homeroom: subjectSchedule, subject teacher: currentSubjectSchedule)
+  const subjectFilledCount = Object.values(
+    isSubjectTeacherMode ? currentSubjectSchedule : subjectSchedule
+  ).reduce((sum, day) =>
     sum + Object.values(day).filter(s => s !== null).length, 0
   );
 
@@ -736,12 +756,12 @@ export function NewFileWizard({ open, onClose }: Props) {
             });
           });
         } else if (subjectTeacherSubjects.length >= 2) {
-          // 複数教科: subjectScheduleグリッドで設定した内容を使用
+          // 複数教科: subjectScheduleArr[0]（A週）の内容を使用（weekCount===1の場合）
           effectiveSubjectSchedule = {};
           WEEKDAYS.forEach(d => {
             effectiveSubjectSchedule![d.key] = {};
             PERIODS.forEach(p => {
-              effectiveSubjectSchedule![d.key][p] = subjectSchedule[d.key]?.[p] ?? null;
+              effectiveSubjectSchedule![d.key][p] = subjectScheduleArr[0]?.[d.key]?.[p] ?? null;
             });
           });
         }
@@ -753,13 +773,23 @@ export function NewFileWizard({ open, onClose }: Props) {
       let effectiveBaseSchedules: Array<{ label: string; schedule: Record<string, Record<number, string | null>>; subjectSchedule?: Record<string, Record<number, string | null>>; }> | undefined;
       let effectiveWeekCycleStart: string | undefined;
       if (weekCount > 1) {
-        effectiveBaseSchedules = baseSchedulesArr.slice(0, weekCount).map((sched, idx) => ({
-          label: WEEK_LABELS[idx],
-          schedule: sched,
-          subjectSchedule: subjectTeacherSubjects.length === 1
-            ? Object.fromEntries(WEEKDAYS.map(d => [d.key, Object.fromEntries(PERIODS.map(p => [p, sched[d.key]?.[p] ? subjectTeacherSubjects[0].name : null]))]))
-            : idx === 0 ? effectiveSubjectSchedule : undefined,
-        }));
+        effectiveBaseSchedules = baseSchedulesArr.slice(0, weekCount).map((sched, idx) => {
+          let weekSubjectSchedule: Record<string, Record<number, string | null>> | undefined;
+          if (subjectTeacherSubjects.length === 1) {
+            // 単数教科: 各週のクラス設定コマに自動適用
+            weekSubjectSchedule = Object.fromEntries(WEEKDAYS.map(d => [d.key, Object.fromEntries(PERIODS.map(p => [p, sched[d.key]?.[p] ? subjectTeacherSubjects[0].name : null]))]));
+          } else if (subjectTeacherSubjects.length >= 2) {
+            // 複数教科: subjectScheduleArr[idx]を使用
+            weekSubjectSchedule = {};
+            WEEKDAYS.forEach(d => {
+              weekSubjectSchedule![d.key] = {};
+              PERIODS.forEach(p => {
+                weekSubjectSchedule![d.key][p] = subjectScheduleArr[idx]?.[d.key]?.[p] ?? null;
+              });
+            });
+          }
+          return { label: WEEK_LABELS[idx], schedule: sched, subjectSchedule: weekSubjectSchedule };
+        });
         // weekCycleStart: 手動入力があればそれを優先、なければ学期開始日の月曜日を自動設定
         if (customWeekCycleStart) {
           // 手動入力値をそのまま使用（月曜日でなくても許容）
@@ -1853,6 +1883,50 @@ export function NewFileWizard({ open, onClose }: Props) {
                   </p>
                 </div>
 
+                {/* A週/B週タブ (複数週のときのみ表示) */}
+                {weekCount > 1 && (
+                  <div className="flex items-center gap-2 border-b border-border pb-2">
+                    <span className="text-xs text-muted-foreground font-medium">週選択:</span>
+                    <div className="flex gap-1">
+                      {WEEK_LABELS.slice(0, weekCount).map((label, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setActiveSubjectTab(idx)}
+                          className={cn(
+                            "px-3 py-1 text-xs rounded font-medium transition-colors",
+                            activeSubjectTab === idx
+                              ? "bg-blue-600 text-white"
+                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          )}
+                        >{label}</button>
+                      ))}
+                    </div>
+                    {/* コピーボタン */}
+                    <div className="ml-auto flex gap-1">
+                      {WEEK_LABELS.slice(0, weekCount).filter((_, i) => i !== activeSubjectTab).map((label, _, arr) => {
+                        const srcIdx = WEEK_LABELS.indexOf(label);
+                        return (
+                          <button
+                            key={srcIdx}
+                            onClick={() => {
+                              const src = subjectScheduleArr[srcIdx];
+                              if (!src) return;
+                              setSubjectScheduleArr(prev => {
+                                const next = [...prev];
+                                next[activeSubjectTab] = JSON.parse(JSON.stringify(src));
+                                return next;
+                              });
+                            }}
+                            className="text-[10px] px-2 py-0.5 rounded border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                          >
+                            {label}からコピー
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* 一括設定ツール */}
                 <div className="flex flex-wrap gap-2 p-3 bg-muted/20 rounded-lg border border-border">
                   <span className="text-xs text-muted-foreground font-medium self-center">一括設定:</span>
@@ -1868,12 +1942,14 @@ export function NewFileWizard({ open, onClose }: Props) {
                           onClick={() => {
                             // n年の全クラスの全コマを指定教科に設定
                             const gradeClasses = allClasses.filter(c => c.startsWith(`${grade}年`));
-                            setSubjectSchedule(prev => {
+                            // 現在のタブのスケジュールのベーススケジュールはアクティブタブに対応する週
+                            const currentBase = baseSchedulesArr[activeSubjectTab] ?? baseSchedule;
+                            setCurrentSubjectSchedule(prev => {
                               const next = { ...prev };
                               WEEKDAYS.forEach(d => {
                                 next[d.key] = { ...next[d.key] };
                                 PERIODS.forEach(p => {
-                                  const cls = baseSchedule[d.key]?.[p];
+                                  const cls = currentBase[d.key]?.[p];
                                   if (cls && gradeClasses.includes(cls)) {
                                     next[d.key][p] = s.name;
                                   }
@@ -1895,7 +1971,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     </div>
                   ))}
                   <button
-                    onClick={() => setSubjectSchedule(prev => {
+                    onClick={() => setCurrentSubjectSchedule(prev => {
                       const next = { ...prev };
                       WEEKDAYS.forEach(d => {
                         next[d.key] = { ...next[d.key] };
@@ -1925,8 +2001,9 @@ export function NewFileWizard({ open, onClose }: Props) {
                         <tr key={period}>
                           <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{period}限</td>
                           {WEEKDAYS.map(d => {
-                            const cls = baseSchedule[d.key]?.[period] ?? null;
-                            const subj = subjectSchedule[d.key]?.[period] ?? null;
+                            const currentBase = baseSchedulesArr[activeSubjectTab] ?? baseSchedule;
+                            const cls = currentBase[d.key]?.[period] ?? null;
+                            const subj = currentSubjectSchedule[d.key]?.[period] ?? null;
                             if (!cls) {
                               return (
                                 <td key={d.key} className="p-0.5 border-b border-r border-border/30">
@@ -1938,7 +2015,10 @@ export function NewFileWizard({ open, onClose }: Props) {
                               <td key={d.key} className="p-0.5 border-b border-r border-border/30">
                                 <Select
                                   value={subj ?? "__empty__"}
-                                  onValueChange={v => handleSubjectChange(d.key, period, v === "__empty__" ? null : v)}
+                                  onValueChange={v => setCurrentSubjectSchedule(prev => ({
+                                    ...prev,
+                                    [d.key]: { ...prev[d.key], [period]: v === "__empty__" ? null : v }
+                                  }))}
                                 >
                                   <SelectTrigger className={cn(
                                     "h-8 text-xs border focus:ring-0 focus:ring-offset-0",

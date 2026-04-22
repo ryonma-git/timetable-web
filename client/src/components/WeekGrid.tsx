@@ -885,24 +885,40 @@ export function WeekGrid() {
                         draggable={!multiSelectMode}
                         onClick={(e) => {
                           if (multiSelectMode) {
+                            // スマホ複数選択モード: 通常タップでトグル、Shiftで範囲選択
                             if (e.shiftKey && lastClickedCellRef.current) {
-                              // Shift: 範囲選択
                               selectCellRange(
                                 lastClickedCellRef.current.date, lastClickedCellRef.current.period,
                                 date, period,
                                 weekDates, [1,2,3,4,5,6]
                               );
-                            } else if (e.metaKey || e.ctrlKey) {
-                              // Cmd/Ctrl: 個別追加トグル
-                              toggleSelectedCell(date, period);
-                              lastClickedCellRef.current = { date, period };
                             } else {
-                              // 通常タップ: トグル
                               toggleSelectedCell(date, period);
                               lastClickedCellRef.current = { date, period };
                             }
-                          } else {
+                          } else if (e.shiftKey && lastClickedCellRef.current) {
+                            // PC Shift+クリック: 既存選択から範囲選択（2コマ目以降）
+                            selectCellRange(
+                              lastClickedCellRef.current.date, lastClickedCellRef.current.period,
+                              date, period,
+                              weekDates, [1,2,3,4,5,6]
+                            );
+                            setMultiSelectMode(true);
+                          } else if ((e.metaKey || e.ctrlKey) && selectedCells.size > 0) {
+                            // PC Cmd/Ctrl+クリック: 既に複数選択中なら追加トグル
+                            toggleSelectedCell(date, period);
+                            lastClickedCellRef.current = { date, period };
+                          } else if ((e.metaKey || e.ctrlKey) && selectedCells.size === 0) {
+                            // PC Cmd/Ctrl+クリック: 1コマ目は単独選択のまま（Excel方式）
                             setSelectedCell(isSelected ? null : { date, period });
+                            lastClickedCellRef.current = { date, period };
+                          } else {
+                            // 通常クリック: 複数選択を解除して単独選択
+                            if (selectedCells.size > 0) {
+                              setMultiSelectMode(false); // clearSelectedCellsも兼ねる
+                            }
+                            setSelectedCell(isSelected && selectedCells.size === 0 ? null : { date, period });
+                            lastClickedCellRef.current = { date, period };
                           }
                         }}
                         onDragStart={() => handleDragStart(date, period, slot.class, slot.subject)}
