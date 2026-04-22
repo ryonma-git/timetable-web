@@ -93,6 +93,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
     { icon: <School size={13} />, label: "学校情報" },
     { icon: <Calendar size={13} />, label: "授業日設定" },
     { icon: <Grid3X3 size={13} />, label: "基本時間割" },
+    { icon: <BookOpen size={13} />, label: "教科設定" },
     { icon: <Check size={13} />, label: "確認・適用" },
   ];
   return (
@@ -371,6 +372,7 @@ export function SettingsDialog({ open, onClose }: Props) {
 
   const canGoNext = () => {
     if (step === 2) return startDate && endDate && startDate <= endDate;
+    if (step === 4) return true; // 教科設定はスキップ可能
     return true;
   };
 
@@ -456,7 +458,7 @@ export function SettingsDialog({ open, onClose }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <StepIndicator current={step} total={4} />
+        <StepIndicator current={step} total={5} />
 
         {/* ─── Step 1: Basic Info + Class Config ──────────────── */}
         {step === 1 && (
@@ -935,8 +937,8 @@ export function SettingsDialog({ open, onClose }: Props) {
               </div>
             )}
 
-            {/* 教科設定セクション (multi_subjectモードのみ) */}
-            {selectedMode === 'multi_subject' && subjects.length >= 2 && (
+            {/* 教科設定セクションは Step4 に移動しました */}
+            {false && (
               <div className="border border-border rounded-lg p-3 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold">教科設定</span>
@@ -1111,10 +1113,194 @@ export function SettingsDialog({ open, onClose }: Props) {
             )}
           </div>
         )}
-
-        {/* ─── Step 4: Apply Mode ──────────────────────────────── */}
+        {/* ─── Step 4: 教科設定 ────────────────────────────────────── */}
         {step === 4 && (
           <div className="space-y-4">
+            <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
+              各コマに教科を割り当てます。設定しなくても次のステップに進めます。
+            </div>
+
+            {subjects.length < 1 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
+                教科が登録されていません。「教科の管理」から教科を登録してから再度この画面を開いてください。
+              </div>
+            )}
+
+            {subjects.length >= 1 && (
+              <div className="border border-border rounded-lg p-3 space-y-3">
+                {/* A週/B週タブ (複数週のときのみ) */}
+                {weekCount > 1 && (
+                  <div className="flex items-center gap-2 border-b border-border pb-2">
+                    <span className="text-xs text-muted-foreground font-medium">週選択:</span>
+                    <div className="flex gap-1">
+                      {WEEK_LABELS_S.slice(0, weekCount).map((label, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setActiveSubjectTab(idx)}
+                          className={cn(
+                            "px-3 py-1 text-xs rounded font-medium transition-colors",
+                            activeSubjectTab === idx
+                              ? "bg-blue-600 text-white"
+                              : "bg-muted text-muted-foreground hover:bg-muted/80"
+                          )}
+                        >{label}</button>
+                      ))}
+                    </div>
+                    <div className="ml-auto flex gap-1">
+                      {WEEK_LABELS_S.slice(0, weekCount).filter((_, i) => i !== activeSubjectTab).map((label) => {
+                        const srcIdx = WEEK_LABELS_S.indexOf(label);
+                        return (
+                          <button
+                            key={srcIdx}
+                            onClick={() => {
+                              const src = subjectScheduleArr[srcIdx];
+                              if (!src) return;
+                              setSubjectScheduleArr(prev => {
+                                const next = [...prev];
+                                next[activeSubjectTab] = JSON.parse(JSON.stringify(src));
+                                return next;
+                              });
+                            }}
+                            className="text-[10px] px-2 py-0.5 rounded border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                          >
+                            {label}からコピー
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 一括設定ツール */}
+                {subjects.length >= 2 && (
+                  <div className="flex flex-wrap gap-2 p-2 bg-muted/20 rounded border border-border">
+                    <span className="text-xs text-muted-foreground font-medium self-center">一括:</span>
+                    {Array.from(new Set(allClasses.map(c => {
+                      const m = c.match(/(\d+)年/);
+                      return m ? parseInt(m[1]) : null;
+                    }).filter((g): g is number => g !== null))).sort().map(grade => (
+                      <div key={grade} className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">{grade}年:</span>
+                        {subjects.map(s => (
+                          <button
+                            key={s.name}
+                            onClick={() => {
+                              const gradeClasses = allClasses.filter(c => c.startsWith(`${grade}年`));
+                              const currentBase = baseSchedulesArr[activeSubjectTab] ?? makeEmptyScheduleS();
+                              setCurrentSubjectSchedule(prev => {
+                                const next = { ...prev };
+                                WEEKDAYS.forEach(d => {
+                                  next[d.key] = { ...next[d.key] };
+                                  PERIODS.forEach(p => {
+                                    const cls = currentBase[d.key]?.[p];
+                                    if (cls && gradeClasses.includes(cls)) {
+                                      next[d.key][p] = s.name;
+                                    }
+                                  });
+                                });
+                                return next;
+                              });
+                            }}
+                            className="text-[10px] px-2 py-0.5 rounded border font-medium transition-colors hover:opacity-80"
+                            style={{
+                              backgroundColor: s.color ? `${s.color}20` : '#f0f0f0',
+                              color: s.color ?? '#666',
+                              borderColor: s.color ? `${s.color}50` : '#ccc',
+                            }}
+                          >
+                            {grade}年→{s.name}
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => setCurrentSubjectSchedule(prev => {
+                        const next = { ...prev };
+                        WEEKDAYS.forEach(d => {
+                          next[d.key] = { ...next[d.key] };
+                          PERIODS.forEach(p => { next[d.key][p] = null; });
+                        });
+                        return next;
+                      })}
+                      className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted transition-colors ml-auto"
+                    >
+                      リセット
+                    </button>
+                  </div>
+                )}
+
+                {/* 教科設定グリッド */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr>
+                        <th className="w-12 text-xs text-muted-foreground font-medium py-2" />
+                        {WEEKDAYS.map(d => (
+                          <th key={d.key} className="text-center text-xs font-bold py-2 px-1 min-w-[90px]">{d.label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {PERIODS.map(period => (
+                        <tr key={period}>
+                          <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{period}限</td>
+                          {WEEKDAYS.map(d => {
+                            const currentBase = baseSchedulesArr[activeSubjectTab] ?? makeEmptyScheduleS();
+                            const cls = currentBase[d.key]?.[period] ?? null;
+                            const subj = currentSubjectSchedule[d.key]?.[period] ?? null;
+                            if (!cls) {
+                              return (
+                                <td key={d.key} className="p-0.5 border-b border-r border-border/30">
+                                  <div className="h-8 text-xs px-1 flex items-center justify-center rounded bg-muted/20 text-muted-foreground/30">—</div>
+                                </td>
+                              );
+                            }
+                            return (
+                              <td key={d.key} className="p-0.5 border-b border-r border-border/30">
+                                <Select
+                                  value={subj ?? "__empty__"}
+                                  onValueChange={v => setCurrentSubjectSchedule(prev => ({
+                                    ...prev,
+                                    [d.key]: { ...prev[d.key], [period]: v === "__empty__" ? null : v }
+                                  }))}
+                                >
+                                  <SelectTrigger className={cn(
+                                    "h-8 text-xs border-0 bg-transparent focus:ring-0 focus:ring-offset-0",
+                                    subj ? "font-semibold text-blue-700" : "text-muted-foreground/50"
+                                  )}>
+                                    <SelectValue>
+                                      <span className={subj ? "font-semibold text-blue-700" : "text-muted-foreground/40"}>
+                                        {subj ?? cls}
+                                      </span>
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-48">
+                                    <SelectItem value="__empty__">
+                                      <span className="text-muted-foreground">— 未設定 —</span>
+                                    </SelectItem>
+                                    {subjects.map(s => (
+                                      <SelectItem key={s.name} value={s.name} className="text-xs">
+                                        <span style={{ color: s.color }}>{s.name}</span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <div className="text-[9px] text-center text-muted-foreground/50 mt-0.5">{cls}</div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── Step 5: Apply Mode ────────────────────────────────────── */}
+        {step === 5 && (      <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
               変更の適用範囲を選択してください。
             </div>
@@ -1215,8 +1401,8 @@ export function SettingsDialog({ open, onClose }: Props) {
           </Button>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{step} / 4</span>
-            {step < 4 ? (
+            <span className="text-xs text-muted-foreground">{step} / 5</span>
+            {step < 5 ? (
               <Button size="sm" onClick={() => setStep(s => s + 1)} disabled={!canGoNext()} className="gap-1.5">
                 次へ <ChevronRight size={14} />
               </Button>
