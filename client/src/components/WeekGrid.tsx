@@ -12,7 +12,7 @@ import { useGradeColors } from "@/contexts/GradeColorContext";
 import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
-import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays, Clock, Bot, FileJson, RotateCcw } from "lucide-react";
+import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays, Clock, Bot, FileJson, RotateCcw, CheckSquare } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -55,6 +55,7 @@ export function WeekGrid() {
     effectiveEntries,
     currentWeekMonday,
     selectedCell, setSelectedCell,
+    multiSelectMode, setMultiSelectMode, selectedCells, toggleSelectedCell, selectCellRange, clearSelectedCells,
     applyOps,
     isLoaded,
     semester,
@@ -70,6 +71,8 @@ export function WeekGrid() {
     goToDate,
     updateWeekPatternOverride,
   } = useTimetable();
+  // 最後にクリックしたセル（Shift範囲選択の起点）
+  const lastClickedCellRef = useRef<{ date: string; period: number } | null>(null);
 
   // classListが空の場合はフォールバック
   const effectiveClassList = classList.length > 0 ? classList : [];
@@ -513,6 +516,37 @@ export function WeekGrid() {
 
       {/* Filter bar: ビュー切替 → クラス絞り込み → 教科絞り込み */}
       <div className="mt-3 flex items-center gap-2 flex-wrap">
+        {/* 複数選択ボタン */}
+        {isLoaded && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-7 gap-1.5 text-xs",
+                  multiSelectMode
+                    ? "bg-amber-100 border-amber-400 text-amber-700 hover:bg-amber-200"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => {
+                  if (multiSelectMode) {
+                    setMultiSelectMode(false);
+                  } else {
+                    setSelectedCell(null);
+                    setMultiSelectMode(true);
+                  }
+                }}
+              >
+                <CheckSquare size={11} />
+                {multiSelectMode ? `複数選択中 (${selectedCells.size})` : "複数選択"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              {multiSelectMode ? "複数選択モードを解除" : "複数のコマを同時編集するモードに入る"}
+            </TooltipContent>
+          </Tooltip>
+        )}
         {/* Subject/Class main toggle button: 教科情報がある場合は常に表示（一番左） */}
         {showSubject && (
           <Tooltip>
@@ -709,6 +743,21 @@ export function WeekGrid() {
           </div>
         )}
       </div>
+      {/* 複数選択モードバー */}
+      {isLoaded && multiSelectMode && (
+        <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-300">
+          <CheckSquare size={14} className="text-amber-600 shrink-0" />
+          <span className="text-xs font-semibold text-amber-700">複数選択モード</span>
+          <span className="text-xs text-amber-600">— セルをタップで選択、Shift+クリックで範囲選択、Cmd/Ctrl+クリックで追加選択</span>
+          {selectedCells.size > 0 && (
+            <span className="ml-1 px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 text-[11px] font-bold">{selectedCells.size}コマ選択中</span>
+          )}
+          <button
+            onClick={() => setMultiSelectMode(false)}
+            className="ml-auto text-xs text-amber-600 hover:text-amber-800 underline"
+          >解除</button>
+        </div>
+      )}
 
       {/* Grid */}
       <div className="mt-3 overflow-x-auto">
@@ -785,6 +834,8 @@ export function WeekGrid() {
                   const slot = getSlot(date, period);
                   const isToday = date === today;
                   const isSelected = selectedCell?.date === date && selectedCell?.period === period;
+                  const cellKey = `${date}|${period}`;
+                  const isMultiSelected = selectedCells.has(cellKey);
                   const isDragSrc = dragState?.srcDate === date && dragState?.srcPeriod === period;
                   const isDragOver = dragOver?.date === date && dragOver?.period === period;
 
@@ -831,8 +882,29 @@ export function WeekGrid() {
                       <div
                         data-date={date}
                         data-period={String(period)}
-                        draggable
-                        onClick={() => setSelectedCell(isSelected ? null : { date, period })}
+                        draggable={!multiSelectMode}
+                        onClick={(e) => {
+                          if (multiSelectMode) {
+                            if (e.shiftKey && lastClickedCellRef.current) {
+                              // Shift: 範囲選択
+                              selectCellRange(
+                                lastClickedCellRef.current.date, lastClickedCellRef.current.period,
+                                date, period,
+                                weekDates, [1,2,3,4,5,6]
+                              );
+                            } else if (e.metaKey || e.ctrlKey) {
+                              // Cmd/Ctrl: 個別追加トグル
+                              toggleSelectedCell(date, period);
+                              lastClickedCellRef.current = { date, period };
+                            } else {
+                              // 通常タップ: トグル
+                              toggleSelectedCell(date, period);
+                              lastClickedCellRef.current = { date, period };
+                            }
+                          } else {
+                            setSelectedCell(isSelected ? null : { date, period });
+                          }
+                        }}
                         onDragStart={() => handleDragStart(date, period, slot.class, slot.subject)}
                         onDragOver={e => handleDragOver(e, date, period)}
                         onDrop={e => handleDrop(e, date, period)}
@@ -845,7 +917,8 @@ export function WeekGrid() {
                         className={cn(
                           "period-cell rounded border cursor-pointer px-2 py-1 flex flex-col justify-between select-none",
                           showSubject ? "h-[60px]" : "h-[52px]",
-                          isSelected && "ring-2 ring-primary ring-inset",
+                          isSelected && !multiSelectMode && "ring-2 ring-primary ring-inset",
+                          isMultiSelected && "ring-2 ring-amber-500 ring-inset bg-amber-50/80",
                           (isDragSrc || isTouchDragSrc) && "opacity-40 scale-95",
                           isDragOver && "ring-2 ring-green-500 ring-inset",
                           isTouchDragOver && !isTouchDragSrc && "ring-2 ring-blue-500 ring-inset",

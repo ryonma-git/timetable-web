@@ -93,6 +93,13 @@ interface TimetableContextValue {
   goToDate: (date: Date) => void;
   selectedCell: { date: string; period: number } | null;
   setSelectedCell: (cell: { date: string; period: number } | null) => void;
+  // Multi-select
+  multiSelectMode: boolean;
+  setMultiSelectMode: (v: boolean) => void;
+  selectedCells: Set<string>; // "date|period" keys
+  toggleSelectedCell: (date: string, period: number) => void;
+  selectCellRange: (fromDate: string, fromPeriod: number, toDate: string, toPeriod: number, weekDates: string[], periods: number[]) => void;
+  clearSelectedCells: () => void;
   asOfDate: string;
   setAsOfDate: (date: string) => void;
   classStats: ClassStats[];
@@ -172,6 +179,35 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState<ActiveTab>("grid");
   const [currentWeekMonday, setCurrentWeekMonday] = useState(() => getMondayOfWeek(new Date()));
   const [selectedCell, setSelectedCell] = useState<{ date: string; period: number } | null>(null);
+  // Multi-select
+  const [multiSelectMode, setMultiSelectModeState] = useState(false);
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+  const setMultiSelectMode = (v: boolean) => {
+    setMultiSelectModeState(v);
+    if (!v) setSelectedCells(new Set());
+  };
+  const toggleSelectedCell = (date: string, period: number) => {
+    const key = `${date}|${period}`;
+    setSelectedCells(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+  const selectCellRange = (fromDate: string, fromPeriod: number, toDate: string, toPeriod: number, weekDates: string[], periods: number[]) => {
+    const fi = weekDates.indexOf(fromDate);
+    const ti = weekDates.indexOf(toDate);
+    const minDi = Math.min(fi, ti); const maxDi = Math.max(fi, ti);
+    const minP = Math.min(fromPeriod, toPeriod); const maxP = Math.max(fromPeriod, toPeriod);
+    const keys = new Set<string>();
+    for (let di = minDi; di <= maxDi; di++) {
+      for (let p = minP; p <= maxP; p++) {
+        keys.add(`${weekDates[di]}|${p}`);
+      }
+    }
+    setSelectedCells(keys);
+  };
+  const clearSelectedCells = () => setSelectedCells(new Set());
   const [asOfDate, setAsOfDate] = useState(todayISO());
 
   const [undoStack, setUndoStack] = useState<HistoryEntry[]>([]);
@@ -666,6 +702,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       activeTab, setActiveTab,
       currentWeekMonday, navigateWeek, goToToday, goToDate,
       selectedCell, setSelectedCell,
+      multiSelectMode, setMultiSelectMode, selectedCells, toggleSelectedCell, selectCellRange, clearSelectedCells,
       asOfDate, setAsOfDate, classStats, subjectStats,
       weekendOverrides, toggleWeekendDay,
       undoStack, redoStack,

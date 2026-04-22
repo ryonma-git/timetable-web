@@ -2,9 +2,10 @@
 // Design: Swiss Grid × Japanese Functional Design
 // Right inspector panel: cell details + operation form with confirm dialog
 // Phase 3: 教科入力対応（single_subject/homeroom/multi_subjectモード）
+// Phase 4: 複数選択モード対応（一括削除・追加・教科・理由）
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
 import { useTimetable } from "@/contexts/TimetableContext";
 import {
@@ -30,10 +31,12 @@ import { useGradeColors } from "@/contexts/GradeColorContext";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 
 type OpMode = "delete" | "add" | "move" | "swap" | "reason" | "subject";
+type MultiOpMode = "delete" | "add" | "reason" | "subject";
 
 export function Inspector() {
   const {
     selectedCell, setSelectedCell,
+    multiSelectMode, setMultiSelectMode, selectedCells, clearSelectedCells,
     effectiveEntries, applyOps,
     customClasses,
     classList,
@@ -55,6 +58,7 @@ export function Inspector() {
   const homeroomClass = semester?.homeroomClass ?? null;
 
   const [opMode, setOpMode] = useState<OpMode>("delete");
+  const [multiOpMode, setMultiOpMode] = useState<MultiOpMode>("delete");
   const [newClass, setNewClass] = useState("");
   const [newSubject, setNewSubject] = useState("");
   const [reason, setReason] = useState("");
@@ -84,35 +88,152 @@ export function Inspector() {
     }
   }, [selectedCell]);
 
-  if (!selectedCell) {
-    // コマ未選択時は非表示（デスクトップ・スマホ共通）
-    return null;
-  }
+  // ─── 複数選択モード: 選択コマのパース ─────────────────────────
+  const parsedSelectedCells = Array.from(selectedCells).map(key => {
+    const [date, periodStr] = key.split("|");
+    return { date, period: Number(periodStr) };
+  });
 
-  const { date, period } = selectedCell;
-  const currentClass = currentSlot?.class ?? null;
-  const currentSubject = currentSlot?.subject ?? null;
-
-  // ─── Build preview and show confirm dialog ─────────────────
-  const showConfirm = (
-    opType: ChangeOpType,
-    description: string,
-    preview: ChangePreview,
-    execute: () => void
-  ) => {
-    setConfirmPreview(preview);
-    setConfirmOpen(true);
-    setPendingExecute(() => execute);
+  // ─── 複数選択モードの一括操作 ─────────────────────────────────
+  const handleMultiExecute = () => {
+    if (selectedCells.size === 0) {
+      toast.error("コマが選択されていません");
+      return;
+    }
+    if (multiOpMode === "delete") {
+      const ops = parsedSelectedCells.flatMap(({ date, period }) => {
+        const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
+        return [buildDeleteOp(date, period, slot?.class ?? null, reason || undefined)];
+      });
+      const preview: ChangePreview = {
+        opType: "delete",
+        description: `${selectedCells.size}コマの授業を一括削除します`,
+        items: parsedSelectedCells.map(({ date, period }) => {
+          const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
+          return {
+            label: `${formatDateJP(date)} ${period}限`,
+            fromDate: date, fromPeriod: period, fromClass: slot?.class ?? null,
+            toDate: date, toPeriod: period, toClass: null,
+          };
+        }),
+        warnings: [],
+      };
+      setConfirmPreview(preview);
+      setConfirmOpen(true);
+      setPendingExecute(() => () => {
+        const audit = applyOps(ops, `一括削除: ${selectedCells.size}コマ`);
+        const errors = audit.filter(a => a.level === "error");
+        if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
+        else toast.success(`${selectedCells.size}コマを削除しました`);
+        setReason("");
+        clearSelectedCells();
+        setMultiSelectMode(false);
+      });
+    } else if (multiOpMode === "add") {
+      const targetClass = newClass || (isHomeroomMode ? (homeroomClass ?? null) : null);
+      const targetSubject = newSubject || null;
+      if (!targetClass && !targetSubject) {
+        toast.error("クラスまたは教科を指定してください");
+        return;
+      }
+      const ops = parsedSelectedCells.flatMap(({ date, period }) => {
+        const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
+        if (targetClass && targetSubject) {
+          return [buildAddOp(date, period, targetClass, reason || undefined, targetSubject)];
+        } else if (targetClass) {
+          return [buildAddOp(date, period, targetClass, reason || undefined, undefined)];
+        } else {
+          return [buildSetSubjectOp(date, period, slot?.class ?? null, targetSubject)];
+        }
+      });
+      const displayLabel = [targetClass, targetSubject].filter(Boolean).join(' / ');
+      const preview: ChangePreview = {
+        opType: "add",
+        description: `${selectedCells.size}コマに「${displayLabel}」を一括追加します`,
+        items: parsedSelectedCells.map(({ date, period }) => {
+          const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
+          return {
+            label: `${formatDateJP(date)} ${period}限`,
+            fromDate: date, fromPeriod: period, fromClass: slot?.class ?? null,
+            toDate: date, toPeriod: period, toClass: targetClass,
+          };
+        }),
+        warnings: [],
+      };
+      setConfirmPreview(preview);
+      setConfirmOpen(true);
+      setPendingExecute(() => () => {
+        const audit = applyOps(ops, `一括追加: ${selectedCells.size}コマ → ${displayLabel}`);
+        const errors = audit.filter(a => a.level === "error");
+        if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
+        else toast.success(`${selectedCells.size}コマに「${displayLabel}」を追加しました`);
+        setNewClass(""); setNewSubject(""); setReason("");
+        clearSelectedCells();
+        setMultiSelectMode(false);
+      });
+    } else if (multiOpMode === "reason") {
+      if (!reason) { toast.error("理由を入力してください"); return; }
+      const ops = parsedSelectedCells.map(({ date, period }) => buildReasonOp(date, period, reason));
+      const preview: ChangePreview = {
+        opType: "add",
+        description: `${selectedCells.size}コマに理由「${reason}」を一括設定します`,
+        items: parsedSelectedCells.map(({ date, period }) => {
+          const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
+          return {
+            label: `${formatDateJP(date)} ${period}限`,
+            fromDate: date, fromPeriod: period, fromClass: slot?.class ?? null,
+            toDate: date, toPeriod: period, toClass: slot?.class ?? null, toReason: reason,
+          };
+        }),
+        warnings: [],
+      };
+      setConfirmPreview(preview);
+      setConfirmOpen(true);
+      setPendingExecute(() => () => {
+        applyOps(ops, `一括理由設定: ${selectedCells.size}コマ → ${reason}`);
+        toast.success(`${selectedCells.size}コマに理由を設定しました`);
+        setReason("");
+        clearSelectedCells();
+        setMultiSelectMode(false);
+      });
+    } else if (multiOpMode === "subject") {
+      const subjectValue = newSubject || null;
+      const ops = parsedSelectedCells.map(({ date, period }) => {
+        const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
+        return buildSetSubjectOp(date, period, slot?.class ?? null, subjectValue);
+      });
+      const preview: ChangePreview = {
+        opType: "add",
+        description: `${selectedCells.size}コマの教科を「${subjectValue ?? "なし"}」に一括設定します`,
+        items: parsedSelectedCells.map(({ date, period }) => {
+          const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
+          return {
+            label: `${formatDateJP(date)} ${period}限`,
+            fromDate: date, fromPeriod: period, fromClass: slot?.class ?? null,
+            toDate: date, toPeriod: period, toClass: slot?.class ?? null,
+          };
+        }),
+        warnings: [],
+      };
+      setConfirmPreview(preview);
+      setConfirmOpen(true);
+      setPendingExecute(() => () => {
+        applyOps(ops, `一括教科設定: ${selectedCells.size}コマ → ${subjectValue ?? "なし"}`);
+        toast.success(subjectValue ? `${selectedCells.size}コマの教科を「${subjectValue}」に設定しました` : `${selectedCells.size}コマの教科を削除しました`);
+        setNewSubject("");
+        clearSelectedCells();
+        setMultiSelectMode(false);
+      });
+    }
   };
 
+  // ─── 単一選択モードの操作 ──────────────────────────────────────
   const handleExecute = () => {
     if (!selectedCell) return;
-
     if (opMode === "delete") {
       const op = buildDeleteOp(date, period, currentClass, reason || undefined);
       const v = validateOp(op);
       if (!v.valid) { toast.error(v.errors.join("\n")); return; }
-
       const preview: ChangePreview = {
         opType: "delete",
         description: `${formatDateJP(date)} ${period}限の授業を削除します`,
@@ -123,7 +244,6 @@ export function Inspector() {
         }],
         warnings: v.warnings,
       };
-
       showConfirm("delete", `削除: ${date} ${period}限`, preview, () => {
         const audit = applyOps([op], `削除: ${date} ${period}限 (${currentClass ?? "空き"})`);
         const errors = audit.filter(a => a.level === "error");
@@ -131,19 +251,16 @@ export function Inspector() {
         else toast.success(`削除しました: ${formatDateJP(date)} ${period}限`);
         setReason("");
       });
-
     } else if (opMode === "add") {
       // 全モード共通: クラスと教科を独立に設定できる
       // homeroomモード: newClassが空の場合はhomeroomClassを使用
       const targetClass = newClass || (isHomeroomMode ? (homeroomClass ?? null) : null);
       const targetSubject = newSubject || null;
-
       // クラスも教科もない場合はエラー
       if (!targetClass && !targetSubject) {
         toast.error("クラスまたは教科を指定してください");
         return;
       }
-
       let op;
       if (targetClass && targetSubject) {
         // クラスと教科両方設定
@@ -155,10 +272,8 @@ export function Inspector() {
         // 教科のみ（クラスなし）
         op = buildSetSubjectOp(date, period, currentClass, targetSubject);
       }
-
       const v = validateOp(op);
       if (!v.valid) { toast.error(v.errors.join("\n")); return; }
-
       const displayLabel = [targetClass, targetSubject].filter(Boolean).join(' / ');
       const preview: ChangePreview = {
         opType: "add",
@@ -170,7 +285,6 @@ export function Inspector() {
         }],
         warnings: v.warnings,
       };
-
       showConfirm("add", `追加: ${date} ${period}限 → ${displayLabel}`, preview, () => {
         const audit = applyOps([op], `追加: ${date} ${period}限 → ${displayLabel}`);
         const errors = audit.filter(a => a.level === "error");
@@ -178,12 +292,10 @@ export function Inspector() {
         else toast.success(`追加しました: ${displayLabel}`);
         setNewClass(""); setNewSubject(""); setReason("");
       });
-
     } else if (opMode === "move") {
       if (!dstDate) { toast.error("移動先の日付を選択してください"); return; }
       const dstSlot = entryByDate.get(dstDate)?.periods.find(p => p.period === Number(dstPeriod));
       const ops = buildMoveOps(date, period, currentClass, dstDate, Number(dstPeriod), dstSlot?.class ?? null, reason || undefined, currentSubject);
-
       const preview: ChangePreview = {
         opType: "move",
         description: `${formatDateJP(date)} ${period}限を ${formatDateJP(dstDate)} ${dstPeriod}限に移動します`,
@@ -201,7 +313,6 @@ export function Inspector() {
         ],
         warnings: dstSlot?.class ? [`移動先 (${formatDateJP(dstDate)} ${dstPeriod}限) には ${dstSlot.class} が入っています。上書きされます。`] : [],
       };
-
       showConfirm("move", `移動: ${date} ${period}限 → ${dstDate} ${dstPeriod}限`, preview, () => {
         const audit = applyOps(ops, `移動: ${date} ${period}限 → ${dstDate} ${dstPeriod}限`);
         const errors = audit.filter(a => a.level === "error");
@@ -209,12 +320,10 @@ export function Inspector() {
         else toast.success(`移動しました`);
         setReason("");
       });
-
     } else if (opMode === "swap") {
       if (!swapDate) { toast.error("交換先の日付を選択してください"); return; }
       const swapSlot = entryByDate.get(swapDate)?.periods.find(p => p.period === Number(swapPeriod));
       const ops = buildSwapOps(date, period, currentClass, swapDate, Number(swapPeriod), swapSlot?.class ?? null, reason || undefined, currentSubject, swapSlot?.subject);
-
       const preview: ChangePreview = {
         opType: "swap",
         description: `${formatDateJP(date)} ${period}限 と ${formatDateJP(swapDate)} ${swapPeriod}限 を交換します`,
@@ -232,18 +341,15 @@ export function Inspector() {
         ],
         warnings: [],
       };
-
       showConfirm("swap", `交換: ${date} ${period}限 ↔ ${swapDate} ${swapPeriod}限`, preview, () => {
         const audit = applyOps(ops, `交換: ${date} ${period}限 ↔ ${swapDate} ${swapPeriod}限`);
         const errors = audit.filter(a => a.level === "error");
         if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
         else toast.success(`交換しました`);
       });
-
     } else if (opMode === "reason") {
       if (!reason) { toast.error("理由を入力してください"); return; }
       const ops = [buildReasonOp(date, period, reason)];
-
       const preview: ChangePreview = {
         opType: "add",
         description: `${formatDateJP(date)} ${period}限の理由を設定します`,
@@ -254,18 +360,15 @@ export function Inspector() {
         }],
         warnings: [],
       };
-
       showConfirm("add", `理由設定: ${date} ${period}限`, preview, () => {
         applyOps(ops, `理由設定: ${date} ${period}限`);
         toast.success(`理由を設定しました`);
         setReason("");
       });
-
     } else if (opMode === "subject") {
       // 教科のみ変更（クラスは維持）
       const subjectValue = newSubject || null;
       const op = buildSetSubjectOp(date, period, currentClass, subjectValue);
-
       const preview: ChangePreview = {
         opType: "add",
         description: `${formatDateJP(date)} ${period}限の教科を設定します`,
@@ -276,7 +379,6 @@ export function Inspector() {
         }],
         warnings: [],
       };
-
       showConfirm("add", `教科設定: ${date} ${period}限 → ${subjectValue ?? "なし"}`, preview, () => {
         applyOps([op], `教科設定: ${date} ${period}限 → ${subjectValue ?? "なし"}`);
         toast.success(subjectValue ? `教科を「${subjectValue}」に設定しました` : "教科を削除しました");
@@ -309,8 +411,215 @@ export function Inspector() {
     ...(showSubjectOp ? [{ id: "subject" as OpMode, label: "教科" }] : []),
   ];
 
+  const multiOpModes: { id: MultiOpMode; label: string }[] = [
+    { id: "delete", label: "削除" },
+    { id: "add", label: "追加" },
+    { id: "reason", label: "理由" },
+    ...(showSubjectOp ? [{ id: "subject" as MultiOpMode, label: "教科" }] : []),
+  ];
+
   // 追加モードの初期クラス値: homeroomモードは担任クラスをデフォルトに設定
   const defaultAddClass = isHomeroomMode ? (homeroomClass ?? "") : "";
+
+  // ─── 複数選択モードのパネル ────────────────────────────────────
+  if (multiSelectMode) {
+    return (
+      <>
+        {/* Mobile: bottom sheet overlay */}
+        <div
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          onClick={() => setMultiSelectMode(false)}
+        />
+        {/* Panel */}
+        <div className="
+          fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl
+          lg:static lg:w-[260px] lg:shrink-0 lg:rounded-none lg:shadow-none lg:z-auto
+          border-t lg:border-t-0 lg:border-l border-border
+          flex flex-col bg-card
+          animate-in slide-in-from-bottom lg:slide-in-from-right duration-200
+          max-h-[80vh] lg:max-h-none
+        ">
+          {/* Mobile drag handle */}
+          <div className="flex justify-center pt-2 pb-1 lg:hidden">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-amber-50/50">
+            <div className="flex items-center gap-2">
+              <CheckSquare size={14} className="text-amber-600" />
+              <div>
+                <p className="text-xs text-amber-600 font-medium">複数選択モード</p>
+                <p className="text-sm font-bold text-foreground">
+                  {selectedCells.size > 0 ? `${selectedCells.size}コマ選択中` : "コマを選択してください"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setMultiSelectMode(false)}
+              className="w-6 h-6 rounded flex items-center justify-center hover:bg-muted transition-colors"
+            >
+              <X size={13} className="text-muted-foreground" />
+            </button>
+          </div>
+
+          {/* 選択コマ一覧（最大5件表示） */}
+          {selectedCells.size > 0 && (
+            <div className="px-4 py-2 border-b border-border bg-muted/20">
+              <div className="space-y-0.5 max-h-24 overflow-y-auto">
+                {parsedSelectedCells.slice(0, 5).map(({ date, period }) => {
+                  const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
+                  return (
+                    <div key={`${date}|${period}`} className="flex items-center gap-1.5 text-[11px]">
+                      <span className="text-muted-foreground">{formatDateJP(date)} {period}限</span>
+                      <span className="font-medium text-foreground">{slot?.class ?? "空き"}</span>
+                      {slot?.subject && <span className="text-muted-foreground">/ {slot.subject}</span>}
+                    </div>
+                  );
+                })}
+                {selectedCells.size > 5 && (
+                  <div className="text-[10px] text-muted-foreground">...他 {selectedCells.size - 5} コマ</div>
+                )}
+              </div>
+              <button
+                onClick={() => clearSelectedCells()}
+                className="mt-1 text-[10px] text-muted-foreground hover:text-foreground underline"
+              >
+                選択をすべて解除
+              </button>
+            </div>
+          )}
+
+          {/* Op mode tabs */}
+          <div className="px-3 pt-3">
+            <div className="flex gap-1 flex-wrap">
+              {multiOpModes.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setMultiOpMode(m.id)}
+                  className={cn(
+                    "px-2.5 py-1 rounded text-xs font-medium transition-colors border",
+                    multiOpMode === m.id
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground"
+                  )}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Form */}
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            {multiOpMode === "delete" && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">選択した <span className="font-medium text-foreground">{selectedCells.size}コマ</span> の授業を削除します</p>
+                <ReasonField reason={reason} setReason={setReason} />
+              </div>
+            )}
+            {multiOpMode === "add" && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">選択した <span className="font-medium text-foreground">{selectedCells.size}コマ</span> に一括追加します</p>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">
+                    クラス
+                    {isHomeroomMode && <span className="ml-1 text-[10px] text-amber-600">(担任: {homeroomClass ?? '未設定'})</span>}
+                  </Label>
+                  <Select
+                    value={newClass || (isHomeroomMode ? (homeroomClass ?? "__none__") : "__none__")}
+                    onValueChange={v => setNewClass(v === "__none__" ? "" : v)}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="クラスを選択..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">
+                        <span className="text-muted-foreground">— 指定なし —</span>
+                      </SelectItem>
+                      {effectiveClassList.map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <SubjectField
+                  value={newSubject}
+                  onChange={setNewSubject}
+                  subjects={subjects.map(s => s.name)}
+                  required={isHomeroomMode && !newClass && !homeroomClass}
+                  allowEmpty
+                  emptyLabel="指定なし"
+                />
+                <ReasonField reason={reason} setReason={setReason} />
+              </div>
+            )}
+            {multiOpMode === "reason" && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">選択した <span className="font-medium text-foreground">{selectedCells.size}コマ</span> に理由を一括設定します</p>
+                <ReasonField reason={reason} setReason={setReason} required />
+              </div>
+            )}
+            {multiOpMode === "subject" && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">選択した <span className="font-medium text-foreground">{selectedCells.size}コマ</span> の教科を一括設定します</p>
+                <SubjectField
+                  value={newSubject}
+                  onChange={setNewSubject}
+                  subjects={subjects.map(s => s.name)}
+                  allowEmpty
+                  emptyLabel="教科なし（削除）"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Execute button */}
+          <div className="px-4 py-3 border-t border-border">
+            <Button
+              className="w-full h-9 text-sm font-medium"
+              disabled={selectedCells.size === 0}
+              onClick={handleMultiExecute}
+            >
+              {multiOpMode === "delete" && `${selectedCells.size}コマを削除`}
+              {multiOpMode === "add" && `${selectedCells.size}コマに追加`}
+              {multiOpMode === "reason" && `${selectedCells.size}コマに理由を設定`}
+              {multiOpMode === "subject" && `${selectedCells.size}コマの教科を設定`}
+            </Button>
+          </div>
+        </div>
+
+        {/* Confirm dialog */}
+        <ConfirmChangeDialog
+          open={confirmOpen}
+          preview={confirmPreview}
+          onConfirm={handleConfirm}
+          onCancel={handleCancelConfirm}
+        />
+      </>
+    );
+  }
+
+  // ─── 単一選択モード（従来通り） ───────────────────────────────
+  if (!selectedCell) {
+    // コマ未選択時は非表示（デスクトップ・スマホ共通）
+    return null;
+  }
+
+  const { date, period } = selectedCell;
+  const currentClass = currentSlot?.class ?? null;
+  const currentSubject = currentSlot?.subject ?? null;
+
+  // ─── Build preview and show confirm dialog ─────────────────
+  const showConfirm = (
+    opType: ChangeOpType,
+    description: string,
+    preview: ChangePreview,
+    execute: () => void
+  ) => {
+    setConfirmPreview(preview);
+    setConfirmOpen(true);
+    setPendingExecute(() => execute);
+  };
 
   // Color for current cell
   const cellColors = (() => {
