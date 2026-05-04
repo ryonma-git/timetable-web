@@ -212,7 +212,18 @@ function AnnualStatsView() {
     const byTermMap = new Map<string, { term: string; total: number; completed: number }[]>();
 
     for (const semData of semesters) {
-      const { effective } = applyOverrides(semData.base, semData.ops ?? []);
+      const { effective: rawEffective } = applyOverrides(semData.base, semData.ops ?? []);
+      // 祝日マスク: 祝日日のコマはclass=nullにして時数計算から除外
+      const semHolidayDates = new Set(
+        (semData.semester.holidays ?? []).map((h: string | { date: string; name?: string }) => typeof h === 'string' ? h : h.date)
+      );
+      const effective = semHolidayDates.size > 0
+        ? rawEffective.map(entry =>
+            semHolidayDates.has(entry.date)
+              ? { ...entry, periods: entry.periods.map(p => ({ ...p, class: null, subject: null })) }
+              : entry
+          )
+        : rawEffective;
       const stats = calcClassStats(effective, asOfDate);
       const sem = semData.semester;
       const termLabel = sem.semesterSystem === "semester"

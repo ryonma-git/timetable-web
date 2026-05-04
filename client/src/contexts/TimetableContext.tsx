@@ -230,10 +230,20 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       return { ...prev, [weekMonday]: { ...current, [key]: !current[key] } };
     });
   }, []);
-
-  // ─── Stats ──────────────────────────────────────────────────
-  const classStats = calcClassStats(effectiveEntries, asOfDate);
-  const subjectStats = calcSubjectStats(effectiveEntries, asOfDate);
+  // ─── Stats ────────────────────────────────────────────
+  // 祝日マスクを適用した時数計算用エントリ（祝日日のコマはclass=nullにする）
+  const holidayDates = new Set(
+    (currentFile?.semester?.holidays ?? []).map(h => typeof h === 'string' ? h : h.date)
+  );
+  const statsEntries = holidayDates.size > 0
+    ? effectiveEntries.map(entry =>
+        holidayDates.has(entry.date)
+          ? { ...entry, periods: entry.periods.map(p => ({ ...p, class: null, subject: null })) }
+          : entry
+      )
+    : effectiveEntries;
+  const classStats = calcClassStats(statsEntries, asOfDate);
+  const subjectStats = calcSubjectStats(statsEntries, asOfDate);
 
   // ─── Navigation ─────────────────────────────────────────────
   const navigateWeek = useCallback((delta: number) => {
