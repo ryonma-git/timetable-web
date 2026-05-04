@@ -1,6 +1,6 @@
 # timetable-web — Claude Code 引き継ぎ書類
 
-> 最終更新: 2026年5月（v55相当）  
+> 最終更新: 2026年5月（v56）  
 > 対象: Claude Code（CLI）でこのリポジトリを引き継ぐ開発者
 
 ---
@@ -16,7 +16,7 @@
 | 状態管理 | React Context（TimetableContext） |
 | パッケージマネージャー | pnpm |
 | デプロイ | Manus（`https://timetableapp-ee4m7qag.manus.space`）+ GitHub Pages（`https://ryonma-git.github.io/timetable-web/`） |
-| リポジトリ | `https://github.com/ryonma-git/timetable-web` |
+| リポジトリ | `https://github.com/ryonma-git/timetable-web`（Public） |
 
 ---
 
@@ -33,12 +33,12 @@ timetable-web/
 │       │   └── GradeColorContext.tsx  ← クラス色管理
 │       ├── lib/
 │       │   ├── timetableFile.ts       ← ★ 型定義・シリアライズ・generateBaseEntries
-│       │   ├── timetable.ts           ← applyOverrides・ユーティリティ
+│       │   ├── timetable.ts           ← applyOverrides・ユーティリティ・calcClassStats
 │       │   ├── exportUtils.ts         ← Excelエクスポート（ExcelJS）
 │       │   └── timetablePdfExport.ts  ← PDFエクスポート（jsPDF直接描画）
 │       └── pages/
 │           └── Home.tsx               ← メインページ・ダイアログ管理
-├── .github/workflows/deploy.yml       ← GitHub Pages自動デプロイ
+├── .github/workflows/deploy.yml       ← GitHub Pages自動デプロイ（mainブランチpush時）
 ├── vite.config.ts                     ← base設定（VITE_BASE_URL環境変数で切り替え）
 ├── CLAUDE_CODE_HANDOFF.md             ← この書類
 └── skills/timetable-app/SKILL.md      ← Manus用スキル（詳細設計ドキュメント）
@@ -97,7 +97,7 @@ interface SemesterMeta {
   classList?: string[];
   customClasses?: string[];
   homeroomClass?: string;
-  holidays?: HolidayEntry[];
+  holidays?: HolidayEntry[];        // ← 祝日・休校日リスト（時数計算に影響）
   periodTimes?: PeriodTimesMap;
   periodTimesByDay?: Record<string, PeriodTimesMap>;
   weekPatternOverrides?: Record<string, number>;
@@ -138,6 +138,7 @@ const {
   mode,                 // TimetableMode
   subjects,             // SubjectDef[]
   classList,            // string[]
+  holidays,             // HolidayEntry[]
   fileHandle,           // FileSystemFileHandle | null（FSA対応ブラウザ）
   hasFileSystemAccess,  // boolean
 
@@ -148,6 +149,7 @@ const {
   saveFileAs,           // (filename?: string) => void
   applyOps,             // (ops: OverrideOp[], description: string) => AuditEntry[]
   updateSettings,       // (newSemester: SemesterMeta, applyFrom?: string, newMode?: TimetableMode) => void
+  updateHolidays,       // (holidays: HolidayEntry[]) => void
   switchToSemester,     // (idx: number) => void
   addSemester,          // (data: SemesterData) => void
   removeSemester,       // (idx: number) => void
@@ -173,7 +175,35 @@ const {
 
 - `weekCycleStart`: A週開始の月曜日（YYYY-MM-DD）
 - `baseSchedules[0]` = A週、`baseSchedules[1]` = B週（最大4週まで）
-- 週の判定: `Math.floor(weeksDiff / 1) % baseSchedules.length`
+- 週の判定: `Math.floor(weeksDiff) % baseSchedules.length`
+
+**注意（v55修正済み）**: NewFileWizard で `semester.baseSchedules` と `semester.weekCycleStart` を必ず設定すること。設定漏れがあると「学期設定を変更」ダイアログでB週データが空になる。
+
+---
+
+## 祝日マスクによる時数計算（v56実装）
+
+`semester.holidays` に登録された日付のコマは、時数集計から自動的に除外される。
+
+**実装箇所**:
+- `TimetableContext.tsx`（学期別集計）: `classStats` / `subjectStats` の計算前に祝日日のコマを `class=null` にした `statsEntries` を生成
+- `StatsView.tsx`（年間集計）: `AnnualStatsView` の `annualStats` 計算でも同様の祝日マスクを適用
+
+```typescript
+// 祝日マスクのパターン（TimetableContext・StatsView共通）
+const holidayDates = new Set(
+  (semester.holidays ?? []).map(h => typeof h === 'string' ? h : h.date)
+);
+const statsEntries = holidayDates.size > 0
+  ? effectiveEntries.map(entry =>
+      holidayDates.has(entry.date)
+        ? { ...entry, periods: entry.periods.map(p => ({ ...p, class: null, subject: null })) }
+        : entry
+    )
+  : effectiveEntries;
+```
+
+**注意**: `effectiveEntries`（WeekGrid の表示用）は変更しない。祝日のグレーアウト表示は既存の仕組みで対応。
 
 ---
 
@@ -195,7 +225,7 @@ const {
 # ビルド時に VITE_BASE_URL=/timetable-web/ を設定
 ```
 
-**初回設定手順**（リポジトリ管理者が一度だけ実施）:
+**設定手順**（リポジトリ管理者が一度だけ実施）:
 
 1. GitHub リポジトリ → Settings → Pages
 2. Source: **GitHub Actions** を選択
@@ -217,46 +247,48 @@ const {
 | `ConfirmChangeDialog.tsx` | 変更確認ダイアログ。スクロール対応 |
 | `ExportDialog.tsx` | Excel/PDF エクスポート |
 | `PrintPreviewDialog.tsx` | 印刷プレビュー |
-| `StatsView.tsx` | クラス別集計・年間集計 |
+| `StatsView.tsx` | クラス別集計・年間集計（祝日マスク適用済み） |
 | `PatchImportDialog.tsx` | パッチインポート |
 | `HolidaySettingsDialog.tsx` | 祝日・休校日管理 |
 | `SemesterTabs.tsx` | 学期タブ切り替え |
-| `CalcHelperPanel.tsx` | 時程逆算補助パネル（PeriodTimesDialog から切り出し）|
+| `CalcHelperPanel.tsx` | 時程逆算補助パネル |
 
 ---
 
-## 既知の問題・注意事項
+## 既知の問題・修正履歴
 
-### B週データ読み込みバグ（v55で修正済み）
+| バージョン | 修正内容 |
+|-----------|---------|
+| v56 | 祝日コマの時数計算バグ修正（祝日マスク実装） |
+| v55 | B週データ読み込みバグ修正（NewFileWizardのbaseSchedules・weekCycleStart設定漏れ） |
+| v55 | _setLoadedStateでactiveSemesterIndexをリセット |
+| v55 | GitHub Pages自動デプロイ設定（.github/workflows/deploy.yml） |
+| v54 | Cmd/Ctrl複数選択バグ修正 |
+| v54 | File System Access API（上書き保存）実装 |
 
-**症状**: 「学期設定を変更」ダイアログを開いたとき、B週のデータが空になる。
+---
 
-**根本原因**: NewFileWizard で `semester.baseSchedules` と `semester.weekCycleStart` が設定されていなかった。
+## よくあるバグと対処法
 
-**修正内容**（v55）:
-- `NewFileWizard.tsx`: `semester` オブジェクトに `baseSchedules` と `weekCycleStart` を追加
-- `SettingsDialog.tsx`: `baseSchedules.length >= 1` の条件に変更（`> 1` から修正）
-
-### 複数選択バグ（v54で修正済み）
-
-**症状**: Cmd/Ctrl+クリックで2コマ目以降が選択できない。
-
-**修正内容**: `WeekGrid.tsx` の条件を `selectedCell !== null || selectedCells.size > 0` に変更。
-
-### TypeScript 型エラーが出た場合
-
-```bash
-cd /home/ubuntu/timetable-web
-npx tsc --noEmit
-```
-
-`TimetableContextValue` インターフェースと `value` オブジェクトの両方に追加が必要。
+| バグ | 原因 | 対処 |
+|-----|------|------|
+| 週選択が空 | `semester` が null | `effectiveEntries` から日付範囲を導出する |
+| PDF文字が豆腐（□）になる | フォント未登録 | `timetablePdfExport.ts` の `loadFont()` が呼ばれているか確認 |
+| PDF固まる | html2canvasやSVG→Canvas変換 | jsPDF直接描画方式を使用（html2canvas禁止） |
+| 色が反映されない | `getClassColor` の引数不足 | `customClassColors` パラメータを渡す |
+| TypeScriptエラー | `TimetableContextValue` に未定義メソッド | インターフェースとproviderの両方に追加 |
+| HMRが更新されない | Viteキャッシュ | 開発サーバーを再起動 |
+| B週データが空 | NewFileWizardのbaseSchedules設定漏れ | v55で修正済み |
+| 祝日日が時数に含まれる | 祝日マスク未適用 | v56で修正済み |
 
 ---
 
 ## 開発コマンド
 
 ```bash
+# 依存関係インストール
+pnpm install
+
 # 開発サーバー起動
 pnpm run dev
 
@@ -295,6 +327,20 @@ const ops: OverrideOp[] = [
 applyOps(ops, "授業追加");
 ```
 
+### 祝日マスクを新しい集計関数に適用する場合
+
+```typescript
+// semester.holidays を Set に変換してマスク適用
+const holidayDates = new Set(
+  (semester?.holidays ?? []).map(h => typeof h === 'string' ? h : h.date)
+);
+const maskedEntries = holidayDates.size > 0
+  ? entries.map(e => holidayDates.has(e.date)
+      ? { ...e, periods: e.periods.map(p => ({ ...p, class: null, subject: null })) }
+      : e)
+  : entries;
+```
+
 ---
 
 ## 参照ファイル
@@ -303,4 +349,4 @@ applyOps(ops, "授業追加");
 - `references/patch_format.md`: パッチインポート形式の詳細仕様
 - `references/data_model.md`: 全型定義の詳細
 - `client/src/lib/timetableFile.ts`: 型定義・シリアライズ・`generateBaseEntries`
-- `client/src/lib/timetable.ts`: `applyOverrides` 実装
+- `client/src/lib/timetable.ts`: `applyOverrides` / `calcClassStats` 実装
