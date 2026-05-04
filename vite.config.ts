@@ -154,6 +154,8 @@ const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(
 
 export default defineConfig({
   plugins,
+  // GitHub Pagesデプロイ時は VITE_BASE_URL=/timetable-web/ を設定する
+  base: process.env.VITE_BASE_URL ?? '/',
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),

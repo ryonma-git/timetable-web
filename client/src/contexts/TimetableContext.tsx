@@ -277,6 +277,9 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setLoadedFileName(filename);
     setUndoStack([]);
     setRedoStack([]);
+    // ファイル読み込み時はactiveSemesterIndexをリセット（ファイルの保存値を優先）
+    const savedIdx = file.activeSemesterIndex ?? 0;
+    setActiveSemesterIndexState(savedIdx);
   }, []);
 
   // ─── Load from TimetableFile object (new/programmatic) ──────

@@ -257,7 +257,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       setHomeroomClass(semester.homeroomClass ?? "");
 
       // Populate base schedule (複週対応)
-      if (semester.baseSchedules && semester.baseSchedules.length > 1) {
+      if (semester.baseSchedules && semester.baseSchedules.length >= 1) {
         // 複週データを読み込む
         const wc = Math.min(4, semester.baseSchedules.length) as 1 | 2 | 3 | 4;
         setWeekCount(wc);
