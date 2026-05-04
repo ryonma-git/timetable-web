@@ -120,8 +120,10 @@ interface TimetableContextValue {
   loadTimetableFile: (file: TimetableFile) => Promise<void>;
   loadFromNativeFile: (file: File) => Promise<{ warnings: string[] }>;
   loadFromZip: (file: File) => Promise<{ warnings: string[]; loadedFiles: string[] }>;
-  saveFile: () => void;
+  saveFile: () => Promise<void>;
   saveFileAs: (filename?: string) => void;
+  fileHandle: FileSystemFileHandle | null;
+  hasFileSystemAccess: boolean; // File System Access APIの対応ブラウザか
 
   // Data Actions
   applyOps: (ops: OverrideOp[], description: string) => AuditEntry[];
@@ -171,6 +173,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   const [isDirty, setIsDirty] = useState(false);
   const [currentFile, setCurrentFile] = useState<TimetableFile | null>(null);
   const [loadedFileName, setLoadedFileName] = useState("");
+  const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
+  const hasFileSystemAccess = 'showOpenFilePicker' in window;
   const [lastFileSavedAt, setLastFileSavedAt] = useState<Date | null>(() => {
     const v = localStorage.getItem(LS_LAST_SAVED_KEY);
     return v ? new Date(v) : null;
@@ -288,6 +292,13 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     const result: LoadResult = deserializeTimetableFile(text);
     const { effective, audit } = applyOverrides(result.file.base, result.file.ops ?? []);
     _setLoadedState(result.file, result.file.base, effective, result.file.ops ?? [], audit, file.name, false);
+    // File System Access API対応ブラウザならfileHandleを保存
+    if ('getAsFileSystemHandle' in file) {
+      try {
+        const handle = await (file as File & { getAsFileSystemHandle?: () => Promise<FileSystemFileHandle> }).getAsFileSystemHandle?.();
+        if (handle && handle.kind === 'file') setFileHandle(handle as FileSystemFileHandle);
+      } catch { /* 無視 */ }
+    }
     return { warnings: result.warnings };
   }, [_setLoadedState]);
 
@@ -297,25 +308,37 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     const { effective, audit } = applyOverrides(result.file.base, result.file.ops ?? []);
     _setLoadedState(result.file, result.file.base, effective, result.file.ops ?? [], audit, file.name, true);
     return { warnings: result.warnings, loadedFiles: result.loadedFiles };
-  }, [_setLoadedState]);
-
-  // ─── Save (overwrite) ────────────────────────────────────────
-  const saveFile = useCallback(() => {
+  }, [_setLoadedState]);  // ─── Save (overwrite) ────────────────────────────────────────────
+  const saveFile = useCallback(async () => {
     if (!currentFile) return;
     const updated: TimetableFile = {
       ...currentFile,
       ops: allOps,
       meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
     };
-    downloadTimetableFile(updated, loadedFileName.endsWith(TIMETABLE_FILE_EXT) ? loadedFileName : undefined);
+    let savedViaHandle = false;
+    // File System Access APIで上書き保存を試みる
+    if (fileHandle) {
+      try {
+        const writable = await fileHandle.createWritable();
+        await writable.write(serializeTimetableFile(updated));
+        await writable.close();
+        savedViaHandle = true;
+      } catch (e) {
+        // パーミッションエラーなどの場合はフォールバック
+        console.warn('File System Access API save failed, falling back to download', e);
+      }
+    }
+    if (!savedViaHandle) {
+      // フォールバック: 従来のダウンロード
+      downloadTimetableFile(updated, loadedFileName.endsWith(TIMETABLE_FILE_EXT) ? loadedFileName : undefined);
+    }
     setCurrentFile(updated);
     setIsDirty(false);
     const now = new Date();
     setLastFileSavedAt(now);
     localStorage.setItem(LS_LAST_SAVED_KEY, now.toISOString());
-  }, [currentFile, allOps, loadedFileName]);
-
-  // ─── Save As ─────────────────────────────────────────────────
+  }, [currentFile, allOps, loadedFileName, fileHandle]);  // ─── Save As ─────────────────────────────────────────────────
   const saveFileAs = useCallback((filename?: string) => {
     if (!currentFile) return;
     const updated: TimetableFile = {
@@ -643,6 +666,16 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   // ─── Auto-save to localStorage ──────────────────────────────
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // File System Access APIのfileHandleをカスタムイベントで受け取る
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const handle = (e as CustomEvent<FileSystemFileHandle>).detail;
+      if (handle && handle.kind === 'file') setFileHandle(handle);
+    };
+    window.addEventListener('timetable:setFileHandle', handler);
+    return () => window.removeEventListener('timetable:setFileHandle', handler);
+  }, []);
+
   useEffect(() => {
     if (!isLoaded || !currentFile) return;
     // Debounce: wait 2s after last change before saving
@@ -721,7 +754,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       canRedo: redoStack.length > 0,
       undo, redo,
       loadTimetableFile, loadFromNativeFile, loadFromZip,
-      saveFile, saveFileAs,
+      saveFile, saveFileAs, fileHandle, hasFileSystemAccess,
       applyOps,
       exportEffective, exportOverride, exportCSV,
       updateSettings,

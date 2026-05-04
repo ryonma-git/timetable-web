@@ -904,11 +904,16 @@ export function WeekGrid() {
                               weekDates, [1,2,3,4,5,6]
                             );
                             setMultiSelectMode(true);
-                          } else if ((e.metaKey || e.ctrlKey) && selectedCells.size > 0) {
-                            // PC Cmd/Ctrl+クリック: 既に複数選択中なら追加トグル
+                          } else if ((e.metaKey || e.ctrlKey) && (selectedCells.size > 0 || selectedCell !== null)) {
+                            // PC Cmd/Ctrl+クリック: 既に何か選択中なら複数選択に追加
+                            // 単独選択中の場合は、その選択セルも複数選択に移行
+                            if (selectedCells.size === 0 && selectedCell !== null) {
+                              // 既存の単独選択をselectedCellsに移行してから追加
+                              toggleSelectedCell(selectedCell.date, selectedCell.period);
+                            }
                             toggleSelectedCell(date, period);
                             lastClickedCellRef.current = { date, period };
-                          } else if ((e.metaKey || e.ctrlKey) && selectedCells.size === 0) {
+                          } else if ((e.metaKey || e.ctrlKey) && selectedCells.size === 0 && selectedCell === null) {
                             // PC Cmd/Ctrl+クリック: 1コマ目は単独選択のまま（Excel方式）
                             setSelectedCell(isSelected ? null : { date, period });
                             lastClickedCellRef.current = { date, period };
