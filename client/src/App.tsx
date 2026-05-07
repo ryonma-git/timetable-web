@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { TimetableProvider } from "./contexts/TimetableContext";
@@ -21,13 +21,18 @@ function SidebarStyleProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// GitHub Pagesデプロイ時は VITE_BASE_URL=/timetable-web/ になるため、Wouterの base も合わせる
+const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '') || '';
+
 function Router() {
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      <Route component={NotFound} />
-    </Switch>
+    <WouterRouter base={BASE}>
+      <Switch>
+        <Route path={"/"} component={Home} />
+        <Route path={"/404"} component={NotFound} />
+        <Route component={NotFound} />
+      </Switch>
+    </WouterRouter>
   );
 }
 
