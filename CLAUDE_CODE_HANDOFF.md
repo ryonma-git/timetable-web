@@ -1,7 +1,17 @@
 # timetable-web — Claude Code 引き継ぎ書類
 
-> 最終更新: 2026年5月（v56）  
+> 最終更新: 2026年5月（v59）  
 > 対象: Claude Code（CLI）でこのリポジトリを引き継ぐ開発者
+
+---
+
+## このファイルの使い方
+
+Claude Code をプロジェクトフォルダで起動し、以下を最初に伝えるだけで引き継ぎ完了です。
+
+```
+CLAUDE_CODE_HANDOFF.md を読んで、このプロジェクトの概要と現状を把握してください
+```
 
 ---
 
@@ -12,11 +22,56 @@
 | 項目 | 内容 |
 |------|------|
 | フレームワーク | React 19 + TypeScript + Vite + Tailwind CSS 4 + shadcn/ui |
-| ルーティング | Wouter |
+| ルーティング | Wouter（`base={BASE}` 設定済み） |
 | 状態管理 | React Context（TimetableContext） |
 | パッケージマネージャー | pnpm |
 | デプロイ | Manus（`https://timetableapp-ee4m7qag.manus.space`）+ GitHub Pages（`https://ryonma-git.github.io/timetable-web/`） |
 | リポジトリ | `https://github.com/ryonma-git/timetable-web`（Public） |
+
+---
+
+## ★ 開発フロー（最重要）
+
+**main ブランチに push するだけで GitHub Pages に自動デプロイされます。**
+
+```bash
+# 1. 最新を取り込む（Manus で作業があった場合）
+git pull
+
+# 2. 開発サーバー起動
+pnpm install
+pnpm run dev
+
+# 3. 修正後の push（自動デプロイ）
+git add -A
+git commit -m "feat: ○○機能を追加"
+git push
+# → 2〜3分後に https://ryonma-git.github.io/timetable-web/ が更新される
+```
+
+デプロイ状況: https://github.com/ryonma-git/timetable-web/actions
+
+### ⚠️ deploy.yml の変更について
+
+`.github/workflows/deploy.yml` は **ローカル（Claude Code）からのみ push 可能**。  
+Manus（クラウド）は GitHub App の権限制限でワークフローファイルを push できない。
+
+---
+
+## Manus との連携フロー
+
+```
+Claude Code（ローカル）
+    ↕ git push / git pull
+   GitHub（ryonma-git/timetable-web）
+    ↕ checkpoint（自動 push/pull）
+Manus（クラウド）→ Publish → timetableapp-ee4m7qag.manus.space
+```
+
+- **Claude Code で修正** → `git push` → GitHub Pages に自動デプロイ
+- **Manus に反映したい場合** → Manus のチャットで「GitHub から最新を取り込んで Publish して」と依頼
+- **Manus で修正後** → ローカルで `git pull` して取り込む
+- **同じファイルを同時編集するとコンフリクト**が発生するため、作業は一方に集中させる
 
 ---
 
@@ -26,22 +81,24 @@
 timetable-web/
 ├── client/
 │   ├── public/
+│   │   └── 404.html               ← GitHub Pages SPA 用リダイレクト（v58追加）
 │   └── src/
-│       ├── components/        ← UIコンポーネント（ダイアログ等）
+│       ├── App.tsx                 ← ルーター（Wouter、base={BASE}設定済み・v59）
+│       ├── components/             ← UIコンポーネント（ダイアログ等）
 │       ├── contexts/
-│       │   ├── TimetableContext.tsx   ← ★ 最重要：全状態管理
+│       │   ├── TimetableContext.tsx   ← ★ 最重要：全状態管理・時数計算
 │       │   └── GradeColorContext.tsx  ← クラス色管理
 │       ├── lib/
 │       │   ├── timetableFile.ts       ← ★ 型定義・シリアライズ・generateBaseEntries
-│       │   ├── timetable.ts           ← applyOverrides・ユーティリティ・calcClassStats
+│       │   ├── timetable.ts           ← applyOverrides・calcClassStats
 │       │   ├── exportUtils.ts         ← Excelエクスポート（ExcelJS）
 │       │   └── timetablePdfExport.ts  ← PDFエクスポート（jsPDF直接描画）
 │       └── pages/
 │           └── Home.tsx               ← メインページ・ダイアログ管理
-├── .github/workflows/deploy.yml       ← GitHub Pages自動デプロイ（mainブランチpush時）
+├── .github/workflows/deploy.yml       ← GitHub Pages自動デプロイ（ローカルからのみ変更可）
 ├── vite.config.ts                     ← base設定（VITE_BASE_URL環境変数で切り替え）
 ├── CLAUDE_CODE_HANDOFF.md             ← この書類
-└── skills/timetable-app/SKILL.md      ← Manus用スキル（詳細設計ドキュメント）
+└── RESUME_CLAUDE_CODE.md              ← 作業再開手順（詳細版）
 ```
 
 ---
@@ -159,16 +216,6 @@ const {
 
 ---
 
-## 動作モード
-
-| モード | 説明 | 特徴 |
-|--------|------|------|
-| `single_subject` | 単一教科（体育専科等） | クラス欄に「n年m組」を入力 |
-| `multi_subject` | 複数教科 | subjects 配列で教科定義、クラス欄に教科名 |
-| `homeroom` | 担任（学級担任） | homeroomClass で自クラスを設定、他クラスの授業も管理 |
-
----
-
 ## 複週（A週/B週）ローテーション
 
 `semester.baseSchedules` が設定されている場合、`generateBaseEntries` が `weekCycleStart` を基準に週ごとに A週/B週 を自動割り当てる。
@@ -207,64 +254,53 @@ const statsEntries = holidayDates.size > 0
 
 ---
 
-## File System Access API（上書き保存）
+## GitHub Pages デプロイの仕組み（v58〜v59）
 
-- Chrome/Edge 対応、Safari は非対応（フォールバックでダウンロード）
-- `handleOpenWithFSA`（Sidebar.tsx）でファイルを開く → `FileSystemFileHandle` を取得
-- `window.dispatchEvent(new CustomEvent('timetable:setFileHandle', { detail: handle }))` で Context に渡す
-- `saveFile` で `fileHandle` があれば `createWritable()` で上書き保存
+### SPA 404 対策（v58）
 
----
+`client/public/404.html` が GitHub Pages の 404 をキャッチし、URL を sessionStorage に保存して `/timetable-web/` にリダイレクト。`client/index.html` でリダイレクト先 URL を復元してルーターに渡す。
 
-## GitHub Pages デプロイ
+### Wouter の base 設定（v59）
 
-`.github/workflows/deploy.yml` で自動デプロイ設定済み。
+`App.tsx` で `import.meta.env.BASE_URL` を Wouter の `base` に設定。GitHub Pages デプロイ時（`BASE_URL=/timetable-web/`）でも `/` のルートが正しく解決される。
 
-```yaml
-# mainブランチにpushすると自動デプロイ
-# ビルド時に VITE_BASE_URL=/timetable-web/ を設定
+```typescript
+// App.tsx
+const BASE = (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '') || '';
+
+function Router() {
+  return (
+    <WouterRouter base={BASE}>
+      <Switch>
+        <Route path={"/"} component={Home} />
+        ...
+      </Switch>
+    </WouterRouter>
+  );
+}
 ```
 
-**設定手順**（リポジトリ管理者が一度だけ実施）:
-
-1. GitHub リポジトリ → Settings → Pages
-2. Source: **GitHub Actions** を選択
-3. main ブランチに push すると自動デプロイ開始
-
 ---
 
-## 主要コンポーネント一覧
+## 完了済みの主要実装（v54〜v59）
 
-| ファイル | 役割 |
-|---------|------|
-| `Home.tsx` | メインページ。ダイアログの open 状態管理 |
-| `Sidebar.tsx` | サイドバー。ファイル操作・保存ボタン |
-| `WeekGrid.tsx` | 週間グリッド表示。複数選択（Excel方式）対応 |
-| `Inspector.tsx` | セル詳細・編集パネル。複数選択時の一括操作 |
-| `NewFileWizard.tsx` | 新規作成ウィザード（5ステップ）|
-| `SettingsDialog.tsx` | 学期設定変更ダイアログ（5ステップ）|
-| `PeriodTimesDialog.tsx` | 時程設定。逆算補助パネル（CalcHelperPanel）内蔵 |
-| `ConfirmChangeDialog.tsx` | 変更確認ダイアログ。スクロール対応 |
-| `ExportDialog.tsx` | Excel/PDF エクスポート |
-| `PrintPreviewDialog.tsx` | 印刷プレビュー |
-| `StatsView.tsx` | クラス別集計・年間集計（祝日マスク適用済み） |
-| `PatchImportDialog.tsx` | パッチインポート |
-| `HolidaySettingsDialog.tsx` | 祝日・休校日管理 |
-| `SemesterTabs.tsx` | 学期タブ切り替え |
-| `CalcHelperPanel.tsx` | 時程逆算補助パネル |
-
----
-
-## 既知の問題・修正履歴
-
-| バージョン | 修正内容 |
-|-----------|---------|
+| バージョン | 内容 |
+|-----------|------|
+| v54 | Cmd/Ctrl 複数選択バグ修正・FSA 上書き保存（Chrome/Edge）・削除ダイアログスクロール対応 |
+| v55 | NewFileWizard で `baseSchedules`・`weekCycleStart` が保存されないバグ修正・GitHub Pages 自動デプロイ設定 |
 | v56 | 祝日コマの時数計算バグ修正（祝日マスク実装） |
-| v55 | B週データ読み込みバグ修正（NewFileWizardのbaseSchedules・weekCycleStart設定漏れ） |
-| v55 | _setLoadedStateでactiveSemesterIndexをリセット |
-| v55 | GitHub Pages自動デプロイ設定（.github/workflows/deploy.yml） |
-| v54 | Cmd/Ctrl複数選択バグ修正 |
-| v54 | File System Access API（上書き保存）実装 |
+| v57 | 引き継ぎ書類作成 |
+| v58 | GitHub Pages SPA 404対策（`404.html` 追加・`index.html` リダイレクトスクリプト） |
+| v59 | Wouter ルーターに `base={BASE}` 設定（GitHub Pages `/timetable-web/` パス対応）✅ 動作確認済み |
+
+---
+
+## 既知の未実装・改善候補
+
+1. **Cmd+S / Ctrl+S ショートカット**: `keydown` イベントで上書き保存を実装
+2. **印刷レイアウト**: `@media print` CSS で時間割を印刷対応
+3. **複数クラスへの一括適用**: 同じ学年の複数クラスに同じ時間割をコピー
+4. **振替授業の管理**: 祝日に振り替えた授業の追跡機能
 
 ---
 
@@ -274,32 +310,21 @@ const statsEntries = holidayDates.size > 0
 |-----|------|------|
 | 週選択が空 | `semester` が null | `effectiveEntries` から日付範囲を導出する |
 | PDF文字が豆腐（□）になる | フォント未登録 | `timetablePdfExport.ts` の `loadFont()` が呼ばれているか確認 |
-| PDF固まる | html2canvasやSVG→Canvas変換 | jsPDF直接描画方式を使用（html2canvas禁止） |
 | 色が反映されない | `getClassColor` の引数不足 | `customClassColors` パラメータを渡す |
 | TypeScriptエラー | `TimetableContextValue` に未定義メソッド | インターフェースとproviderの両方に追加 |
-| HMRが更新されない | Viteキャッシュ | 開発サーバーを再起動 |
 | B週データが空 | NewFileWizardのbaseSchedules設定漏れ | v55で修正済み |
 | 祝日日が時数に含まれる | 祝日マスク未適用 | v56で修正済み |
+| GitHub Pages で 404 | Wouter の base 未設定 | v59で修正済み |
 
 ---
 
 ## 開発コマンド
 
 ```bash
-# 依存関係インストール
-pnpm install
-
-# 開発サーバー起動
-pnpm run dev
-
-# TypeScript チェック
-npx tsc --noEmit
-
-# ビルド（Manus環境用）
-pnpm run build
-
-# ビルド（GitHub Pages用）
-VITE_BASE_URL=/timetable-web/ pnpm run build
+pnpm install              # 依存関係インストール
+pnpm run dev              # 開発サーバー起動（http://localhost:5173）
+npx tsc --noEmit          # TypeScript チェック
+pnpm run build            # 本番ビルド（Manus環境用）
 ```
 
 ---
@@ -311,12 +336,6 @@ VITE_BASE_URL=/timetable-web/ pnpm run build
 1. `TimetableContextValue` インターフェースにメソッドを追加
 2. `TimetableProvider` 内で `useCallback` で実装
 3. `value` オブジェクトに追加
-
-### 新しいダイアログを追加する場合
-
-1. `client/src/components/` に新コンポーネントを作成
-2. `Home.tsx` で `useState` で open 状態を管理
-3. `Home.tsx` の右上ボタンエリアまたはドロップダウンに追加
 
 ### OverrideOp を適用する場合
 
@@ -330,7 +349,6 @@ applyOps(ops, "授業追加");
 ### 祝日マスクを新しい集計関数に適用する場合
 
 ```typescript
-// semester.holidays を Set に変換してマスク適用
 const holidayDates = new Set(
   (semester?.holidays ?? []).map(h => typeof h === 'string' ? h : h.date)
 );
@@ -340,13 +358,3 @@ const maskedEntries = holidayDates.size > 0
       : e)
   : entries;
 ```
-
----
-
-## 参照ファイル
-
-- `skills/timetable-app/SKILL.md`: Manus 用スキル（詳細設計ドキュメント）
-- `references/patch_format.md`: パッチインポート形式の詳細仕様
-- `references/data_model.md`: 全型定義の詳細
-- `client/src/lib/timetableFile.ts`: 型定義・シリアライズ・`generateBaseEntries`
-- `client/src/lib/timetable.ts`: `applyOverrides` / `calcClassStats` 実装
