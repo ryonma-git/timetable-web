@@ -45,7 +45,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
   const {
     isLoaded, isDirty, loadedFileName, currentFile,
     loadFromNativeFile, loadFromZip,
-    saveFile, fileHandle, hasFileSystemAccess,
+    saveFile,
     activeTab, setActiveTab,
     currentWeekMonday, navigateWeek, goToToday, goToDate,
     canUndo, canRedo, undo, redo,
@@ -109,38 +109,6 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     } finally {
       setLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  // File System Access APIでファイルを開く（Chrome/Edge対応）
-  const handleOpenWithFSA = async () => {
-    if (!hasFileSystemAccess) {
-      fileInputRef.current?.click();
-      return;
-    }
-    setLoading(true);
-    try {
-      const [handle] = await (window as unknown as { showOpenFilePicker: (opts?: object) => Promise<FileSystemFileHandle[]> }).showOpenFilePicker({
-        types: [{ description: '時間割ファイル', accept: { 'application/octet-stream': [TIMETABLE_FILE_EXT] } }],
-        multiple: false,
-      });
-      const file = await handle.getFile();
-      const text = await file.text();
-      const { deserializeTimetableFile } = await import('@/lib/timetableFile');
-      const result = deserializeTimetableFile(text);
-      // fileHandleをTimetableContextに渡すために一度loadFromNativeFileを呼び、その後に手動でセット
-      await loadFromNativeFile(file);
-      // fileHandleを別途セット（TimetableContextに直接アクセスできないため、コンテキスト内部で処理）
-      // 代替: グローバルイベントでhandleを渡す
-      window.dispatchEvent(new CustomEvent('timetable:setFileHandle', { detail: handle }));
-      toast.success(`読み込み完了: ${file.name}`);
-      result.warnings.forEach((w: string) => toast.warning(w));
-    } catch (err: unknown) {
-      if ((err as {name?: string}).name !== 'AbortError') {
-        toast.error(`読み込みエラー: ${String(err)}`);
-      }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -242,7 +210,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
 
         {/* Open */}
         <button
-          onClick={handleOpenWithFSA}
+          onClick={() => fileInputRef.current?.click()}
           disabled={loading}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-md
                      bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground
@@ -265,7 +233,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                   }`}
               >
                 <Save size={13} />
-                <span>{isDirty ? (fileHandle ? "上書き保存" : "保存（ダウンロード）") : "保存済み"}</span>
+                <span>{isDirty ? "保存（未保存あり）" : "保存済み"}</span>
                 {isDirty && (
                   <span className="ml-auto w-2 h-2 rounded-full bg-amber-400 shrink-0" />
                 )}
