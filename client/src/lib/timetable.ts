@@ -30,6 +30,8 @@ export interface TimetableEntry {
   weekday: string;      // "Mon", "Tue", ...
   weekday_jp: string;   // "月", "火", ...
   periods: PeriodSlot[];
+  /** set_day_reason で設定された日付レベルの理由・メモ */
+  dayReason?: string;
 }
 
 export interface EffectiveBundle {
@@ -195,6 +197,7 @@ function deepCopyEntries(entries: TimetableEntry[]): TimetableEntry[] {
   return entries.map(e => ({
     ...e,
     periods: e.periods.map(p => ({ ...p })),
+    // dayReason は spread で引き継がれる（明示的に記載して意図を明確化）
   }));
 }
 
@@ -224,25 +227,63 @@ export function applyOverrides(
 
     switch (op.op) {
       case "clear_period_class": {
-        if (op.period === undefined) break;
+        if (op.period === undefined) {
+          // period未指定 + clear_all_classes: true → その日の全コマを全クラス休講
+          if (op.clear_all_classes) {
+            entries[idx].periods.forEach(p => {
+              p.class = null;
+              p.subject = null;
+              if (op.reason) p.reason = op.reason;
+            });
+            audit.push({
+              id: nanoid(), level: "info", message: "clear_period_class+clear_all (all periods)",
+              date: op.date, opType: op.op,
+            });
+          }
+          break;
+        }
         const slotIdx = entries[idx].periods.findIndex(p => p.period === op.period);
         if (slotIdx === -1) break;
         const before = entries[idx].periods[slotIdx].class;
-        if (op.target_class && before !== op.target_class) {
+
+        if (op.clear_all_classes) {
+          // clear_all_classes: true → 全クラス休講（target_classは無視）
+          entries[idx].periods[slotIdx].class = null;
+          entries[idx].periods[slotIdx].subject = null;
+          if (op.reason) entries[idx].periods[slotIdx].reason = op.reason;
           audit.push({
-            id: nanoid(), level: "warn",
-            message: `target_class mismatch: 期待「${op.target_class}」実際「${before ?? "null"}」`,
-            date: op.date, period: op.period, opType: op.op,
-            before, targetClass: op.target_class,
+            id: nanoid(), level: "info", message: "clear_period_class+clear_all",
+            date: op.date, period: op.period, opType: op.op, before, after: null,
+          });
+        } else if (op.target_class) {
+          // target_classが指定されている → そのクラスのみ休講
+          if (before === op.target_class) {
+            entries[idx].periods[slotIdx].class = null;
+            entries[idx].periods[slotIdx].subject = null;
+            if (op.reason) entries[idx].periods[slotIdx].reason = op.reason;
+            audit.push({
+              id: nanoid(), level: "info", message: "clear_period_class (target match)",
+              date: op.date, period: op.period, opType: op.op, before, after: null,
+            });
+          } else {
+            // target_classが一致しない → 何もしない（他クラスに影響させない）
+            audit.push({
+              id: nanoid(), level: "info",
+              message: `clear_period_class skipped: target「${op.target_class}」≠ actual「${before ?? "null"}」`,
+              date: op.date, period: op.period, opType: op.op,
+              before, targetClass: op.target_class,
+            });
+          }
+        } else {
+          // target_classなし・clear_all_classesなし → 無条件に休講（後方互換）
+          entries[idx].periods[slotIdx].class = null;
+          entries[idx].periods[slotIdx].subject = null;
+          if (op.reason) entries[idx].periods[slotIdx].reason = op.reason;
+          audit.push({
+            id: nanoid(), level: "info", message: "clear_period_class",
+            date: op.date, period: op.period, opType: op.op, before, after: null,
           });
         }
-        entries[idx].periods[slotIdx].class = null;
-        entries[idx].periods[slotIdx].subject = null;
-        if (op.reason) entries[idx].periods[slotIdx].reason = op.reason;
-        audit.push({
-          id: nanoid(), level: "info", message: "clear_period_class",
-          date: op.date, period: op.period, opType: op.op, before, after: null,
-        });
         break;
       }
       case "set_period_class": {
@@ -294,16 +335,12 @@ export function applyOverrides(
         break;
       }
       case "set_day_reason": {
-        if (op.clear_all_classes) {
-          entries[idx].periods.forEach(p => {
-            p.class = null;
-            p.subject = null;
-            p.reason = op.reason;
-          });
-        }
+        // set_day_reason は表示用メモ・理由付けのみ。授業削除には使わない。
+        // clear_all_classes が付いていても授業は削除しない（仕様変更 v61）
+        entries[idx].dayReason = op.reason;
         audit.push({
           id: nanoid(), level: "info",
-          message: op.clear_all_classes ? "set_day_reason+clear_all" : "set_day_reason",
+          message: "set_day_reason",
           date: op.date, opType: op.op,
         });
         break;

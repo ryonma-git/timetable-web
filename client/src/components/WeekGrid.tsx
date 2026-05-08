@@ -804,6 +804,14 @@ export function WeekGrid() {
                       {holidayDates.has(date) && (
                         <span className="text-[9px] bg-red-100 text-red-500 rounded-full px-1.5 py-0.5 font-medium leading-none">{holidayNameMap.get(date) ?? '休校'}</span>
                       )}
+                      {!holidayDates.has(date) && entryByDate.get(date)?.dayReason && (
+                        <span
+                          className="text-[9px] bg-blue-100 text-blue-600 rounded-full px-1.5 py-0.5 font-medium leading-none max-w-[80px] truncate"
+                          title={entryByDate.get(date)?.dayReason}
+                        >
+                          {entryByDate.get(date)?.dayReason}
+                        </span>
+                      )}
                     </div>
                   </th>
                 );
