@@ -38,9 +38,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { PeriodTimesDialog, PeriodTimesDialogStandalone } from "@/components/PeriodTimesDialog";
 import { generateBaseEntries, createNewTimetableFile, SemesterMeta, TimetableMode, SemesterSystem, SubjectDef, HolidayEntry } from "@/lib/timetableFile";
+import type { OverrideOp } from "@/lib/timetable";
 import { generateTimetableTemplate, generateTimetablePrompt, generateHomeroomTimetablePrompt, generatePeriodTimesTemplate, generatePeriodTimesPrompt, copyToClipboard } from "@/lib/llmImport";
 import Holidays from "date-holidays";
 import { useTimetable } from "@/contexts/TimetableContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { normalizeClassName, classSort, generateDefaultClasses, SchoolType } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
 
@@ -194,6 +205,13 @@ export function NewFileWizard({ open, onClose }: Props) {
   const { loadTimetableFile, goToDate } = useTimetable();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  // 祝日コマ削除確認ダイアログ
+  const [holidayClearDialogOpen, setHolidayClearDialogOpen] = useState(false);
+  const [pendingCreateData, setPendingCreateData] = useState<{
+    file: ReturnType<typeof createNewTimetableFile>;
+    clearOps: OverrideOp[];
+    startDate: string;
+  } | null>(null);
 
   // Step 1: Metadata
   const [school, setSchool] = useState("");
@@ -871,6 +889,33 @@ export function NewFileWizard({ open, onClose }: Props) {
       file.semester = semester;
       file.base = base;
 
+      // 祝日コマ削除確認: autoHolidayEntriesがある場合、baseから削除対象Opを生成
+      if (autoHolidayEntries.length > 0) {
+        const holidayDates = new Set(autoHolidayEntries.map(h => h.date));
+        const clearOps: OverrideOp[] = [];
+        for (const entry of base) {
+          if (!holidayDates.has(entry.date)) continue;
+          for (const slot of entry.periods) {
+            if (slot.class !== null) {
+              clearOps.push({
+                op: "clear_period_class",
+                date: entry.date,
+                period: slot.period,
+                target_class: null,
+                clear_all_classes: true,
+                reason: autoHolidayEntries.find(h => h.date === entry.date)?.name ?? "祝日",
+              });
+            }
+          }
+        }
+        if (clearOps.length > 0) {
+          // 確認ダイアログを表示するためにpendingCreateDataに保存
+          setPendingCreateData({ file, clearOps, startDate });
+          setHolidayClearDialogOpen(true);
+          return; // ダイアログ結果を待つ
+        }
+      }
+
       await loadTimetableFile(file);
       // 学期開始日の週に移動（今日ではなく設定した学期の始まりを表示）
       if (startDate) {
@@ -879,6 +924,39 @@ export function NewFileWizard({ open, onClose }: Props) {
       handleClose();
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 祝日コマ削除確認ダイアログ: 「削除する」を選択
+  const handleHolidayClearConfirm = async () => {
+    if (!pendingCreateData) return;
+    setLoading(true);
+    try {
+      const { file, clearOps, startDate: sd } = pendingCreateData;
+      file.ops = clearOps;
+      await loadTimetableFile(file);
+      if (sd) goToDate(new Date(sd));
+      handleClose();
+    } finally {
+      setLoading(false);
+      setPendingCreateData(null);
+      setHolidayClearDialogOpen(false);
+    }
+  };
+
+  // 祝日コマ削除確認ダイアログ: 「そのまま」を選択
+  const handleHolidayClearSkip = async () => {
+    if (!pendingCreateData) return;
+    setLoading(true);
+    try {
+      const { file, startDate: sd } = pendingCreateData;
+      await loadTimetableFile(file);
+      if (sd) goToDate(new Date(sd));
+      handleClose();
+    } finally {
+      setLoading(false);
+      setPendingCreateData(null);
+      setHolidayClearDialogOpen(false);
     }
   };
 
@@ -899,6 +977,7 @@ export function NewFileWizard({ open, onClose }: Props) {
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={v => !v && handleClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -2600,5 +2679,24 @@ export function NewFileWizard({ open, onClose }: Props) {
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* 祝日コマ削除確認ダイアログ */}
+    <AlertDialog open={holidayClearDialogOpen} onOpenChange={setHolidayClearDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>祝日の授業コマを削除しますか？</AlertDialogTitle>
+          <AlertDialogDescription>
+            自動取得した祝日（{pendingCreateData?.clearOps ? new Set(pendingCreateData.clearOps.map(op => op.date)).size : 0}日分）に授業コマが入っています。<br />
+            「削除する」を選ぶと、祝日のコマが空白になります。<br />
+            「そのまま」を選ぶと、祝日のコマは残ります（時数集計からは除外されます）。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={handleHolidayClearSkip}>そのまま</AlertDialogCancel>
+          <AlertDialogAction onClick={handleHolidayClearConfirm}>削除する</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
