@@ -5,6 +5,8 @@
 
 import { useMemo, useState } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
+import { useLanguage, type Language } from "@/contexts/LanguageContext";
+import type { SemesterMeta } from "@/lib/timetableFile";
 import { ClassStats, SubjectStats, todayISO, applyOverrides, calcClassStats, classSort } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -15,17 +17,30 @@ import { useGradeColors } from "@/contexts/GradeColorContext";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { exportAnnualStatsCSV, exportAnnualStatsExcel, type AnnualClassStat } from "@/lib/exportUtils";
 
+function formatItemCount(count: number, language: Language) {
+  return language === "ja" ? `${count}件` : `${count} ${count === 1 ? "item" : "items"}`;
+}
+
+function formatOperationCount(count: number, language: Language) {
+  return language === "ja" ? `${count}件の操作` : `${count} ${count === 1 ? "operation" : "operations"}`;
+}
+
+function formatPeriodUnit(language: Language, unit: string) {
+  return language === "ja" ? unit : ` ${unit}`;
+}
+
 // ─── Stats View ───────────────────────────────────────────────
 
 export function StatsView() {
   const { classStats, subjectStats, asOfDate, setAsOfDate, isLoaded, currentFile, mode } = useTimetable();
+  const { t } = useLanguage();
   // 学級担任モードは教科集計をデフォルトに表示、教科担任モードはクラス集計をデフォルトに表示
   const defaultStatsTab = mode === 'homeroom' ? 'subject' : 'class';
   const [viewMode, setViewMode] = useState<"semester" | "annual">("semester");
   const [statsTab, setStatsTab] = useState<"class" | "subject">(defaultStatsTab);
 
   if (!isLoaded) {
-    return <EmptyState message="ファイルを読み込むと集計が表示されます" />;
+    return <EmptyState message={t("stats.emptyStats")} />;
   }
 
   return (
@@ -42,7 +57,7 @@ export function StatsView() {
           )}
         >
           <BarChart3 size={13} />
-          学期別集計
+          {t("stats.semesterStats")}
         </button>
         {(currentFile?.semesters && currentFile.semesters.length > 1) && (
           <button
@@ -55,7 +70,7 @@ export function StatsView() {
             )}
           >
             <CalendarRange size={13} />
-            年間集計
+            {t("stats.annualStats")}
           </button>
         )}
       </div>
@@ -74,7 +89,7 @@ export function StatsView() {
               )}
             >
               <BarChart3 size={12} />
-              クラス別集計
+              {t("stats.classStats")}
             </button>
             {subjectStats.length > 0 && (
               <button
@@ -87,7 +102,7 @@ export function StatsView() {
                 )}
               >
                 <BookOpen size={12} />
-                教科別集計
+                {t("stats.subjectStats")}
               </button>
             )}
           </div>
@@ -117,6 +132,7 @@ function SemesterStatsView({
   asOfDate: string;
   setAsOfDate: (d: string) => void;
 }) {
+  const { t } = useLanguage();
   const gradeGroups: Record<string, ClassStats[]> = {};
   for (const s of classStats) {
     if (!gradeGroups[s.grade]) gradeGroups[s.grade] = [];
@@ -128,7 +144,7 @@ function SemesterStatsView({
       {/* as_of date picker */}
       <div className="flex items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground whitespace-nowrap">集計基準日</Label>
+          <Label className="text-xs text-muted-foreground whitespace-nowrap">{t("stats.asOfDate")}</Label>
           <Input
             type="date"
             value={asOfDate}
@@ -140,10 +156,10 @@ function SemesterStatsView({
           onClick={() => setAsOfDate(todayISO())}
           className="text-xs text-primary hover:underline"
         >
-          今日に戻す
+          {t("stats.backToToday")}
         </button>
         <span className="text-xs text-muted-foreground">
-          ※ この日付以前を「実施済み」として集計します
+          {t("stats.asOfHelp")}
         </span>
       </div>
 
@@ -151,19 +167,19 @@ function SemesterStatsView({
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
           {
-            label: "総コマ数",
+            label: t("stats.totalPeriods"),
             value: classStats.reduce((s, c) => s + c.totalPeriods, 0),
             color: "text-foreground",
             bg: "bg-muted/50",
           },
           {
-            label: "実施済み",
+            label: t("stats.completed"),
             value: classStats.reduce((s, c) => s + c.completedPeriods, 0),
             color: "text-emerald-700",
             bg: "bg-emerald-50",
           },
           {
-            label: "残り",
+            label: t("stats.remaining"),
             value: classStats.reduce((s, c) => s + c.remainingPeriods, 0),
             color: "text-amber-700",
             bg: "bg-amber-50",
@@ -172,7 +188,7 @@ function SemesterStatsView({
           <div key={card.label} className={cn("rounded-lg p-3 border border-border", card.bg)}>
             <p className="text-xs text-muted-foreground">{card.label}</p>
             <p className={cn("text-2xl font-bold tabular-nums", card.color)}>{card.value}</p>
-            <p className="text-[10px] text-muted-foreground">コマ</p>
+            <p className="text-[10px] text-muted-foreground">{t("stats.periodUnit")}</p>
           </div>
         ))}
       </div>
@@ -190,6 +206,7 @@ function SemesterStatsView({
 function AnnualStatsView() {
   const { currentFile, asOfDate } = useTimetable();
   const { gradeColors } = useGradeColors();
+  const { language, t } = useLanguage();
 
   // Collect all semesters
   const semesters = useMemo(() => {
@@ -203,6 +220,14 @@ function AnnualStatsView() {
     }
     return [];
   }, [currentFile]);
+
+  const getSemesterLabel = (sem: SemesterMeta) => {
+    const system = sem.semesterSystem ?? "trimester";
+    if (system === "semester") {
+      return sem.semesterNumber === 1 ? t("weekGrid.firstTerm") : t("weekGrid.secondTerm");
+    }
+    return language === "ja" ? `${sem.semesterNumber}${t("weekGrid.termSuffix")}` : `${t("weekGrid.termSuffix")} ${sem.semesterNumber}`;
+  };
 
   // Compute effective entries per semester and aggregate
   const annualStats = useMemo(() => {
@@ -226,9 +251,7 @@ function AnnualStatsView() {
         : rawEffective;
       const stats = calcClassStats(effective, asOfDate);
       const sem = semData.semester;
-      const termLabel = sem.semesterSystem === "semester"
-        ? (sem.semesterNumber === 1 ? "前期" : "後期")
-        : `${sem.semesterNumber}学期`;
+      const termLabel = getSemesterLabel(sem);
 
       for (const s of stats) {
         totalMap.set(s.class, (totalMap.get(s.class) ?? 0) + s.totalPeriods);
@@ -256,7 +279,7 @@ function AnnualStatsView() {
         : 0,
       byTerm: byTermMap.get(cls) ?? [],
     }));
-  }, [semesters, asOfDate]);
+  }, [semesters, asOfDate, language, t]);
 
   // Group by grade
   const gradeGroups = useMemo(() => {
@@ -272,13 +295,11 @@ function AnnualStatsView() {
     const labels: string[] = [];
     for (const semData of semesters) {
       const sem = semData.semester;
-      const label = sem.semesterSystem === "semester"
-        ? (sem.semesterNumber === 1 ? "前期" : "後期")
-        : `${sem.semesterNumber}学期`;
+      const label = getSemesterLabel(sem);
       if (!labels.includes(label)) labels.push(label);
     }
     return labels;
-  }, [semesters]);
+  }, [semesters, language, t]);
 
   const totalAll = annualStats.reduce((s, c) => s + c.total, 0);
   const completedAll = annualStats.reduce((s, c) => s + c.completed, 0);
@@ -288,7 +309,7 @@ function AnnualStatsView() {
     exportAnnualStatsCSV(
       annualStats as AnnualClassStat[],
       termLabels,
-      currentFile?.meta.title ?? "時間割",
+      currentFile?.meta.title ?? t("home.titleFallback"),
     );
   };
 
@@ -296,7 +317,7 @@ function AnnualStatsView() {
     await exportAnnualStatsExcel(
       annualStats as AnnualClassStat[],
       termLabels,
-      currentFile?.meta.title ?? "時間割",
+      currentFile?.meta.title ?? t("home.titleFallback"),
     );
   };
 
@@ -317,14 +338,18 @@ function AnnualStatsView() {
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3 mb-5">
         {[
-          { label: "年間総コマ数", value: totalAll, color: "text-foreground", bg: "bg-muted/50" },
-          { label: "実施済み", value: completedAll, color: "text-emerald-700", bg: "bg-emerald-50" },
-          { label: "残り", value: remainingAll, color: "text-amber-700", bg: "bg-amber-50" },
+          { label: t("stats.annualTotalPeriods"), value: totalAll, color: "text-foreground", bg: "bg-muted/50" },
+          { label: t("stats.completed"), value: completedAll, color: "text-emerald-700", bg: "bg-emerald-50" },
+          { label: t("stats.remaining"), value: remainingAll, color: "text-amber-700", bg: "bg-amber-50" },
         ].map(card => (
           <div key={card.label} className={cn("rounded-lg p-3 border border-border", card.bg)}>
             <p className="text-xs text-muted-foreground">{card.label}</p>
             <p className={cn("text-2xl font-bold tabular-nums", card.color)}>{card.value}</p>
-            <p className="text-[10px] text-muted-foreground">コマ（{semesters.length}学期合計）</p>
+            <p className="text-[10px] text-muted-foreground">
+              {language === "ja"
+                ? `${t("stats.periodUnit")}（${semesters.length}${t("stats.semesterTotalSuffix")}）`
+                : `${t("stats.periodUnit")} (${semesters.length} ${semesters.length === 1 ? t("stats.termLowerSingular") : t("stats.termLowerPlural")} total)`}
+            </p>
           </div>
         ))}
       </div>
@@ -347,14 +372,14 @@ function AnnualStatsView() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">クラス</th>
-                    {termLabels.map(t => (
-                      <th key={t} className="text-center px-2 py-2 font-medium text-muted-foreground">{t}</th>
+                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">{t("stats.class")}</th>
+                    {termLabels.map(termLabel => (
+                      <th key={termLabel} className="text-center px-2 py-2 font-medium text-muted-foreground">{termLabel}</th>
                     ))}
-                    <th className="text-center px-2 py-2 font-medium text-foreground">合計</th>
-                    <th className="text-center px-2 py-2 font-medium text-emerald-700">済</th>
-                    <th className="text-center px-2 py-2 font-medium text-amber-700">残</th>
-                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">進捗</th>
+                    <th className="text-center px-2 py-2 font-medium text-foreground">{t("stats.total")}</th>
+                    <th className="text-center px-2 py-2 font-medium text-emerald-700">{t("stats.doneShort")}</th>
+                    <th className="text-center px-2 py-2 font-medium text-amber-700">{t("stats.remainingShort")}</th>
+                    <th className="text-right px-3 py-2 font-medium text-muted-foreground">{t("stats.progress")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -372,14 +397,14 @@ function AnnualStatsView() {
                         <td className="px-3 py-2 font-medium" style={{ color: rowColors.text }}>
                           {s.class}
                         </td>
-                        {termLabels.map(t => {
-                          const termData = s.byTerm.find(bt => bt.term === t);
+                        {termLabels.map(termLabel => {
+                          const termData = s.byTerm.find(bt => bt.term === termLabel);
                           return (
-                            <td key={t} className="text-center px-2 py-2 tabular-nums text-muted-foreground">
+                            <td key={termLabel} className="text-center px-2 py-2 tabular-nums text-muted-foreground">
                               {termData ? (
                                 <span>
                                   <span className="text-foreground font-medium">{termData.total}</span>
-                                  <span className="text-[9px] text-muted-foreground/60">コマ</span>
+                                  <span className="text-[9px] text-muted-foreground/60">{formatPeriodUnit(language, t("stats.periodUnit"))}</span>
                                 </span>
                               ) : (
                                 <span className="text-muted-foreground/30">—</span>
@@ -416,7 +441,7 @@ function AnnualStatsView() {
 
       {semesters.length === 0 && (
         <div className="text-center py-8 text-sm text-muted-foreground">
-          複数学期のデータがありません
+          {t("stats.noMultiSemester")}
         </div>
       )}
     </>
@@ -435,12 +460,13 @@ function SubjectStatsView({
   setAsOfDate: (d: string) => void;
 }) {
   const { subjectColors } = useGradeColors();
+  const { t } = useLanguage();
 
   if (subjectStats.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-sm text-muted-foreground">教科情報のあるコマがありません</p>
-        <p className="text-xs text-muted-foreground/60 mt-1">授業変更パネルからコマに教科を設定すると集計されます</p>
+        <p className="text-sm text-muted-foreground">{t("stats.noSubjectData")}</p>
+        <p className="text-xs text-muted-foreground/60 mt-1">{t("stats.subjectDataHint")}</p>
       </div>
     );
   }
@@ -454,7 +480,7 @@ function SubjectStatsView({
       {/* as_of date picker */}
       <div className="flex items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <Label className="text-xs text-muted-foreground whitespace-nowrap">集計基準日</Label>
+          <Label className="text-xs text-muted-foreground whitespace-nowrap">{t("stats.asOfDate")}</Label>
           <Input
             type="date"
             value={asOfDate}
@@ -466,24 +492,24 @@ function SubjectStatsView({
           onClick={() => setAsOfDate(todayISO())}
           className="text-xs text-primary hover:underline"
         >
-          今日に戻す
+          {t("stats.backToToday")}
         </button>
         <span className="text-xs text-muted-foreground">
-          ※ この日付以前を「実施済み」として集計します
+          {t("stats.asOfHelp")}
         </span>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { label: "総コマ数", value: totalAll, color: "text-foreground", bg: "bg-muted/50" },
-          { label: "実施済み", value: completedAll, color: "text-emerald-700", bg: "bg-emerald-50" },
-          { label: "残り", value: remainingAll, color: "text-amber-700", bg: "bg-amber-50" },
+          { label: t("stats.totalPeriods"), value: totalAll, color: "text-foreground", bg: "bg-muted/50" },
+          { label: t("stats.completed"), value: completedAll, color: "text-emerald-700", bg: "bg-emerald-50" },
+          { label: t("stats.remaining"), value: remainingAll, color: "text-amber-700", bg: "bg-amber-50" },
         ].map(card => (
           <div key={card.label} className={cn("rounded-lg p-3 border border-border", card.bg)}>
             <p className="text-xs text-muted-foreground">{card.label}</p>
             <p className={cn("text-2xl font-bold tabular-nums", card.color)}>{card.value}</p>
-            <p className="text-[10px] text-muted-foreground">コマ</p>
+            <p className="text-[10px] text-muted-foreground">{t("stats.periodUnit")}</p>
           </div>
         ))}
       </div>
@@ -506,9 +532,9 @@ function SubjectStatsView({
                   <span className="text-[10px] text-muted-foreground/60 bg-muted/50 rounded px-1">{totalPct}%</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs tabular-nums">
-                  <span className="text-muted-foreground">計 <span className="font-bold text-foreground">{s.totalPeriods}</span></span>
-                  <span className="text-emerald-600">済 <span className="font-bold">{s.completedPeriods}</span></span>
-                  <span className="text-amber-600">残 <span className="font-bold">{s.remainingPeriods}</span></span>
+                  <span className="text-muted-foreground">{t("stats.totalShort")} <span className="font-bold text-foreground">{s.totalPeriods}</span></span>
+                  <span className="text-emerald-600">{t("stats.doneShort")} <span className="font-bold">{s.completedPeriods}</span></span>
+                  <span className="text-amber-600">{t("stats.remainingShort")} <span className="font-bold">{s.remainingPeriods}</span></span>
                   <span className="text-muted-foreground font-medium">{pct}%</span>
                 </div>
               </div>
@@ -553,6 +579,7 @@ function GradeGroup({ grade, stats }: { grade: string; stats: ClassStats[] }) {
 
 function ClassStatRow({ stat }: { stat: ClassStats }) {
   const { gradeColors } = useGradeColors();
+  const { t } = useLanguage();
   const colors = getClassColor(stat.class, gradeColors);
   const pct = Math.round(stat.completionRate * 100);
 
@@ -561,9 +588,9 @@ function ClassStatRow({ stat }: { stat: ClassStats }) {
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium" style={{ color: colors.text }}>{stat.class}</span>
         <div className="flex items-center gap-3 text-xs tabular-nums">
-          <span className="text-muted-foreground">計 <span className="font-bold text-foreground">{stat.totalPeriods}</span></span>
-          <span className="text-emerald-600">済 <span className="font-bold">{stat.completedPeriods}</span></span>
-          <span className="text-amber-600">残 <span className="font-bold">{stat.remainingPeriods}</span></span>
+          <span className="text-muted-foreground">{t("stats.totalShort")} <span className="font-bold text-foreground">{stat.totalPeriods}</span></span>
+          <span className="text-emerald-600">{t("stats.doneShort")} <span className="font-bold">{stat.completedPeriods}</span></span>
+          <span className="text-amber-600">{t("stats.remainingShort")} <span className="font-bold">{stat.remainingPeriods}</span></span>
           <span className="text-muted-foreground font-medium">{pct}%</span>
         </div>
       </div>
@@ -582,17 +609,18 @@ function ClassStatRow({ stat }: { stat: ClassStats }) {
 
 export function HistoryView() {
   const { undoStack, undo, isLoaded } = useTimetable();
+  const { language, t } = useLanguage();
 
   if (!isLoaded) {
-    return <EmptyState message="ファイルを読み込むと変更履歴が表示されます" />;
+    return <EmptyState message={t("history.emptyLoad")} />;
   }
 
   if (undoStack.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-2 p-8 text-center">
         <Info size={24} className="text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">変更履歴はまだありません</p>
-        <p className="text-xs text-muted-foreground/60">授業変更を行うと、ここに履歴が表示されます</p>
+        <p className="text-sm text-muted-foreground">{t("history.noneTitle")}</p>
+        <p className="text-xs text-muted-foreground/60">{t("history.noneDescription")}</p>
       </div>
     );
   }
@@ -600,8 +628,8 @@ export function HistoryView() {
   return (
     <div className="flex-1 overflow-auto p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold">変更履歴</h2>
-        <span className="text-xs text-muted-foreground">{undoStack.length}件</span>
+        <h2 className="text-sm font-bold">{t("history.title")}</h2>
+        <span className="text-xs text-muted-foreground">{formatItemCount(undoStack.length, language)}</span>
       </div>
       <div className="space-y-2">
         {[...undoStack].reverse().map((entry, i) => (
@@ -613,8 +641,8 @@ export function HistoryView() {
               <div>
                 <p className="text-sm font-medium">{entry.description}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {new Date(entry.timestamp).toLocaleString("ja-JP")}
-                  {" · "}{entry.ops.length}件の操作
+                  {new Date(entry.timestamp).toLocaleString(language === "ja" ? "ja-JP" : "en-US")}
+                  {" · "}{formatOperationCount(entry.ops.length, language)}
                 </p>
               </div>
               {i === 0 && (
@@ -622,7 +650,7 @@ export function HistoryView() {
                   onClick={undo}
                   className="text-[10px] text-primary hover:underline shrink-0"
                 >
-                  元に戻す
+                  {t("history.undo")}
                 </button>
               )}
             </div>
@@ -637,9 +665,10 @@ export function HistoryView() {
 
 export function AuditView() {
   const { auditLog, isLoaded } = useTimetable();
+  const { language, t } = useLanguage();
 
   if (!isLoaded) {
-    return <EmptyState message="ファイルを読み込むと適用ログが表示されます" />;
+    return <EmptyState message={t("audit.emptyLoad")} />;
   }
 
   const warns = auditLog.filter(a => a.level === "warn").length;
@@ -648,17 +677,25 @@ export function AuditView() {
   return (
     <div className="flex-1 overflow-auto p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold">適用ログ</h2>
+        <h2 className="text-sm font-bold">{t("audit.title")}</h2>
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-muted-foreground">{auditLog.length}件</span>
-          {warns > 0 && <span className="text-amber-600 font-medium">警告 {warns}件</span>}
-          {errors > 0 && <span className="text-red-600 font-medium">エラー {errors}件</span>}
+          <span className="text-muted-foreground">{formatItemCount(auditLog.length, language)}</span>
+          {warns > 0 && (
+            <span className="text-amber-600 font-medium">
+              {language === "ja" ? `${t("audit.warning")} ${formatItemCount(warns, language)}` : `${warns} ${warns === 1 ? "warning" : "warnings"}`}
+            </span>
+          )}
+          {errors > 0 && (
+            <span className="text-red-600 font-medium">
+              {language === "ja" ? `${t("audit.error")} ${formatItemCount(errors, language)}` : `${errors} ${errors === 1 ? "error" : "errors"}`}
+            </span>
+          )}
         </div>
       </div>
 
       {auditLog.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-sm text-muted-foreground">ログはありません</p>
+          <p className="text-sm text-muted-foreground">{t("audit.none")}</p>
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -685,7 +722,7 @@ export function AuditView() {
                 <span className="font-medium text-foreground">{entry.message}</span>
                 {(entry.date || entry.period) && (
                   <span className="text-muted-foreground ml-1.5">
-                    {entry.date}{entry.period ? ` ${entry.period}限` : ""}
+                    {entry.date}{entry.period ? (language === "ja" ? ` ${entry.period}${t("audit.periodSuffix")}` : ` ${t("audit.periodSuffix")} ${entry.period}`) : ""}
                   </span>
                 )}
                 {(entry.before !== undefined || entry.after !== undefined) && (
