@@ -848,16 +848,30 @@ export function ExportDialog({ open, onClose }: Props) {
                     size="sm"
                     onClick={handleExportGCal}
                     disabled={weeksToPrint.length === 0 || gcalProgress.status === "running"}
-                    className="h-7 text-xs gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="h-7 text-xs gap-1 bg-blue-600 hover:bg-blue-700 text-white shrink-0 min-w-[130px] justify-center"
                   >
                     {gcalProgress.status === "running" ? (
-                      <><Loader2 size={12} className="animate-spin" />{gcalProgress.done}/{gcalProgress.total}</>
+                      <><Loader2 size={12} className="animate-spin" />追加中...</>
                     ) : (
                       <><CalendarDays size={12} />カレンダーに追加</>
                     )}
                   </Button>
                 </div>
                 {/* 進捗・結果表示 */}
+                {gcalProgress.status === "running" && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Loader2 size={11} className="animate-spin" />追加中...</span>
+                      <span className="font-mono">{gcalProgress.done} / {gcalProgress.total} 件</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-1.5">
+                      <div
+                        className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                        style={{ width: gcalProgress.total > 0 ? `${(gcalProgress.done / gcalProgress.total) * 100}%` : "0%" }}
+                      />
+                    </div>
+                  </div>
+                )}
                 {gcalProgress.status === "done" && (
                   <div className="flex items-center gap-1.5 text-xs text-green-500">
                     <CheckCircle2 size={12} />

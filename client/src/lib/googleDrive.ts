@@ -16,6 +16,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/drive.appdata",   // 自動同期（隠しフォルダ）
   "https://www.googleapis.com/auth/drive.file",       // 手動バックアップ（マイドライブ）
   "https://www.googleapis.com/auth/calendar.events",  // Googleカレンダー出力
+  "https://www.googleapis.com/auth/calendar.readonly", // カレンダー一覧取得
 ].join(" ");
 
 // Auto-sync: hidden appDataFolder
