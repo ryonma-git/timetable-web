@@ -2,6 +2,7 @@
 // Design: Swiss Grid × Japanese Functional Design
 // Left sidebar: new/open/save, navigation, undo/redo, export, color settings
 // Phase 4: 教科管理ダイアログ・モードバッジを追加
+// Phase 5: Google Drive連携 UI を追加
 
 import { useRef, useState, useEffect } from "react";
 import {
@@ -10,6 +11,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Cloud,
+  CloudOff,
+  CloudUpload,
   Download,
   FileJson,
   FilePlus,
@@ -19,6 +23,9 @@ import {
   FolderOpen,
   History,
   Loader2,
+  LogIn,
+  LogOut,
+  RefreshCw,
   RotateCcw,
   RotateCw,
   Save,
@@ -28,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTimetable, type ActiveTab } from "@/contexts/TimetableContext";
+import { useGoogleDrive } from "@/contexts/GoogleDriveContext";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ColorSettingsDialog } from "@/components/ColorSettingsDialog";
@@ -46,6 +54,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     isLoaded, isDirty, loadedFileName, currentFile,
     loadFromNativeFile, loadFromZip,
     saveFile,
+    loadTimetableFile,
     activeTab, setActiveTab,
     currentWeekMonday, navigateWeek, goToToday, goToDate,
     canUndo, canRedo, undo, redo,
@@ -54,10 +63,23 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     pendingOps,
     semester,
     mode,
+    allOps,
   } = useTimetable();
+
+  const {
+    isLoggedIn,
+    syncStatus,
+    lastSyncedAt,
+    syncError,
+    login,
+    logout,
+    syncToDrive,
+    loadFromDrive,
+  } = useGoogleDrive();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [driveLoading, setDriveLoading] = useState(false);
   const { sidebarStyle, setSidebarStyle } = useSidebarStyle();
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -87,6 +109,18 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [isLoaded, saveFile, canUndo, undo, canRedo, redo]);
+
+  // 自動同期: isDirty が false になった（ローカル保存完了）タイミングで Drive に自動アップロード
+  const prevIsDirtyRef = useRef(isDirty);
+  useEffect(() => {
+    const wasJustSaved = prevIsDirtyRef.current === true && isDirty === false;
+    prevIsDirtyRef.current = isDirty;
+    if (wasJustSaved && isLoggedIn && isLoaded && currentFile) {
+      syncToDrive(currentFile, allOps).catch(() => {
+        // エラーはsyncStatusに反映されるのでここでは何もしない
+      });
+    }
+  }, [isDirty, isLoggedIn, isLoaded, currentFile, allOps, syncToDrive]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -145,6 +179,37 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     toast.success("保存しました");
   };
 
+  const handleDriveSave = async () => {
+    if (!currentFile) return;
+    setDriveLoading(true);
+    try {
+      await syncToDrive(currentFile, allOps);
+      toast.success("Google Driveに保存しました");
+    } catch {
+      toast.error("Drive保存に失敗しました");
+    } finally {
+      setDriveLoading(false);
+    }
+  };
+
+  const handleDriveLoad = async () => {
+    setDriveLoading(true);
+    try {
+      const result = await loadFromDrive();
+      if (!result) {
+        toast.info("Google Driveにデータがありませんでした");
+        return;
+      }
+      await loadTimetableFile(result.file);
+      toast.success("Google Driveから読み込みました");
+      result.warnings.forEach((w: string) => toast.warning(w));
+    } catch {
+      toast.error("Drive読み込みに失敗しました");
+    } finally {
+      setDriveLoading(false);
+    }
+  };
+
   // Week label
   const weekEnd = new Date(currentWeekMonday);
   weekEnd.setDate(weekEnd.getDate() + 4);
@@ -156,6 +221,16 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     { id: "history", label: "変更履歴", icon: <History size={16} /> },
     { id: "audit", label: "適用ログ", icon: <Clock size={16} /> },
   ];
+
+  // 最終同期日時のフォーマット
+  const formatSyncTime = (date: Date | null) => {
+    if (!date) return null;
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    if (diff < 60000) return "たった今";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}分前`;
+    return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+  };
 
   return (
     <aside
@@ -273,6 +348,103 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
         >
           サンプルデータを読み込む
         </button>
+
+        {/* ─── Google Drive 連携 ─── */}
+        <div className="border-t border-sidebar-border/50 pt-2 mt-1 space-y-1.5">
+          <p className="text-[10px] text-sidebar-foreground/40 font-medium uppercase tracking-wider flex items-center gap-1 px-1">
+            <Cloud size={9} />
+            Google Drive
+          </p>
+
+          {!isLoggedIn ? (
+            /* 未ログイン時: ログインボタン */
+            <button
+              onClick={login}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                         bg-blue-600/20 hover:bg-blue-600/30 text-blue-400
+                         text-xs font-medium transition-colors duration-150 border border-blue-500/30"
+            >
+              <LogIn size={13} />
+              Googleでログイン
+            </button>
+          ) : (
+            /* ログイン済み時 */
+            <>
+              {/* 同期状態バッジ */}
+              <div className="flex items-center gap-1.5 px-1">
+                {syncStatus === "syncing" && (
+                  <span className="flex items-center gap-1 text-[10px] text-blue-400">
+                    <RefreshCw size={10} className="animate-spin" />
+                    同期中...
+                  </span>
+                )}
+                {syncStatus === "synced" && (
+                  <span className="flex items-center gap-1 text-[10px] text-green-400">
+                    <Cloud size={10} />
+                    {lastSyncedAt ? formatSyncTime(lastSyncedAt) + " に同期" : "同期済み"}
+                  </span>
+                )}
+                {syncStatus === "error" && (
+                  <span className="flex items-center gap-1 text-[10px] text-red-400" title={syncError ?? ""}>
+                    <CloudOff size={10} />
+                    同期エラー
+                  </span>
+                )}
+                {(syncStatus === "idle") && (
+                  <span className="flex items-center gap-1 text-[10px] text-sidebar-foreground/40">
+                    <Cloud size={10} />
+                    Drive連携中
+                  </span>
+                )}
+                {/* ログアウトボタン（右端） */}
+                <button
+                  onClick={logout}
+                  className="ml-auto flex items-center gap-1 text-[10px] text-sidebar-foreground/40 hover:text-red-400 transition-colors"
+                  title="ログアウト"
+                >
+                  <LogOut size={10} />
+                  解除
+                </button>
+              </div>
+
+              {/* Driveに保存ボタン */}
+              {isLoaded && (
+                <button
+                  onClick={handleDriveSave}
+                  disabled={driveLoading || syncStatus === "syncing"}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                             bg-green-600/20 hover:bg-green-600/30 text-green-400
+                             text-xs font-medium transition-colors duration-150 border border-green-500/30
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {(driveLoading || syncStatus === "syncing") ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <CloudUpload size={13} />
+                  )}
+                  Driveに保存
+                </button>
+              )}
+
+              {/* Driveから読み込むボタン */}
+              <button
+                onClick={handleDriveLoad}
+                disabled={driveLoading || syncStatus === "syncing"}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                           bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground/70
+                           text-xs font-medium transition-colors duration-150 border border-sidebar-border
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {(driveLoading || syncStatus === "syncing") ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Cloud size={13} />
+                )}
+                Driveから読み込む
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Navigation - 常に表示、スクロールしない */}

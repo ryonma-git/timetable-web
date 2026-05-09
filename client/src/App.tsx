@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { TimetableProvider } from "./contexts/TimetableContext";
 import { GradeColorProvider } from "./contexts/GradeColorContext";
+import { GoogleDriveProvider } from "./contexts/GoogleDriveContext";
 import Home from "./pages/Home";
 import { InstallBanner } from "./components/InstallBanner";
 import React from "react";
@@ -42,6 +43,7 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <GradeColorProvider>
           <TimetableProvider>
+            <GoogleDriveProvider>
             <SidebarStyleProvider>
               <TooltipProvider>
                 <Toaster richColors position="top-right" />
@@ -49,6 +51,7 @@ function App() {
                 <InstallBanner />
               </TooltipProvider>
             </SidebarStyleProvider>
+            </GoogleDriveProvider>
           </TimetableProvider>
         </GradeColorProvider>
       </ThemeProvider>
