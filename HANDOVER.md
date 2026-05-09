@@ -6,6 +6,17 @@
 
 ---
 
+> **⚠️ 最新版のドキュメントは必ず GitHub を参照してください**  
+> このファイルはローカルコピーです。最新情報は以下の GitHub 上のファイルを確認してください。
+>
+> | ドキュメント | GitHub URL |
+> |-------------|------------|
+> | **このファイル（HANDOVER.md）** | https://github.com/ryonma-git/timetable-web/blob/main/HANDOVER.md |
+> | **更新履歴・概要（README.md）** | https://github.com/ryonma-git/timetable-web/blob/main/README.md |
+> | **リポジトリトップ** | https://github.com/ryonma-git/timetable-web |
+
+---
+
 ## 1. リポジトリの取得（最初にやること）
 
 ```bash
