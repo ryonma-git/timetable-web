@@ -1,6 +1,6 @@
 # timetable-web — Claude Code 引き継ぎ書類
 
-> 最終更新: 2026年5月（v76言語切替初期実装）
+> 最終更新: 2026年5月（v77言語切替拡張）
 > 対象: Claude Code（CLI）でこのリポジトリを引き継ぐ開発者
 
 > **安定版の基準**: 暫定安定版は v74。v75以降は Claude Code / Codex 実装版だが、利用者確認前のため未検証扱いとする。ユーザーが明示しない限り、更新版を安定版とは記載しない。
@@ -60,7 +60,7 @@ git push
 - `client/src/contexts/LanguageContext.tsx` で `ja` / `en` の辞書と `useLanguage()` を提供する。
 - 日本語をデフォルトにし、`localStorage` の `timetable_language` に選択言語を保存する。
 - 左下メニューに日本語/英語の切替を追加済み。
-- v76時点ではサイドバーと上部操作ボタンのみ段階対応。ダイアログ、エクスポート文言、Google Drive/Calendar の細部は未移行が残る。
+- v77時点ではサイドバー、上部操作ボタン、週間グリッド、自動復元、変更確認、学期タブまで段階対応。設定系・新規作成ウィザード・インスペクター・統計・エクスポート詳細・Google Drive/Calendar の細部は未移行が残る。
 
 ### ⚠️ deploy.yml の変更について
 

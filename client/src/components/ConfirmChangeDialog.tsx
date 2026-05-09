@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useGradeColors } from "@/contexts/GradeColorContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { getClassColor } from "@/lib/gradeColors";
-import { formatDateJP } from "@/lib/timetable";
 
 export type ChangeOpType = "delete" | "add" | "move" | "swap";
 
@@ -44,12 +44,13 @@ interface Props {
 
 function ClassBadge({ cls, reason }: { cls: string | null; reason?: string }) {
   const { gradeColors } = useGradeColors();
+  const { t } = useLanguage();
   const color = getClassColor(cls, gradeColors);
 
   if (!cls) {
     return (
       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-muted text-muted-foreground border border-border">
-        空き{reason ? ` (${reason})` : ""}
+        {t("confirmChange.empty")}{reason ? ` (${reason})` : ""}
       </span>
     );
   }
@@ -65,26 +66,44 @@ function ClassBadge({ cls, reason }: { cls: string | null; reason?: string }) {
 }
 
 function PeriodLabel({ date, period }: { date?: string; period?: number }) {
+  const { language, t } = useLanguage();
   if (!date && !period) return null;
+  const formattedDate = (() => {
+    if (!date) return "";
+    const d = new Date(date + "T00:00:00");
+    if (language === "ja") {
+      const m = d.getMonth() + 1;
+      const day = d.getDate();
+      const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+      return `${m}/${day}（${weekdays[d.getDay()]}）`;
+    }
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", weekday: "short" });
+  })();
   return (
     <span className="text-xs text-muted-foreground">
-      {date ? formatDateJP(date) : ""}
-      {period ? ` ${period}限` : ""}
+      {formattedDate}
+      {period ? (language === "ja" ? ` ${period}${t("weekGrid.periodSuffix")}` : ` ${t("weekGrid.periodSuffix")} ${period}`) : ""}
     </span>
   );
 }
 
-const OP_LABELS: Record<ChangeOpType, { label: string; color: string }> = {
-  delete: { label: "削除", color: "text-destructive" },
-  add: { label: "追加", color: "text-green-600" },
-  move: { label: "移動", color: "text-blue-600" },
-  swap: { label: "交換", color: "text-violet-600" },
+const OP_COLORS: Record<ChangeOpType, string> = {
+  delete: "text-destructive",
+  add: "text-green-600",
+  move: "text-blue-600",
+  swap: "text-violet-600",
 };
 
 export function ConfirmChangeDialog({ open, preview, onConfirm, onCancel }: Props) {
+  const { t } = useLanguage();
   if (!preview) return null;
 
-  const opInfo = OP_LABELS[preview.opType];
+  const opLabel = {
+    delete: t("confirmChange.delete"),
+    add: t("confirmChange.add"),
+    move: t("confirmChange.move"),
+    swap: t("confirmChange.swap"),
+  }[preview.opType];
   const hasWarnings = (preview.warnings?.length ?? 0) > 0;
 
   return (
@@ -97,8 +116,8 @@ export function ConfirmChangeDialog({ open, preview, onConfirm, onCancel }: Prop
             ) : (
               <CheckCircle size={18} className="text-green-500" />
             )}
-            <span>変更の確認</span>
-            <span className={`text-sm font-normal ${opInfo.color}`}>— {opInfo.label}</span>
+            <span>{t("confirmChange.title")}</span>
+            <span className={`text-sm font-normal ${OP_COLORS[preview.opType]}`}>- {opLabel}</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -108,7 +127,7 @@ export function ConfirmChangeDialog({ open, preview, onConfirm, onCancel }: Prop
             <div className="bg-amber-50 border border-amber-200 rounded-md p-3 space-y-1">
               <p className="text-xs font-medium text-amber-700 flex items-center gap-1">
                 <AlertTriangle size={12} />
-                警告
+                {t("confirmChange.warning")}
               </p>
               {preview.warnings!.map((w, i) => (
                 <p key={i} className="text-xs text-amber-600">{w}</p>
@@ -149,7 +168,7 @@ export function ConfirmChangeDialog({ open, preview, onConfirm, onCancel }: Prop
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" size="sm" onClick={onCancel}>
-            キャンセル
+            {t("confirmChange.cancel")}
           </Button>
           <Button
             size="sm"
@@ -158,7 +177,7 @@ export function ConfirmChangeDialog({ open, preview, onConfirm, onCancel }: Prop
             className="gap-1.5"
           >
             {hasWarnings ? <AlertTriangle size={13} /> : <CheckCircle size={13} />}
-            {hasWarnings ? "警告を無視して実行" : "実行"}
+            {hasWarnings ? t("confirmChange.runWithWarnings") : t("confirmChange.run")}
           </Button>
         </div>
       </DialogContent>

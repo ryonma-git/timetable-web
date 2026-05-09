@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
+import { useLanguage, type Language, type TranslationKey } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,12 +26,12 @@ import {
 import { SemesterData, SemesterMeta } from "@/lib/timetableFile";
 import { generateBaseEntries } from "@/lib/timetableFile";
 
-function getSemesterLabel(meta: SemesterMeta): string {
+function getSemesterLabel(meta: SemesterMeta, language: Language, t: (key: TranslationKey) => string): string {
   const system = meta.semesterSystem ?? "trimester";
   if (system === "semester") {
-    return meta.semesterNumber === 1 ? "前期" : "後期";
+    return meta.semesterNumber === 1 ? t("weekGrid.firstTerm") : t("weekGrid.secondTerm");
   }
-  return `${meta.semesterNumber}学期`;
+  return language === "ja" ? `${meta.semesterNumber}${t("weekGrid.termSuffix")}` : `${t("weekGrid.termSuffix")} ${meta.semesterNumber}`;
 }
 
 interface AddSemesterDialogProps {
@@ -41,6 +42,7 @@ interface AddSemesterDialogProps {
 }
 
 function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemesterDialogProps) {
+  const { language, t } = useLanguage();
   const system = currentSemester?.semesterSystem ?? "trimester";
   const maxSemesters = system === "semester" ? 2 : 3;
 
@@ -49,11 +51,11 @@ function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemeste
   const [endDate, setEndDate] = useState("");
 
   const semesterOptions = system === "semester"
-    ? [{ value: "1", label: "前期" }, { value: "2", label: "後期" }]
+    ? [{ value: "1", label: t("weekGrid.firstTerm") }, { value: "2", label: t("weekGrid.secondTerm") }]
     : [
-        { value: "1", label: "1学期" },
-        { value: "2", label: "2学期" },
-        { value: "3", label: "3学期" },
+        { value: "1", label: language === "ja" ? `1${t("weekGrid.termSuffix")}` : `${t("weekGrid.termSuffix")} 1` },
+        { value: "2", label: language === "ja" ? `2${t("weekGrid.termSuffix")}` : `${t("weekGrid.termSuffix")} 2` },
+        { value: "3", label: language === "ja" ? `3${t("weekGrid.termSuffix")}` : `${t("weekGrid.termSuffix")} 3` },
       ];
 
   const handleAdd = () => {
@@ -80,11 +82,11 @@ function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemeste
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-sm font-semibold">学期を追加</DialogTitle>
+          <DialogTitle className="text-sm font-semibold">{t("semester.add")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <div className="space-y-1">
-            <Label className="text-xs">学期</Label>
+            <Label className="text-xs">{t("semester.semester")}</Label>
             <Select value={semesterNumber} onValueChange={setSemesterNumber}>
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
@@ -99,7 +101,7 @@ function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemeste
             </Select>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">始業日</Label>
+            <Label className="text-xs">{t("semester.startDate")}</Label>
             <Input
               type="date"
               value={startDate}
@@ -108,7 +110,7 @@ function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemeste
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">終業日</Label>
+            <Label className="text-xs">{t("semester.endDate")}</Label>
             <Input
               type="date"
               value={endDate}
@@ -117,12 +119,12 @@ function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemeste
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            基本時間割・クラス設定は現在の学期から引き継がれます。
+            {t("semester.copyNotice")}
           </p>
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose} className="text-xs h-7">
-            キャンセル
+            {t("semester.cancel")}
           </Button>
           <Button
             size="sm"
@@ -130,7 +132,7 @@ function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemeste
             disabled={!startDate || !endDate}
             className="text-xs h-7"
           >
-            追加
+            {t("semester.addButton")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -139,6 +141,7 @@ function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemeste
 }
 
 export function SemesterTabs() {
+  const { language, t } = useLanguage();
   const {
     currentFile,
     activeSemesterIndex,
@@ -161,14 +164,14 @@ export function SemesterTabs() {
     return (
       <div className="flex items-center gap-1 px-3 py-1 border-b border-border bg-muted/30">
         <span className="text-xs text-muted-foreground font-medium">
-          {getSemesterLabel(semester)}
+          {getSemesterLabel(semester, language, t)}
         </span>
         <Button
           variant="ghost"
           size="sm"
           className="h-5 w-5 p-0 ml-1 text-muted-foreground hover:text-foreground"
           onClick={() => setAddDialogOpen(true)}
-          title="学期を追加"
+          title={t("semester.add")}
         >
           <Plus size={10} />
         </Button>
@@ -195,16 +198,18 @@ export function SemesterTabs() {
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             )}
           >
-            {getSemesterLabel(semData.semester)}
+            {getSemesterLabel(semData.semester, language, t)}
             <span className="ml-1 text-muted-foreground font-normal">
-              {semData.semester.startDate?.slice(5, 7)}月〜{semData.semester.endDate?.slice(5, 7)}月
+              {language === "ja"
+                ? `${semData.semester.startDate?.slice(5, 7)}${t("semester.monthSuffix")}〜${semData.semester.endDate?.slice(5, 7)}${t("semester.monthSuffix")}`
+                : `${semData.semester.startDate?.slice(5, 7)}-${semData.semester.endDate?.slice(5, 7)}`}
             </span>
           </button>
           {semesters.length > 1 && (
             <button
               onClick={() => removeSemester(idx)}
               className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 hover:text-destructive transition-all ml-0.5"
-              title="この学期を削除"
+              title={t("semester.deleteTitle")}
             >
               <X size={10} />
             </button>
@@ -216,7 +221,7 @@ export function SemesterTabs() {
         size="sm"
         className="h-6 w-6 p-0 ml-1 text-muted-foreground hover:text-foreground shrink-0"
         onClick={() => setAddDialogOpen(true)}
-        title="学期を追加"
+        title={t("semester.add")}
       >
         <Plus size={12} />
       </Button>

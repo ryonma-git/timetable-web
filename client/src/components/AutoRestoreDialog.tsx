@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { deserializeTimetableFile } from "@/lib/timetableFile";
 import { applyOverrides } from "@/lib/timetable";
 import {
@@ -27,6 +28,7 @@ interface SavedMeta {
 
 export function AutoRestoreDialog() {
   const { isLoaded, loadTimetableFile } = useTimetable();
+  const { language, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [meta, setMeta] = useState<SavedMeta | null>(null);
 
@@ -71,7 +73,7 @@ export function AutoRestoreDialog() {
   const savedAt = (() => {
     try {
       const d = new Date(meta.savedAt);
-      return d.toLocaleString("ja-JP", {
+      return d.toLocaleString(language === "ja" ? "ja-JP" : "en-US", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -89,18 +91,18 @@ export function AutoRestoreDialog() {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RotateCcw size={18} className="text-primary" />
-            前回の作業を復元しますか？
+            {t("autoRestore.title")}
           </DialogTitle>
           <DialogDescription className="pt-2 space-y-1 text-sm">
-            前回の編集内容が自動保存されています。
+            {t("autoRestore.description")}
           </DialogDescription>
           <div className="mt-3 bg-muted rounded-lg px-4 py-3 text-sm space-y-1">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">ファイル名</span>
+              <span className="text-muted-foreground">{t("autoRestore.fileName")}</span>
               <span className="font-medium text-foreground">{meta.title}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">最終保存</span>
+              <span className="text-muted-foreground">{t("autoRestore.lastSaved")}</span>
               <span className="font-medium text-foreground">{savedAt}</span>
             </div>
           </div>
@@ -113,7 +115,7 @@ export function AutoRestoreDialog() {
             onClick={handleDiscard}
           >
             <X size={14} />
-            破棄して新規
+            {t("autoRestore.discard")}
           </Button>
           <Button
             size="sm"
@@ -121,7 +123,7 @@ export function AutoRestoreDialog() {
             onClick={handleRestore}
           >
             <RotateCcw size={14} />
-            復元する
+            {t("autoRestore.restore")}
           </Button>
         </DialogFooter>
       </DialogContent>

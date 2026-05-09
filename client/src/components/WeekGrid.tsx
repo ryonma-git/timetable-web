@@ -9,7 +9,8 @@ import { PeriodTimesDialog } from "@/components/PeriodTimesDialog";
 import { LLMImportDialog } from "@/components/LLMImportDialog";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGradeColors } from "@/contexts/GradeColorContext";
-import { buildSwapOps, formatDate, formatDateJP, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { buildSwapOps, formatDate, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
 import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays, Clock, Bot, FileJson, RotateCcw, CheckSquare } from "lucide-react";
@@ -24,8 +25,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const PERIOD_LABELS = ["", "1限", "2限", "3限", "4限", "5限", "6限"];
 
 interface DragState {
   srcDate: string;
@@ -71,6 +70,7 @@ export function WeekGrid() {
     goToDate,
     updateWeekPatternOverride,
   } = useTimetable();
+  const { language, t } = useLanguage();
   // 最後にクリックしたセル（Shift範囲選択の起点）
   const lastClickedCellRef = useRef<{ date: string; period: number } | null>(null);
 
@@ -97,6 +97,27 @@ export function WeekGrid() {
   const [datePickerValue, setDatePickerValue] = useState("");
   const dateInputRef = useRef<HTMLInputElement>(null);
   const today = todayISO();
+  const formatDisplayDate = useCallback((dateStr: string) => {
+    const d = new Date(dateStr + "T00:00:00");
+    if (language === "ja") {
+      const m = d.getMonth() + 1;
+      const day = d.getDate();
+      const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+      return `${m}/${day}（${weekdays[d.getDay()]}）`;
+    }
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", weekday: "short" });
+  }, [language]);
+  const formatRangeDate = useCallback((d: Date) => (
+    language === "ja"
+      ? `${d.getMonth() + 1}月${d.getDate()}日`
+      : `${d.getMonth() + 1}/${d.getDate()}`
+  ), [language]);
+  const weekPatternLabels = [
+    t("weekGrid.weekA"),
+    t("weekGrid.weekB"),
+    t("weekGrid.weekC"),
+    t("weekGrid.weekD"),
+  ];
 
   // homeroomモードでは担任クラスを固定
   const homeroomClass = semester?.homeroomClass ?? null;
@@ -120,7 +141,7 @@ export function WeekGrid() {
 
   // holidays: HolidayEntry[] → 日付のSetとname mapに変換
   const holidayDates = new Set(holidays.map(h => h.date));
-  const holidayNameMap = new Map(holidays.map(h => [h.date, h.name ?? '休校日']));
+  const holidayNameMap = new Map(holidays.map(h => [h.date, h.name ?? t("weekGrid.schoolClosed")]));
 
   // Determine if this week shows Saturday/Sunday
   const weekMondayStr = formatDate(currentWeekMonday);
@@ -306,9 +327,9 @@ export function WeekGrid() {
           </svg>
         </div>
         <div className="text-center">
-          <p className="text-base font-semibold text-foreground/70">データを読み込んでください</p>
+          <p className="text-base font-semibold text-foreground/70">{t("weekGrid.noDataTitle")}</p>
           <p className="text-sm text-muted-foreground mt-1">
-            左のサイドバーから「ファイルを開く」または<br />「新規作成」でデータを準備できます
+            {t("weekGrid.noDataLine1")}<br />{t("weekGrid.noDataLine2")}
           </p>
         </div>
       </div>
@@ -342,13 +363,12 @@ export function WeekGrid() {
         const month = mon.getMonth() + 1;
         const academicYear = month >= 4 ? year : year - 1;
         const semLabel = semester.semesterSystem === "semester"
-          ? (semester.semesterNumber === 1 ? "前期" : "後期")
-          : `${semester.semesterNumber}学期`;
+          ? (semester.semesterNumber === 1 ? t("weekGrid.firstTerm") : t("weekGrid.secondTerm"))
+          : (language === "ja" ? `${semester.semesterNumber}${t("weekGrid.termSuffix")}` : `${t("weekGrid.termSuffix")} ${semester.semesterNumber}`);
         // 週の範囲ラベル
         const weekEnd = new Date(currentWeekMonday);
         weekEnd.setDate(weekEnd.getDate() + (showSaturday ? 5 : showSunday ? 6 : 4));
-        const fmt = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
-        const weekRangeLabel = `${fmt(currentWeekMonday)}～${fmt(weekEnd)}`;
+        const weekRangeLabel = `${formatRangeDate(currentWeekMonday)}-${formatRangeDate(weekEnd)}`;
         const isCurrentWeek = formatDate(currentWeekMonday) === formatDate(new Date(today));
 
         // 複週バッジ: A週/B週を計算
@@ -357,7 +377,6 @@ export function WeekGrid() {
         let weekPatternCount = 1;
         const mondayStr = formatDate(currentWeekMonday);
         if (semester.baseSchedules && semester.baseSchedules.length > 1) {
-          const WEEK_LABELS_GRID = ["A週", "B週", "C週", "D週"];
           weekPatternCount = semester.baseSchedules.length;
           // 手動上書きがあればそちらを優先
           if (semester.weekPatternOverrides?.[mondayStr] !== undefined) {
@@ -375,14 +394,16 @@ export function WeekGrid() {
             const n = semester.baseSchedules.length;
             weekPatternIdx = ((weeksDiff % n) + n) % n;
           }
-          weekPatternLabel = WEEK_LABELS_GRID[weekPatternIdx] ?? null;
+          weekPatternLabel = weekPatternLabels[weekPatternIdx] ?? null;
         }
 
         return (
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             {/* Meta badges */}
             <div className="flex items-center gap-2">
-              <span className="text-base font-bold text-foreground">{academicYear}年度</span>
+              <span className="text-base font-bold text-foreground">
+                {language === "ja" ? `${academicYear}${t("weekGrid.academicYearSuffix")}` : `${academicYear} ${t("weekGrid.academicYearSuffix")}`}
+              </span>
               <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">{semLabel}</span>
               {weekPatternLabel && weekPatternIdx !== null && (
                 <Popover>
@@ -394,17 +415,16 @@ export function WeekGrid() {
                           ? "bg-orange-100 text-orange-700 ring-1 ring-orange-400"
                           : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                       )}
-                      title="タップして週パターンを変更"
+                      title={t("weekGrid.weekPatternChangeTitle")}
                     >
                       {weekPatternLabel}
                       {semester.weekPatternOverrides?.[mondayStr] !== undefined && " ✎"}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-52 p-3" align="start">
-                    <p className="text-xs font-semibold text-foreground mb-2">この週のパターンを変更</p>
+                    <p className="text-xs font-semibold text-foreground mb-2">{t("weekGrid.weekPatternTitle")}</p>
                     <div className="flex flex-col gap-1">
                       {Array.from({ length: weekPatternCount }, (_, i) => {
-                        const labels = ["A週", "B週", "C週", "D週"];
                         return (
                           <button
                             key={i}
@@ -416,7 +436,7 @@ export function WeekGrid() {
                                 : "hover:bg-accent text-foreground"
                             )}
                           >
-                            {labels[i]}
+                            {weekPatternLabels[i]}
                           </button>
                         );
                       })}
@@ -427,7 +447,7 @@ export function WeekGrid() {
                         className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                       >
                         <RotateCcw className="w-3 h-3" />
-                        自動計算に戻す
+                        {t("weekGrid.resetAuto")}
                       </button>
                     )}
                   </PopoverContent>
@@ -435,7 +455,7 @@ export function WeekGrid() {
               )}
               {isHomeroomMode && homeroomClass && (
                 <span className="text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 font-medium">
-                  担任: {homeroomClass}
+                  {t("weekGrid.homeroom")}: {homeroomClass}
                 </span>
               )}
             </div>
@@ -456,7 +476,7 @@ export function WeekGrid() {
                     {weekRangeLabel}
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">今週に戻る</TooltipContent>
+                <TooltipContent side="bottom" className="text-xs">{t("weekGrid.backToThisWeek")}</TooltipContent>
               </Tooltip>
               {/* Date jump */}
               <div className="relative">
@@ -474,11 +494,11 @@ export function WeekGrid() {
                       <CalendarDays size={14} />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">日付で移動</TooltipContent>
+                  <TooltipContent side="bottom" className="text-xs">{t("weekGrid.jumpByDate")}</TooltipContent>
                 </Tooltip>
                 {showDatePicker && (
                   <div className="absolute top-full mt-1 right-0 bg-popover border border-border rounded-lg shadow-lg p-2 z-50 w-48">
-                    <p className="text-[10px] text-muted-foreground mb-1.5">移動先の日付を選択</p>
+                    <p className="text-[10px] text-muted-foreground mb-1.5">{t("weekGrid.pickDate")}</p>
                     <input
                       ref={dateInputRef}
                       type="date"
@@ -539,11 +559,11 @@ export function WeekGrid() {
                 }}
               >
                 <CheckSquare size={11} />
-                {multiSelectMode ? `複数選択中 (${selectedCells.size})` : "複数選択"}
+                {multiSelectMode ? `${t("weekGrid.multiSelectActive")} (${selectedCells.size})` : t("weekGrid.multiSelect")}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              {multiSelectMode ? "複数選択モードを解除" : "複数のコマを同時編集するモードに入る"}
+              {multiSelectMode ? t("weekGrid.exitMultiSelect") : t("weekGrid.enterMultiSelect")}
             </TooltipContent>
           </Tooltip>
         )}
@@ -563,11 +583,11 @@ export function WeekGrid() {
                 onClick={() => setSubjectFirst(v => !v)}
               >
                 {subjectFirst ? <BookOpen size={11} /> : <Users size={11} />}
-                {subjectFirst ? "教科ビュー" : "クラスビュー"}
+                {subjectFirst ? t("weekGrid.subjectView") : t("weekGrid.classView")}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              {subjectFirst ? "教科を大きく、クラスを小さく表示中。クリックで切り替え" : "クラスを大きく、教科を小さく表示中。クリックで切り替え"}
+              {subjectFirst ? t("weekGrid.subjectViewTip") : t("weekGrid.classViewTip")}
             </TooltipContent>
           </Tooltip>
         )}
@@ -578,7 +598,7 @@ export function WeekGrid() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className={cn("h-7 gap-1.5 text-xs", filterClass && "border-primary text-primary")}>
                 <Filter size={12} />
-                {filterClass ? filterClass : "クラスで絞り込み"}
+                {filterClass ? filterClass : t("weekGrid.filterByClass")}
                 {filterClass && (
                   <span
                     role="button"
@@ -591,10 +611,10 @@ export function WeekGrid() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44 max-h-72 overflow-y-auto">
-              <DropdownMenuLabel className="text-xs">クラスフィルター</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs">{t("weekGrid.classFilter")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setFilterClass(null)} className="text-xs">
-                すべて表示
+                {t("weekGrid.showAll")}
               </DropdownMenuItem>
               {effectiveClassList.map(cls => (
                 <DropdownMenuItem
@@ -615,7 +635,7 @@ export function WeekGrid() {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className={cn("h-7 gap-1.5 text-xs", filterSubject && "border-primary text-primary")}>
                 <Filter size={12} />
-                {filterSubject ? filterSubject : "教科で絞り込み"}
+                {filterSubject ? filterSubject : t("weekGrid.filterBySubject")}
                 {filterSubject && (
                   <span
                     role="button"
@@ -628,10 +648,10 @@ export function WeekGrid() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-44 max-h-72 overflow-y-auto">
-              <DropdownMenuLabel className="text-xs">教科フィルター</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs">{t("weekGrid.subjectFilter")}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setFilterSubject(null)} className="text-xs">
-                すべて表示
+                {t("weekGrid.showAll")}
               </DropdownMenuItem>
               {subjects.map(s => (
                 <DropdownMenuItem
@@ -663,13 +683,13 @@ export function WeekGrid() {
                   onClick={() => setShowPeriodTimesLocal(true)}
                 >
                   <Clock size={11} />
-                  時程表
+                  {t("weekGrid.periodTimes")}
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">
                 {semester?.periodTimes && Object.keys(semester.periodTimes).length > 0
-                  ? "時程表設定済（クリックで編集）"
-                  : "各コマの開始・終了時刻を設定（ICS書き出し用）"
+                  ? t("weekGrid.periodTimesSetTip")
+                  : t("weekGrid.periodTimesTip")
                 }
               </TooltipContent>
             </Tooltip>
@@ -681,20 +701,20 @@ export function WeekGrid() {
                   className="h-7 gap-1 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
                 >
                   <Bot size={11} />
-                  LLM読み取り
+                  {t("weekGrid.llmImport")}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel className="text-xs">画像から読み取る</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-xs">{t("weekGrid.readFromImage")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-xs gap-2" onClick={() => { setLlmImportMode("timetable"); setShowLLMImportLocal(true); }}>
-                  <FileJson size={12} className="text-blue-500" />時間割
+                  <FileJson size={12} className="text-blue-500" />{t("weekGrid.timetable")}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-xs gap-2" onClick={() => { setLlmImportMode("period_times"); setShowLLMImportLocal(true); }}>
-                  <Clock size={12} className="text-green-500" />時程表
+                  <Clock size={12} className="text-green-500" />{t("weekGrid.periodTimesShort")}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-xs gap-2" onClick={() => { setLlmImportMode("schedule"); setShowLLMImportLocal(true); }}>
-                  <CalendarDays size={12} className="text-amber-500" />年間予定表
+                  <CalendarDays size={12} className="text-amber-500" />{t("weekGrid.annualSchedule")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -711,11 +731,11 @@ export function WeekGrid() {
                     onClick={() => toggleWeekendDay(weekMondayStr, 'saturday')}
                   >
                     <CalendarPlus size={11} />
-                    土曜授業
+                    {t("weekGrid.saturdayClass")}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
-                  この週のみ土曜日を授業日として表示
+                  {t("weekGrid.saturdayClassTip")}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -732,11 +752,11 @@ export function WeekGrid() {
                     onClick={() => toggleWeekendDay(weekMondayStr, 'sunday')}
                   >
                     <CalendarPlus size={11} />
-                    日曜授業
+                    {t("weekGrid.sundayClass")}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
-                  この週のみ日曜日を授業日として表示
+                  {t("weekGrid.sundayClassTip")}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -747,15 +767,17 @@ export function WeekGrid() {
       {isLoaded && multiSelectMode && (
         <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-300">
           <CheckSquare size={14} className="text-amber-600 shrink-0" />
-          <span className="text-xs font-semibold text-amber-700">複数選択モード</span>
-          <span className="text-xs text-amber-600">— セルをタップで選択、Shift+クリックで範囲選択、Cmd/Ctrl+クリックで追加選択</span>
+          <span className="text-xs font-semibold text-amber-700">{t("weekGrid.multiSelectMode")}</span>
+          <span className="text-xs text-amber-600">- {t("weekGrid.multiSelectHelp")}</span>
           {selectedCells.size > 0 && (
-            <span className="ml-1 px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 text-[11px] font-bold">{selectedCells.size}コマ選択中</span>
+            <span className="ml-1 px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 text-[11px] font-bold">
+              {language === "ja" ? `${selectedCells.size}${t("weekGrid.selectedSlotsSuffix")}` : `${selectedCells.size} ${t("weekGrid.selectedSlotsSuffix")}`}
+            </span>
           )}
           <button
             onClick={() => setMultiSelectMode(false)}
             className="ml-auto text-xs text-amber-600 hover:text-amber-800 underline"
-          >解除</button>
+          >{t("weekGrid.release")}</button>
         </div>
       )}
 
@@ -769,10 +791,10 @@ export function WeekGrid() {
                 <button
                   onClick={() => navigateWeek(-1)}
                   className="w-full h-full flex flex-col items-center justify-center gap-0.5 py-2 hover:bg-accent rounded transition-colors group"
-                  title="前の週"
+                  title={t("weekGrid.previousWeek")}
                 >
                   <ChevronLeft size={14} className="text-muted-foreground group-hover:text-foreground" />
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground leading-none">前の週</span>
+                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground leading-none">{t("weekGrid.previousWeek")}</span>
                 </button>
               </th>
               {weekDates.map(date => {
@@ -791,7 +813,7 @@ export function WeekGrid() {
                   >
                     <div className="flex flex-col items-center gap-0.5">
                       <span className={cn("text-xs", isToday ? "text-amber-600 font-bold" : "text-muted-foreground")}>
-                        {formatDateJP(date)}
+                        {formatDisplayDate(date)}
                       </span>
                       {isToday && (
                         <span className="text-[9px] bg-amber-400 text-amber-900 rounded-full px-1.5 py-0.5 font-bold leading-none">
@@ -799,10 +821,10 @@ export function WeekGrid() {
                         </span>
                       )}
                       {!hasData && (
-                        <span className="text-[9px] text-muted-foreground/50">データなし</span>
+                        <span className="text-[9px] text-muted-foreground/50">{t("weekGrid.noData")}</span>
                       )}
                       {holidayDates.has(date) && (
-                        <span className="text-[9px] bg-red-100 text-red-500 rounded-full px-1.5 py-0.5 font-medium leading-none">{holidayNameMap.get(date) ?? '休校'}</span>
+                        <span className="text-[9px] bg-red-100 text-red-500 rounded-full px-1.5 py-0.5 font-medium leading-none">{holidayNameMap.get(date) ?? t("weekGrid.schoolClosed")}</span>
                       )}
                       {!holidayDates.has(date) && entryByDate.get(date)?.dayReason && (
                         <span
@@ -821,10 +843,10 @@ export function WeekGrid() {
                 <button
                   onClick={() => navigateWeek(1)}
                   className="w-full h-full flex flex-col items-center justify-center gap-0.5 py-2 hover:bg-accent rounded transition-colors group"
-                  title="次の週"
+                  title={t("weekGrid.nextWeek")}
                 >
                   <ChevronRight size={14} className="text-muted-foreground group-hover:text-foreground" />
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground leading-none">次の週</span>
+                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground leading-none">{t("weekGrid.nextWeek")}</span>
                 </button>
               </th>
             </tr>
@@ -835,7 +857,7 @@ export function WeekGrid() {
                 <td className="text-center text-xs text-muted-foreground font-medium py-1 pr-2 border-b border-border/50 w-14">
                   <div className="flex flex-col items-center">
                     <span className="font-bold text-foreground/60">{period}</span>
-                    <span className="text-[9px] text-muted-foreground/50">限</span>
+                    <span className="text-[9px] text-muted-foreground/50">{t("weekGrid.periodSuffix")}</span>
                   </div>
                 </td>
                 {weekDates.map(date => {
@@ -868,8 +890,8 @@ export function WeekGrid() {
 
                   // タッチドラッグ用のラベル計算
                   const touchLabel = (() => {
-                    if (showSubject && subjectFirst) return slot.subject ?? slot.class ?? "空き";
-                    return slot.class ?? slot.subject ?? "空き";
+                    if (showSubject && subjectFirst) return slot.subject ?? slot.class ?? t("weekGrid.empty");
+                    return slot.class ?? slot.subject ?? t("weekGrid.empty");
                   })();
                   const touchLabelSub = (() => {
                     if (showSubject && subjectFirst) return slot.class ?? undefined;
@@ -1035,7 +1057,7 @@ export function WeekGrid() {
 
       {/* Dynamic Legend */}
       <div className="mt-3 flex items-center flex-wrap gap-3 text-[10px] text-muted-foreground">
-        <span className="font-medium">凡例:</span>
+        <span className="font-medium">{t("weekGrid.legend")}</span>
         {/* Class-based legend (not shown in homeroom mode) */}
         {!isHomeroomMode && legendGrades.map(grade => {
           const c = gradeColors[grade];
@@ -1046,7 +1068,7 @@ export function WeekGrid() {
                 className="w-3 h-3 rounded border"
                 style={{ backgroundColor: c.bg, borderColor: c.border }}
               />
-              <span style={{ color: c.text }}>{grade}年</span>
+              <span style={{ color: c.text }}>{language === "ja" ? `${grade}${t("weekGrid.gradeSuffix")}` : `${t("weekGrid.gradeSuffix")} ${grade}`}</span>
             </div>
           );
         })}
@@ -1065,10 +1087,10 @@ export function WeekGrid() {
         })}
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded border bg-muted border-border" />
-          <span>空き</span>
+          <span>{t("weekGrid.empty")}</span>
         </div>
-        <span className="ml-2 text-muted-foreground/60 hidden sm:inline">ドラッグ＆ドロップで交換</span>
-        <span className="ml-2 text-muted-foreground/60 sm:hidden">長押しでドラッグ交換</span>
+        <span className="ml-2 text-muted-foreground/60 hidden sm:inline">{t("weekGrid.dragSwap")}</span>
+        <span className="ml-2 text-muted-foreground/60 sm:hidden">{t("weekGrid.longPressSwap")}</span>
       </div>
 
       {/* タッチドラッグゴースト */}
@@ -1104,7 +1126,7 @@ export function WeekGrid() {
           {touchDragOver && !(touchDragOver.date === touchDrag.srcDate && touchDragOver.period === touchDrag.srcPeriod) && (
             <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
               <span className="text-[10px] bg-blue-600 text-white rounded-full px-2 py-0.5 font-medium">
-                ↔ 交換
+                ↔ {t("weekGrid.swap")}
               </span>
             </div>
           )}
@@ -1130,8 +1152,19 @@ function TodayBanner({
   showSubject: boolean;
   isHomeroomMode: boolean;
 }) {
+  const { language, t } = useLanguage();
   const todayEntry = entries.find(e => e.date === today);
   if (!todayEntry) return null;
+  const displayDate = (() => {
+    const d = new Date(today + "T00:00:00");
+    if (language === "ja") {
+      const m = d.getMonth() + 1;
+      const day = d.getDate();
+      const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+      return `${m}/${day}（${weekdays[d.getDay()]}）`;
+    }
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", weekday: "short" });
+  })();
 
   const classes = todayEntry.periods.filter(p => p.class || p.subject).map(p => ({
     period: p.period,
@@ -1144,10 +1177,10 @@ function TodayBanner({
     <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
       <div className="flex items-center gap-2 mb-2">
         <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-        <span className="text-xs font-bold text-amber-700">本日の授業予定 — {formatDateJP(today)}</span>
+        <span className="text-xs font-bold text-amber-700">{t("weekGrid.todaySchedule")} - {displayDate}</span>
       </div>
       {classes.length === 0 ? (
-        <p className="text-xs text-amber-600/70">本日の授業はありません</p>
+        <p className="text-xs text-amber-600/70">{t("weekGrid.noTodayClasses")}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {classes.map(c => {
@@ -1165,7 +1198,9 @@ function TodayBanner({
                 className="flex items-center gap-1.5 border rounded-md px-2 py-1"
                 style={{ backgroundColor: color.bg, borderColor: color.border }}
               >
-                <span className="text-[10px] text-amber-600 font-bold">{c.period}限</span>
+                <span className="text-[10px] text-amber-600 font-bold">
+                  {language === "ja" ? `${c.period}${t("weekGrid.periodSuffix")}` : `${t("weekGrid.periodSuffix")} ${c.period}`}
+                </span>
                 <span className="text-xs font-medium" style={{ color: color.text }}>{displayLabel}</span>
                 {c.reason && (
                   <span className="text-[9px] text-muted-foreground bg-white/60 rounded px-1">{c.reason}</span>
