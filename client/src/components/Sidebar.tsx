@@ -6,8 +6,10 @@
 
 import { useRef, useState, useEffect } from "react";
 import {
+  AlertTriangle,
   BookOpen,
   CalendarDays,
+  Cookie,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -70,6 +72,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
   const {
     isLoggedIn,
     isRestoringLogin,
+    silentRestoreFailed,
     syncStatus,
     lastSyncedAt,
     syncError,
@@ -78,6 +81,8 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     backupError,
     login,
     logout,
+    relogin,
+    requestCookieAccess,
     syncToDrive,
     backupToMyDrive,
     loadFromDrive,
@@ -393,6 +398,35 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
               <Loader2 size={13} className="animate-spin" />
               ログイン状態を復元中...
             </div>
+          ) : silentRestoreFailed ? (
+            /* サイレントログイン失敗時: 再ログイン促進UI */
+            <div className="space-y-1.5">
+              <div className="flex items-start gap-2 px-2 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-amber-400">
+                <AlertTriangle size={11} className="shrink-0 mt-0.5" />
+                <p className="text-[10px] leading-relaxed">
+                  Googleログインが切れました。再ログインしてください。
+                </p>
+              </div>
+              <button
+                onClick={login}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                           bg-blue-600/20 hover:bg-blue-600/30 text-blue-400
+                           text-xs font-medium transition-colors duration-150 border border-blue-500/30"
+              >
+                <LogIn size={13} />
+                再ログイン
+              </button>
+              <button
+                onClick={requestCookieAccess}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                           bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground/60
+                           text-xs font-medium transition-colors duration-150 border border-sidebar-border"
+                title="サードパーティCookieの許可をブラウザに要求します"
+              >
+                <Cookie size={13} />
+                Cookie許可を要求
+              </button>
+            </div>
           ) : !isLoggedIn ? (
             /* 未ログイン時: ログインボタン */
             <button
@@ -433,6 +467,15 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                     Drive連携中
                   </span>
                 )}
+                {/* 再認証ボタン */}
+                <button
+                  onClick={relogin}
+                  className="flex items-center gap-1 text-[10px] text-sidebar-foreground/40 hover:text-blue-400 transition-colors"
+                  title="アカウントの権限を再確認します"
+                >
+                  <RefreshCw size={10} />
+                  再認証
+                </button>
                 {/* ログアウトボタン（右端） */}
                 <button
                   onClick={logout}

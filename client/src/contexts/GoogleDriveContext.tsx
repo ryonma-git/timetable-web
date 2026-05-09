@@ -27,6 +27,7 @@ import {
   listBackupFiles,
 } from "@/lib/googleDrive";
 import { serializeTimetableFile, deserializeTimetableFile } from "@/lib/timetableFile";
+import { toast } from "sonner";
 import type { TimetableFile } from "@/lib/timetableFile";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -50,6 +51,8 @@ export interface GoogleDriveContextValue {
   isLoggedIn: boolean;
   /** ページリロード後のサイレントログイン復元中フラグ */
   isRestoringLogin: boolean;
+  /** サイレントログイン復元が失敗したフラグ（手動再ログインが必要） */
+  silentRestoreFailed: boolean;
   /** 自動同期ステータス（appDataFolder） */
   syncStatus: SyncStatus;
   lastSyncedAt: Date | null;
@@ -59,6 +62,10 @@ export interface GoogleDriveContextValue {
   lastBackupAt: Date | null;
   backupError: string | null;
   login: () => void;
+  /** アカウント再同意（再認証）— 既ログイン時でも consent 画面を再表示 */
+  relogin: () => void;
+  /** サードパーティCookieの許可をブラウザに要求（Storage Access API） */
+  requestCookieAccess: () => Promise<boolean>;
   logout: () => void;
   /** 【自動同期】appDataFolderへアップロード */
   syncToDrive: (file: TimetableFile, allOps: unknown[]) => Promise<void>;
@@ -89,6 +96,7 @@ const LOGGED_IN_KEY = "gdrive_logged_in";
 export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isRestoringLogin, setIsRestoringLogin] = useState(() => localStorage.getItem("gdrive_logged_in") === "1");
+  const [silentRestoreFailed, setSilentRestoreFailed] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -109,6 +117,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
           if (token) {
             setIsLoggedIn(true);
             setIsRestoringLogin(false);
+            setSilentRestoreFailed(false);
             localStorage.setItem(LOGGED_IN_KEY, "1");
           }
         },
@@ -144,7 +153,24 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         requestAccessToken("");
         // isRestoringLogin will be cleared when token callback fires (setIsLoggedIn(true))
         // or after a timeout fallback
-        setTimeout(() => setIsRestoringLogin(false), 5000);
+        setTimeout(() => {
+          if (!isTokenValid()) {
+            setIsRestoringLogin(false);
+            setSilentRestoreFailed(true);
+            toast.warning(
+              "Googleログインが切れました。再ログインが必要です。",
+              {
+                duration: 8000,
+                action: {
+                  label: "再ログイン",
+                  onClick: () => requestAccessToken("consent"),
+                },
+              }
+            );
+          } else {
+            setIsRestoringLogin(false);
+          }
+        }, 5000);
       } catch {
         setIsRestoringLogin(false);
         // Ignore — user will need to log in manually
@@ -159,7 +185,32 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       setSyncError("Google認証が初期化されていません。ページを再読み込みしてください。");
       return;
     }
+    setSilentRestoreFailed(false);
     requestAccessToken("consent");
+  }, []);
+
+  // アカウント再同意（再認証）— 既ログイン時でも consent 画面を再表示
+  const relogin = useCallback(() => {
+    if (!gisReadyRef.current) return;
+    setSilentRestoreFailed(false);
+    requestAccessToken("consent");
+  }, []);
+
+  // Storage Access API でサードパーティCookieの許可をブラウザに要求
+  const requestCookieAccess = useCallback(async (): Promise<boolean> => {
+    try {
+      if (typeof document.requestStorageAccess === "function") {
+        await document.requestStorageAccess();
+        toast.success("Cookieへのアクセスが許可されました。再ログインをお試しください。");
+        return true;
+      } else {
+        toast.info("このブラウザはStorage Access APIに対応していません。ブラウザの設定でサードパーティCookieを許可してください。");
+        return false;
+      }
+    } catch {
+      toast.error("Cookieへのアクセスが拒否されました。ブラウザの設定でサードパーティCookieを許可してください。");
+      return false;
+    }
   }, []);
 
   const logout = useCallback(() => {
@@ -282,6 +333,9 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       value={{
         isLoggedIn,
         isRestoringLogin,
+        silentRestoreFailed,
+        relogin,
+        requestCookieAccess,
         syncStatus,
         lastSyncedAt,
         syncError,
