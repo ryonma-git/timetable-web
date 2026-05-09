@@ -273,6 +273,9 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
   const [deleteRangeStart, setDeleteRangeStart] = useState("");
   const [deleteRangeEnd, setDeleteRangeEnd] = useState("");
   const [showDeleteSection, setShowDeleteSection] = useState(false);
+  // プレビュートグル: ICS タブはデフォルト非表示、他はデフォルト表示
+  const [showPreview, setShowPreview] = useState<boolean | null>(null);
+  const isPreviewVisible = showPreview !== null ? showPreview : format !== "ics";
 
   const printRef = useRef<HTMLDivElement>(null);
   const today = todayISO();
@@ -469,6 +472,11 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
   }, [gcalCalendarLoaded, login]);
 
   // format=ics かつ ログイン済みになったタイミングで自動取得
+  // format 変更時にプレビュートグルをリセット（ICS はデフォルト非表示）
+  useEffect(() => {
+    setShowPreview(null);
+  }, [format]);
+
   useEffect(() => {
     if (format === "ics" && isLoggedIn && !gcalCalendarLoaded) {
       handleLoadCalendars();
@@ -791,8 +799,22 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
           </div>
         </div>
 
+        {/* Preview toggle button */}
+        <div className="px-5 py-2 border-t border-border/30 bg-muted/10 shrink-0 flex items-center justify-between">
+          <button
+            onClick={() => setShowPreview(v => v === null ? !(format !== "ics") : !v)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isPreviewVisible ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            プレビュー{isPreviewVisible ? "を非表示" : "を表示"}
+          </button>
+          {isPreviewVisible && (
+            <span className="text-xs text-muted-foreground">印刷イメージを確認できます</span>
+          )}
+        </div>
         {/* Preview area */}
-        <div className={format === "ics" ? "overflow-auto p-3 bg-gray-100 max-h-[160px] border-t border-border/30" : "flex-1 overflow-auto p-5 bg-gray-100"}>
+        {isPreviewVisible && (
+        <div className="flex-1 overflow-auto p-5 bg-gray-100">
           <div
             className={cn(
               "bg-white shadow-md mx-auto",
@@ -927,10 +949,11 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
             </div>
           </div>
         </div>
+        )}
 
         {/* ICS タブ選択時: Googleカレンダー追加エリア */}
         {format === "ics" && (
-          <div className="px-5 py-3 border-t border-border bg-muted/20 overflow-y-auto max-h-[40vh] space-y-2">
+          <div className="px-5 py-3 border-t border-border bg-muted/20 overflow-y-auto flex-1 space-y-3">
             <div className="flex items-center gap-2">
               <CalendarDays size={13} className="text-blue-400" />
               <span className="text-xs font-medium">Googleカレンダーに直接追加</span>
