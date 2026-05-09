@@ -653,16 +653,21 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
             </button>
             <button
               onClick={() => setShowExportDialog(true)}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]
-                         text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]\n                         text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
             >
               <FileText size={12} />
               PDF / PNG / Excel
             </button>
+            <button
+              onClick={() => setShowExportDialog(true)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]\n                         text-blue-400 hover:text-blue-300 hover:bg-sidebar-accent transition-colors font-medium"
+            >
+              <CalendarDays size={12} />
+              Googleカレンダー連携
+            </button>
           </div>
         </div>
       )}
-
       {showExportDialog && (
         <ExportDialog open={showExportDialog} onClose={() => setShowExportDialog(false)} />
       )}

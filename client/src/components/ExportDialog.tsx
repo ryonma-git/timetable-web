@@ -3,7 +3,7 @@
 // エクスポートダイアログ: Excel / PDF（印刷ウィンドウ）/ PNG（印刷ウィンドウ）
 // PDF/PNGは新しいウィンドウで印刷ダイアログを開く方式（軽量・確実）
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 import { getClassColor } from "@/lib/gradeColors";
@@ -38,10 +38,13 @@ import { insertCalendarEvents, listCalendars, isTokenValid, type CalendarEvent }
 type RangeMode = "single" | "month" | "semester" | "from_today_n" | "from_today_all";
 type ExportFormat = "excel" | "pdf" | "ics";
 
+type GCalSummaryFormat = "subject_class" | "class_subject" | "subject_only" | "class_only";
+
 interface GCalProgress {
   done: number;
   total: number;
   inserted: number;
+  updated: number;
   errors: number;
   status: "idle" | "running" | "done" | "error";
 }
@@ -239,9 +242,10 @@ export function ExportDialog({ open, onClose }: Props) {
   const [showEmptyCells, setShowEmptyCells] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [gcalProgress, setGcalProgress] = useState<GCalProgress>({
-    done: 0, total: 0, inserted: 0, errors: 0, status: "idle",
+    done: 0, total: 0, inserted: 0, updated: 0, errors: 0, status: "idle",
   });
-  const [gcalCalendars, setGcalCalendars] = useState<{ id: string; summary: string; primary?: boolean }[]>([]);
+  const [gcalSummaryFormat, setGcalSummaryFormat] = useState<GCalSummaryFormat>("class_subject");
+  const [gcalCalendars, setGcalCalendars] = useState<{ id: string; summary: string; primary?: boolean; backgroundColor?: string }[]>([]);
   const [gcalCalendarId, setGcalCalendarId] = useState("primary");
   const [gcalCalendarLoaded, setGcalCalendarLoaded] = useState(false);
 
@@ -412,6 +416,13 @@ export function ExportDialog({ open, onClose }: Props) {
     } catch { /* ignore */ }
   }, [gcalCalendarLoaded, login]);
 
+  // format=ics かつ ログイン済みになったタイミングで自動取得
+  useEffect(() => {
+    if (format === "ics" && isLoggedIn && !gcalCalendarLoaded) {
+      handleLoadCalendars();
+    }
+  }, [format, isLoggedIn, gcalCalendarLoaded, handleLoadCalendars]);
+
   const handleExportGCal = useCallback(async () => {
     if (!semester) return;
     if (!isTokenValid()) { login(); return; }
@@ -443,13 +454,25 @@ export function ExportDialog({ open, onClose }: Props) {
         if (!period.class && !period.subject) continue;
         const className = period.class ?? "";
         const subjectName = period.subject ?? "";
-        let summary = subjectName && className ? `${subjectName}（${className}）` : subjectName || className;
-        if (school) summary = `[${school}] ${summary}`;
-        const descParts = [`${period.period}限`];
+        let summary: string;
+        switch (gcalSummaryFormat) {
+          case "class_subject": summary = className && subjectName ? `${className} ${subjectName}` : className || subjectName; break;
+          case "subject_class": summary = subjectName && className ? `${subjectName} ${className}` : subjectName || className; break;
+          case "subject_only": summary = subjectName || className; break;
+          case "class_only": summary = className || subjectName; break;
+          default: summary = className || subjectName;
+        }
+        const descParts: string[] = [];
+        if (school) descParts.push(`学校: ${school}`);
+        descParts.push(`${period.period}限`);
+        if (subjectName) descParts.push(`教科: ${subjectName}`);
+        if (className) descParts.push(`クラス: ${className}`);
         if (period.reason) descParts.push(`備考: ${period.reason}`);
+        // 重複防止UID: 日付+時限+クラスの組み合わせ
+        const uid = `timetable-${entry.date}-p${period.period}-${(className || subjectName).replace(/[^a-zA-Z0-9぀-鿿]/g, "")}`;
         const timeSlot = getPeriodTime(entry.date, period.period);
         if (timeSlot) {
-          events.push({ summary, description: descParts.join("\n"),
+          events.push({ summary, description: descParts.join("\n"), uid,
             start: { dateTime: toRFC3339(entry.date, timeSlot.start), timeZone: "Asia/Tokyo" },
             end: { dateTime: toRFC3339(entry.date, timeSlot.end), timeZone: "Asia/Tokyo" },
           });
@@ -457,23 +480,23 @@ export function ExportDialog({ open, onClose }: Props) {
           const d = new Date(entry.date + "T00:00:00");
           d.setDate(d.getDate() + 1);
           const nextDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-          events.push({ summary, description: descParts.join("\n"),
+          events.push({ summary, description: descParts.join("\n"), uid,
             start: { date: entry.date }, end: { date: nextDay },
           });
         }
       }
     }
     if (events.length === 0) return;
-    setGcalProgress({ done: 0, total: events.length, inserted: 0, errors: 0, status: "running" });
+    setGcalProgress({ done: 0, total: events.length, inserted: 0, updated: 0, errors: 0, status: "running" });
     try {
       const result = await insertCalendarEvents(events, gcalCalendarId, (done, total) => {
         setGcalProgress(prev => ({ ...prev, done, total }));
       });
-      setGcalProgress(prev => ({ ...prev, inserted: result.inserted, errors: result.errors, status: "done" }));
+      setGcalProgress(prev => ({ ...prev, inserted: result.inserted, updated: result.updated, errors: result.errors, status: "done" }));
     } catch {
       setGcalProgress(prev => ({ ...prev, status: "error" }));
     }
-  }, [weeksToPrint, semester, effectiveEntries, currentFile, gcalCalendarId, login]);
+  }, [weeksToPrint, semester, effectiveEntries, currentFile, gcalCalendarId, gcalSummaryFormat, login]);
 
   // ── Export: ICS ───────────────────────────────────────────
   const handleExportICS = useCallback(async () => {
@@ -830,20 +853,49 @@ export function ExportDialog({ open, onClose }: Props) {
               </div>
             ) : (
               <div className="space-y-2">
-                {/* カレンダー選択 */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">追加先:</span>
-                  <select
-                    value={gcalCalendarId}
-                    onChange={e => setGcalCalendarId(e.target.value)}
-                    onFocus={handleLoadCalendars}
-                    className="text-xs bg-background border border-border rounded px-2 py-1 text-foreground flex-1 max-w-[280px]"
-                  >
-                    <option value="primary">メインカレンダー</option>
-                    {gcalCalendars.filter(c => c.id !== "primary").map(c => (
-                      <option key={c.id} value={c.id}>{c.summary}</option>
-                    ))}
-                  </select>
+                {/* イベント名形式 + カレンダー選択 + 追加ボタン */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* イベント名形式 */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-xs text-muted-foreground">表示形式:</span>
+                    <select
+                      value={gcalSummaryFormat}
+                      onChange={e => setGcalSummaryFormat(e.target.value as GCalSummaryFormat)}
+                      className="text-xs bg-background border border-border rounded px-2 py-1 text-foreground"
+                    >
+                      <option value="class_subject">クラス 教科（例: 5年3組 英語）</option>
+                      <option value="subject_class">教科 クラス（例: 英語 5年3組）</option>
+                      <option value="subject_only">教科のみ（例: 英語）</option>
+                      <option value="class_only">クラスのみ（例: 5年3組）</option>
+                    </select>
+                  </div>
+                  {/* カレンダー選択 */}
+                  <div className="flex items-center gap-1.5 flex-1 min-w-[180px]">
+                    <span className="text-xs text-muted-foreground shrink-0">追加先:</span>
+                    <select
+                      value={gcalCalendarId}
+                      onChange={e => setGcalCalendarId(e.target.value)}
+                      onFocus={handleLoadCalendars}
+                      className="text-xs bg-background border border-border rounded px-2 py-1 text-foreground flex-1 max-w-[240px]"
+                    >
+                      <option value="primary">メインカレンダー</option>
+                      {gcalCalendars.filter(c => c.id !== "primary").map(c => (
+                        <option key={c.id} value={c.id}>{c.summary}</option>
+                      ))}
+                    </select>
+                    {/* カレンダー色ドット */}
+                    {(() => {
+                      const cal = gcalCalendars.find(c => c.id === gcalCalendarId);
+                      const color = cal?.backgroundColor ?? (gcalCalendarId === "primary" ? "#4285F4" : undefined);
+                      return color ? (
+                        <span
+                          className="inline-block w-3 h-3 rounded-full shrink-0 border border-white/20"
+                          style={{ backgroundColor: color }}
+                        />
+                      ) : null;
+                    })()}
+                  </div>
+                  {/* 追加ボタン */}
                   <Button
                     size="sm"
                     onClick={handleExportGCal}
@@ -873,9 +925,13 @@ export function ExportDialog({ open, onClose }: Props) {
                   </div>
                 )}
                 {gcalProgress.status === "done" && (
-                  <div className="flex items-center gap-1.5 text-xs text-green-500">
-                    <CheckCircle2 size={12} />
-                    {gcalProgress.inserted}件追加完了
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                    <span className="flex items-center gap-1 text-green-500">
+                      <CheckCircle2 size={12} />
+                      {gcalProgress.inserted > 0 && `新規 ${gcalProgress.inserted}件`}
+                      {gcalProgress.updated > 0 && `${gcalProgress.inserted > 0 ? " / " : ""}更新 ${gcalProgress.updated}件`}
+                      {gcalProgress.inserted === 0 && gcalProgress.updated === 0 && "完了"}
+                    </span>
                     {gcalProgress.errors > 0 && (
                       <span className="text-amber-400">(エラー: {gcalProgress.errors}件)</span>
                     )}
@@ -883,16 +939,30 @@ export function ExportDialog({ open, onClose }: Props) {
                       href="https://calendar.google.com"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-1 flex items-center gap-0.5 text-blue-400 hover:underline"
+                      className="flex items-center gap-0.5 text-blue-400 hover:underline"
                     >
                       Googleカレンダーを開く <ExternalLink size={10} />
                     </a>
+                    <button
+                      onClick={() => setGcalProgress(prev => ({ ...prev, status: "idle", done: 0, total: 0, inserted: 0, updated: 0, errors: 0 }))}
+                      className="text-muted-foreground hover:text-foreground underline"
+                    >
+                      もう一度追加
+                    </button>
                   </div>
                 )}
                 {gcalProgress.status === "error" && (
-                  <div className="flex items-center gap-1.5 text-xs text-red-400">
-                    <AlertCircle size={12} />
-                    追加に失敗しました。トークンが切れている場合は再ログインしてください。
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="flex items-center gap-1 text-red-400">
+                      <AlertCircle size={12} />
+                      追加に失敗しました。トークンが切れている場合は再ログインしてください。
+                    </span>
+                    <button
+                      onClick={() => setGcalProgress(prev => ({ ...prev, status: "idle" }))}
+                      className="text-muted-foreground hover:text-foreground underline"
+                    >
+                      再試行
+                    </button>
                   </div>
                 )}
               </div>

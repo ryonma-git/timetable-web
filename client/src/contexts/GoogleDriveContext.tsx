@@ -93,6 +93,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const [lastBackupAt, setLastBackupAt] = useState<Date | null>(null);
   const [backupError, setBackupError] = useState<string | null>(null);
   const gisReadyRef = useRef(false);
+  const [gisReady, setGisReady] = useState(false);
 
   // Initialize GIS when the script is loaded
   useEffect(() => {
@@ -113,6 +114,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         }
       );
       gisReadyRef.current = true;
+      setGisReady(true);
       return true;
     };
 
@@ -129,17 +131,17 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
 
   // Auto-restore login state: if user was logged in before, silently request token
   useEffect(() => {
-    if (!gisReadyRef.current) return;
+    if (!gisReady) return;
     const wasLoggedIn = localStorage.getItem(LOGGED_IN_KEY) === "1";
     if (wasLoggedIn && !isTokenValid()) {
-      // Silent token refresh (no popup)
+      // Silent token refresh (no popup — GIS will reuse existing consent)
       try {
         requestAccessToken("");
       } catch {
         // Ignore — user will need to log in manually
       }
     }
-  }, [gisReadyRef.current]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gisReady]); // runs once when GIS is ready
 
   const login = useCallback(() => {
     if (!gisReadyRef.current) {

@@ -386,16 +386,62 @@ export interface CalendarEvent {
   start: { dateTime?: string; date?: string; timeZone?: string };
   end: { dateTime?: string; date?: string; timeZone?: string };
   colorId?: string;
+  /** 重複防止用のUID */
+  uid?: string;
 }
 
 export interface CalendarInsertResult {
   inserted: number;
+  updated: number;
   errors: number;
   calendarId: string;
 }
 
 /**
  * Googleカレンダーに複数イベントを追加する。
+ * 進捗コールバック付き。
+ */
+/**
+ * 既存のtimetableUidを持つイベントを検索して返す\uff08重複防止用\uff09
+ */
+async function fetchExistingUids(
+  calendarId: string,
+  token: string,
+  timeMin: string,
+  timeMax: string
+): Promise<Map<string, string>> {
+  const uidToEventId = new Map<string, string>();
+  let pageToken: string | undefined;
+  do {
+    const params = new URLSearchParams({
+      privateExtendedProperty: "timetableApp=1",
+      timeMin,
+      timeMax,
+      maxResults: "2500",
+      singleEvents: "true",
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+    const res = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) break;
+    const data = await res.json() as {
+      items: { id: string; extendedProperties?: { private?: { timetableUid?: string } } }[];
+      nextPageToken?: string;
+    };
+    for (const item of data.items ?? []) {
+      const uid = item.extendedProperties?.private?.timetableUid;
+      if (uid) uidToEventId.set(uid, item.id);
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+  return uidToEventId;
+}
+
+/**
+ * Googleカレンダーに複数イベントを追加する。
+ * UID が一致する既存イベントがあれば更新\uff08重複防止\uff09。
  * 進捗コールバック付き。
  */
 export async function insertCalendarEvents(
@@ -405,40 +451,71 @@ export async function insertCalendarEvents(
 ): Promise<CalendarInsertResult> {
   const token = getAccessToken();
   if (!token) throw new Error("アクセストークンがありません。再ログインしてください。");
-
   let inserted = 0;
+  let updated = 0;
   let errors = 0;
 
+  // 重複チェック: イベントの日付範囲を計算
+  const allDates = events.flatMap(e => [
+    e.start.date ?? e.start.dateTime?.slice(0, 10) ?? "",
+    e.end.date ?? e.end.dateTime?.slice(0, 10) ?? "",
+  ]).filter(Boolean);
+  const timeMin = allDates.length > 0
+    ? `${allDates.reduce((a, b) => a < b ? a : b)}T00:00:00+09:00`
+    : new Date().toISOString();
+  const timeMax = allDates.length > 0
+    ? `${allDates.reduce((a, b) => a > b ? a : b)}T23:59:59+09:00`
+    : new Date(Date.now() + 86400000 * 365).toISOString();
+
+  // 既存UIDマップを取得
+  const existingUids = await fetchExistingUids(calendarId, token, timeMin, timeMax);
+
   for (let i = 0; i < events.length; i++) {
-    const event = events[i];
+    const { uid, ...eventWithoutUid } = events[i];
+    const existingId = uid ? existingUids.get(uid) : undefined;
+
+    const eventBody = {
+      ...eventWithoutUid,
+      extendedProperties: {
+        private: {
+          timetableApp: "1",
+          ...(uid ? { timetableUid: uid } : {}),
+        },
+      },
+    };
+
     try {
-      const res = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(event),
-        }
-      );
-      if (res.ok) {
-        inserted++;
+      let res: Response;
+      if (existingId) {
+        res = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${existingId}`,
+          {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(eventBody),
+          }
+        );
+        if (res.ok) updated++; else errors++;
       } else {
-        errors++;
+        res = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(eventBody),
+          }
+        );
+        if (res.ok) inserted++; else errors++;
       }
     } catch {
       errors++;
     }
     onProgress?.(i + 1, events.length);
-    // Rate limiting: small delay between requests
     if (i < events.length - 1) {
       await new Promise(r => setTimeout(r, 60));
     }
   }
-
-  return { inserted, errors, calendarId };
+  return { inserted, updated, errors, calendarId };
 }
 
 /**
