@@ -31,7 +31,7 @@ import { exportTimetableExcel } from "@/lib/exportUtils";
 import { exportTimetablePdf } from "@/lib/timetablePdfExport";
 import { exportToICS, downloadICS } from "@/lib/icsExport";
 import { useGoogleDrive } from "@/contexts/GoogleDriveContext";
-import { insertCalendarEvents, listCalendars, isTokenValid, deleteCalendarEvents, type CalendarEvent } from "@/lib/googleDrive";
+import { insertCalendarEvents, listCalendars, isTokenValid, deleteCalendarEvents, deleteCalendarEventsInRange, type CalendarEvent } from "@/lib/googleDrive";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -265,6 +265,9 @@ export function ExportDialog({ open, onClose, initialTab }: Props) {
     done: 0, total: 0, deleted: 0, errors: 0, status: "idle",
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<"tagged" | "range">("tagged");
+  const [deleteRangeStart, setDeleteRangeStart] = useState("");
+  const [deleteRangeEnd, setDeleteRangeEnd] = useState("");
 
   const printRef = useRef<HTMLDivElement>(null);
   const today = todayISO();
@@ -546,17 +549,31 @@ export function ExportDialog({ open, onClose, initialTab }: Props) {
     setShowDeleteConfirm(false);
     setGcalDeleteProgress({ done: 0, total: 0, deleted: 0, errors: 0, status: "running" });
     try {
-      const result = await deleteCalendarEvents(
-        gcalCalendarId,
-        undefined,
-        undefined,
-        (done, total) => setGcalDeleteProgress(prev => ({ ...prev, done, total }))
-      );
+      let result;
+      if (deleteMode === "range") {
+        // 期間指定削除（タグなし旧イベントも含む）
+        const tMin = new Date(deleteRangeStart + "T00:00:00").toISOString();
+        const tMax = new Date(deleteRangeEnd + "T23:59:59").toISOString();
+        result = await deleteCalendarEventsInRange(
+          gcalCalendarId,
+          tMin,
+          tMax,
+          (done, total) => setGcalDeleteProgress(prev => ({ ...prev, done, total }))
+        );
+      } else {
+        // タグ付きイベントのみ削除
+        result = await deleteCalendarEvents(
+          gcalCalendarId,
+          undefined,
+          undefined,
+          (done, total) => setGcalDeleteProgress(prev => ({ ...prev, done, total }))
+        );
+      }
       setGcalDeleteProgress(prev => ({ ...prev, deleted: result.deleted, errors: result.errors, status: "done" }));
     } catch {
       setGcalDeleteProgress(prev => ({ ...prev, status: "error" }));
     }
-  }, [gcalCalendarId, login]);
+  }, [gcalCalendarId, deleteMode, deleteRangeStart, deleteRangeEnd, login]);
 
   // ── Dispatch export ─────────────────────────────────────
   const handleExport = useCallback(async () => {
@@ -1002,50 +1019,157 @@ export function ExportDialog({ open, onClose, initialTab }: Props) {
                   </div>
                 )}
                 {/* 削除セクション */}
-                <div className="border-t border-border/50 pt-2 mt-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-muted-foreground">「カレンダーに追加」したイベントを一括削除:</span>
-                  {!showDeleteConfirm ? (
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      disabled={gcalDeleteProgress.status === "running"}
-                      className="text-xs text-red-400 hover:text-red-300 underline disabled:opacity-50"
-                    >
-                      カレンダーから削除...
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-red-400">「{gcalCalendars.find(c => c.id === gcalCalendarId)?.summary ?? "メインカレンダー"}」の時間割イベントを全削除します。本当によろしいですか？</span>
-                      <Button size="sm" variant="destructive" onClick={handleDeleteGCal} className="h-6 text-xs px-2">削除する</Button>
-                      <button onClick={() => setShowDeleteConfirm(false)} className="text-xs text-muted-foreground hover:text-foreground underline">キャンセル</button>
+                <div className="border-t border-border/50 pt-3 mt-2 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <AlertCircle size={12} className="text-red-400 shrink-0" />
+                    <span className="text-xs font-medium text-red-400">Googleカレンダーからイベントを削除</span>
+                  </div>
+
+                  {/* モード選択 */}
+                  {gcalDeleteProgress.status === "idle" && !showDeleteConfirm && (
+                    <div className="space-y-1.5">
+                      <label className="flex items-start gap-2 cursor-pointer group">
+                        <input
+                          type="radio"
+                          name="deleteMode"
+                          value="tagged"
+                          checked={deleteMode === "tagged"}
+                          onChange={() => setDeleteMode("tagged")}
+                          className="mt-0.5 accent-red-500"
+                        />
+                        <div>
+                          <span className="text-xs font-medium">このアプリで追加したイベントのみ削除</span>
+                          <p className="text-xs text-muted-foreground">「カレンダーに追加」ボタンで追加したイベントを削除します。他のイベントには影響しません。</p>
+                        </div>
+                      </label>
+                      <label className="flex items-start gap-2 cursor-pointer group">
+                        <input
+                          type="radio"
+                          name="deleteMode"
+                          value="range"
+                          checked={deleteMode === "range"}
+                          onChange={() => setDeleteMode("range")}
+                          className="mt-0.5 accent-red-500"
+                        />
+                        <div className="flex-1">
+                          <span className="text-xs font-medium">期間を指定してすべて削除</span>
+                          <p className="text-xs text-muted-foreground">⚠️ 旧バージョンで追加したイベントも含め、指定期間内の<strong>すべてのイベント</strong>を削除します。他のイベントも削除されます。</p>
+                          {deleteMode === "range" && (
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <input
+                                type="date"
+                                value={deleteRangeStart}
+                                onChange={e => setDeleteRangeStart(e.target.value)}
+                                className="text-xs bg-background border border-border rounded px-2 py-1 text-foreground"
+                              />
+                              <span className="text-xs text-muted-foreground">〜</span>
+                              <input
+                                type="date"
+                                value={deleteRangeEnd}
+                                onChange={e => setDeleteRangeEnd(e.target.value)}
+                                className="text-xs bg-background border border-border rounded px-2 py-1 text-foreground"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </label>
                     </div>
                   )}
-                </div>
-                {gcalDeleteProgress.status === "running" && (
-                  <div className="mt-1 space-y-1">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Loader2 size={11} className="animate-spin" />削除中...</span>
-                      <span className="font-mono">{gcalDeleteProgress.done} / {gcalDeleteProgress.total > 0 ? gcalDeleteProgress.total : "?"} 件</span>
-                    </div>
-                    {gcalDeleteProgress.total > 0 && (
-                      <div className="w-full bg-muted rounded-full h-1.5">
-                        <div className="bg-red-500 h-1.5 rounded-full transition-all duration-300" style={{ width: `${(gcalDeleteProgress.done / gcalDeleteProgress.total) * 100}%` }} />
+
+                  {/* 削除ボタン（idle時） */}
+                  {gcalDeleteProgress.status === "idle" && !showDeleteConfirm && (
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      disabled={deleteMode === "range" && (!deleteRangeStart || !deleteRangeEnd)}
+                      className="text-xs text-red-400 hover:text-red-300 underline disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      削除を実行する...
+                    </button>
+                  )}
+
+                  {/* 確認ステップ */}
+                  {showDeleteConfirm && gcalDeleteProgress.status === "idle" && (
+                    <div className="rounded border border-red-500/40 bg-red-500/5 p-3 space-y-2">
+                      <div className="flex items-start gap-1.5">
+                        <AlertCircle size={13} className="text-red-400 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold text-red-400">本当に削除しますか？この操作は元に戻せません。</p>
+                          {deleteMode === "tagged" ? (
+                            <p className="text-xs text-muted-foreground">
+                              対象カレンダー：<strong>「{gcalCalendars.find(c => c.id === gcalCalendarId)?.summary ?? "メインカレンダー"}」</strong><br />
+                              このアプリで追加したすべての時間割イベントを削除します。
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              対象カレンダー：<strong>「{gcalCalendars.find(c => c.id === gcalCalendarId)?.summary ?? "メインカレンダー"}」</strong><br />
+                              期間：<strong>{deleteRangeStart} 〜 {deleteRangeEnd}</strong><br />
+                              ⚠️ この期間内の<strong>すべてのイベント</strong>（他のイベントも含む）が削除されます。
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
-                {gcalDeleteProgress.status === "done" && (
-                  <div className="flex items-center gap-2 text-xs mt-1">
-                    <span className="flex items-center gap-1 text-green-500"><CheckCircle2 size={12} />{gcalDeleteProgress.deleted}件削除完了{gcalDeleteProgress.errors > 0 && `（エラー: ${gcalDeleteProgress.errors}件）`}</span>
-                    <button onClick={() => setGcalDeleteProgress(prev => ({ ...prev, status: "idle" }))} className="text-muted-foreground hover:text-foreground underline">閉じる</button>
-                  </div>
-                )}
-                {gcalDeleteProgress.status === "error" && (
-                  <div className="flex items-center gap-2 text-xs mt-1">
-                    <span className="flex items-center gap-1 text-red-400"><AlertCircle size={12} />削除に失敗しました。</span>
-                    <button onClick={() => setGcalDeleteProgress(prev => ({ ...prev, status: "idle" }))} className="text-muted-foreground hover:text-foreground underline">閉じる</button>
-                  </div>
-                )}
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="destructive" onClick={handleDeleteGCal} className="h-7 text-xs px-3 gap-1">
+                          <AlertCircle size={11} />
+                          削除する
+                        </Button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(false)}
+                          className="text-xs text-muted-foreground hover:text-foreground underline"
+                        >
+                          キャンセル
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 進捗 */}
+                  {gcalDeleteProgress.status === "running" && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Loader2 size={11} className="animate-spin" />削除中... 中断しないでください</span>
+                        <span className="font-mono">{gcalDeleteProgress.done} / {gcalDeleteProgress.total > 0 ? gcalDeleteProgress.total : "?"} 件</span>
+                      </div>
+                      {gcalDeleteProgress.total > 0 && (
+                        <div className="w-full bg-muted rounded-full h-1.5">
+                          <div className="bg-red-500 h-1.5 rounded-full transition-all duration-300" style={{ width: `${(gcalDeleteProgress.done / gcalDeleteProgress.total) * 100}%` }} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 完了 */}
+                  {gcalDeleteProgress.status === "done" && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="flex items-center gap-1 text-green-500">
+                        <CheckCircle2 size={12} />
+                        {gcalDeleteProgress.deleted}件削除完了
+                        {gcalDeleteProgress.errors > 0 && `（エラー: ${gcalDeleteProgress.errors}件）`}
+                      </span>
+                      <button
+                        onClick={() => { setGcalDeleteProgress(prev => ({ ...prev, status: "idle" })); setShowDeleteConfirm(false); }}
+                        className="text-muted-foreground hover:text-foreground underline"
+                      >
+                        閉じる
+                      </button>
+                    </div>
+                  )}
+
+                  {/* エラー */}
+                  {gcalDeleteProgress.status === "error" && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="flex items-center gap-1 text-red-400">
+                        <AlertCircle size={12} />
+                        削除に失敗しました。トークンが切れている場合は再ログインしてください。
+                      </span>
+                      <button
+                        onClick={() => { setGcalDeleteProgress(prev => ({ ...prev, status: "idle" })); setShowDeleteConfirm(false); }}
+                        className="text-muted-foreground hover:text-foreground underline"
+                      >
+                        閉じる
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
