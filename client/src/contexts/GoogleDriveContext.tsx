@@ -16,6 +16,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  GOOGLE_CLIENT_ID,
   initGoogleAuth,
   requestAccessToken,
   revokeToken,
@@ -105,16 +106,26 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const [backupError, setBackupError] = useState<string | null>(null);
   const gisReadyRef = useRef(false);
   const [gisReady, setGisReady] = useState(false);
+  const tokenRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize GIS when the script is loaded
   useEffect(() => {
     const tryInit = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const gis = (window as any).google as { accounts?: unknown } | undefined;
+      const gis = (window as any).google as { accounts?: { oauth2?: unknown; id?: unknown } } | undefined;
       if (!gis?.accounts) return false;
+
       initGoogleAuth(
         (token) => {
           if (token) {
+            // Clear previous auto-refresh timer and set a new one for 55 min
+            if (tokenRefreshTimerRef.current) {
+              clearTimeout(tokenRefreshTimerRef.current);
+            }
+            tokenRefreshTimerRef.current = setTimeout(() => {
+              requestAccessToken("");
+            }, 55 * 60 * 1000);
+
             setIsLoggedIn(true);
             setIsRestoringLogin(false);
             setSilentRestoreFailed(false);
@@ -126,6 +137,23 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
           setSyncError(err);
         }
       );
+
+      // Google One Tap — HTTPS only (no-op on localhost)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const gisId = (gis.accounts as any)?.id as { initialize: Function; prompt: Function } | undefined;
+      if (gisId) {
+        gisId.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: (_response: { credential: string }) => {
+            // One Tap established a session; silently request an access token
+            requestAccessToken("");
+          },
+          auto_select: true,
+          cancel_on_tap_outside: false,
+        });
+        gisId.prompt();
+      }
+
       gisReadyRef.current = true;
       setGisReady(true);
       return true;
@@ -214,6 +242,10 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    if (tokenRefreshTimerRef.current) {
+      clearTimeout(tokenRefreshTimerRef.current);
+      tokenRefreshTimerRef.current = null;
+    }
     revokeToken();
     setIsLoggedIn(false);
     setSyncStatus("idle");
