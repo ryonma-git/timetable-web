@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { X, FileText, FileSpreadsheet, Loader2, CalendarDays, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
+import { X, FileText, FileSpreadsheet, Loader2, CalendarDays, CheckCircle2, AlertCircle, ExternalLink, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportTimetableExcel } from "@/lib/exportUtils";
 import { exportTimetablePdf } from "@/lib/timetablePdfExport";
@@ -36,7 +36,7 @@ import { insertCalendarEvents, listCalendars, isTokenValid, deleteCalendarEvents
 // ─── Types ────────────────────────────────────────────────────
 
 type RangeMode = "single" | "month" | "semester" | "from_today_n" | "from_today_all";
-type ExportFormat = "excel" | "pdf" | "png" | "ics";
+type ExportFormat = "excel" | "pdf" | "png" | "ics" | "raw";
 
 type GCalSummaryFormat = "subject_class" | "class_subject" | "subject_only" | "class_only";
 
@@ -61,6 +61,9 @@ interface Props {
   open: boolean;
   onClose: () => void;
   initialTab?: ExportFormat;
+  exportCSV?: () => void;
+  exportEffective?: () => void;
+  exportOverride?: () => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -229,7 +232,7 @@ ${isPng ? `<script>
 
 // ─── Component ───────────────────────────────────────────────
 
-export function ExportDialog({ open, onClose, initialTab }: Props) {
+export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffective, exportOverride }: Props) {
   const {
     effectiveEntries,
     semester,
@@ -580,12 +583,14 @@ export function ExportDialog({ open, onClose, initialTab }: Props) {
     if (format === "excel") await handleExportExcel();
     else if (format === "pdf") await handleExportPdf();
     else if (format === "ics") await handleExportICS();
+    // raw タブは個別ボタンで操作するためここでは何もしない
   }, [format, handleExportExcel, handleExportPdf, handleExportICS]);
 
   const formatButtons: { value: ExportFormat; label: string; icon: React.ReactNode; desc: string }[] = [
     { value: "excel", label: "Excel", icon: <FileSpreadsheet size={12} />, desc: ".xlsx形式でダウンロード" },
     { value: "pdf", label: "PDF", icon: <FileText size={12} />, desc: ".pdf形式でダウンロード（日本語フォント埋め込み）" },
-    { value: "ics", label: "ICS / Googleカレンダー", icon: <CalendarDays size={12} />, desc: ".icsダウンロード または Googleカレンダーに直接追加" },
+    { value: "ics", label: "ICS / Google連携", icon: <CalendarDays size={12} />, desc: ".icsダウンロード または Googleカレンダーに直接追加" },
+    { value: "raw", label: "生データ", icon: <Database size={12} />, desc: "CSV / JSON形式で書き出し" },
   ];
 
   return (
@@ -891,7 +896,7 @@ export function ExportDialog({ open, onClose, initialTab }: Props) {
 
         {/* ICS タブ選択時: Googleカレンダー追加エリア */}
         {format === "ics" && (
-          <div className="px-5 py-3 border-t border-border bg-muted/20 shrink-0 space-y-2">
+          <div className="px-5 py-3 border-t border-border bg-muted/20 overflow-y-auto max-h-[40vh] space-y-2">
             <div className="flex items-center gap-2">
               <CalendarDays size={13} className="text-blue-400" />
               <span className="text-xs font-medium">Googleカレンダーに直接追加</span>
@@ -1176,6 +1181,30 @@ export function ExportDialog({ open, onClose, initialTab }: Props) {
           </div>
         )}
 
+        {/* 生データ タブ選択時 */}
+        {format === "raw" && (
+          <div className="px-5 py-4 border-t border-border bg-muted/20 space-y-3">
+            <div className="flex items-center gap-2">
+              <Database size={13} className="text-muted-foreground" />
+              <span className="text-xs font-medium">生データ書き出し</span>
+            </div>
+            <p className="text-xs text-muted-foreground">時間割データをそのままファイルとして書き出します。バックアップや他ツールとの連携に使用できます。</p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={exportCSV} className="h-7 text-xs gap-1.5">
+                <span className="font-mono text-muted-foreground text-[10px]">.csv</span>
+                CSV形式でダウンロード
+              </Button>
+              <Button size="sm" variant="outline" onClick={exportEffective} className="h-7 text-xs gap-1.5">
+                <span className="font-mono text-muted-foreground text-[10px]">.json</span>
+                確定データ（JSON）
+              </Button>
+              <Button size="sm" variant="outline" onClick={exportOverride} className="h-7 text-xs gap-1.5">
+                <span className="font-mono text-muted-foreground text-[10px]">.json</span>
+                変更履歴（JSON）
+              </Button>
+            </div>
+          </div>
+        )}
         {/* Footer */}
         <div className="px-5 py-3 border-t border-border bg-background shrink-0 flex items-center justify-between">
           <Button variant="outline" size="sm" onClick={onClose} className="gap-1.5">
@@ -1194,6 +1223,8 @@ export function ExportDialog({ open, onClose, initialTab }: Props) {
                 <><Loader2 size={13} className="animate-spin" />処理中...</>
               ) : format === "excel" ? (
                 <><FileSpreadsheet size={13} />Excelでダウンロード</>
+              ) : format === "raw" ? (
+                <><Database size={13} />生データを書き出し</>
               ) : format === "ics" ? (
                 <><CalendarDays size={13} />ICSでダウンロード</>
               ) : (

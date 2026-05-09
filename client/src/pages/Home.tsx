@@ -120,6 +120,9 @@ export default function Home() {
         open={showExportDialog || showExportGCal}
         onClose={() => { setShowExportDialog(false); setShowExportGCal(false); }}
         initialTab={showExportGCal ? "ics" : undefined}
+        exportCSV={exportCSV}
+        exportEffective={exportEffective}
+        exportOverride={exportOverride}
       />
       <PatchImportDialog open={showPatchImport} onClose={() => setShowPatchImport(false)} />
       <PeriodTimesDialog open={showPeriodTimes} onOpenChange={setShowPeriodTimes} />
@@ -221,35 +224,7 @@ export default function Home() {
               {/* Desktop: individual buttons / Mobile: collapsed into "..." menu */}
               {activeTab === "grid" && (
                 <>
-                  {/* 生データ ドロップダウン（CSV/JSON） */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
-                      >
-                        <Database size={12} />
-                        <span>生データ</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuLabel className="text-xs">生データ書き出し</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={exportCSV} className="text-xs gap-2">
-                        <span className="font-mono text-muted-foreground">.csv</span>
-                        CSV形式でダウンロード
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={exportEffective} className="text-xs gap-2">
-                        <span className="font-mono text-muted-foreground">.json</span>
-                        確定データ（JSON）
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={exportOverride} className="text-xs gap-2">
-                        <span className="font-mono text-muted-foreground">.json</span>
-                        変更履歴（JSON）
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -266,7 +241,7 @@ export default function Home() {
                     size="sm"
                     onClick={() => setShowExportDialog(true)}
                     className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
-                    title="エクスポート（Excel / PDF / PNG / ICS / Googleカレンダー）"
+                    title="エクスポート（Excel / PDF / ICS / Google連携 / 生データ）"
                   >
                     <FileSpreadsheet size={12} />
                     <span>エクスポート</span>
@@ -280,7 +255,7 @@ export default function Home() {
                     title="Googleカレンダーに直接追加"
                   >
                     <CalendarDays size={12} />
-                    <span>Gカレンダー</span>
+                    <span>Google連携</span>
                   </Button>
                   <Button
                     variant="outline"
