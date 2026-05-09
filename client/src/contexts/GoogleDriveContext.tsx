@@ -107,6 +107,8 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const gisReadyRef = useRef(false);
   const [gisReady, setGisReady] = useState(false);
   const tokenRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // One Tap がコールバックを呼び出したかを追跡するフラグ
+  const oneTapFiredRef = useRef(false);
 
   // Initialize GIS when the script is loaded
   useEffect(() => {
@@ -118,6 +120,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       initGoogleAuth(
         (token) => {
           if (token) {
+            oneTapFiredRef.current = false;
             // Clear previous auto-refresh timer and set a new one for 55 min
             if (tokenRefreshTimerRef.current) {
               clearTimeout(tokenRefreshTimerRef.current);
@@ -134,7 +137,14 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         },
         (err) => {
           console.error("GIS auth error:", err);
-          setSyncError(err);
+          if (oneTapFiredRef.current) {
+            // One Tap 後のサイレント取得失敗 → consent ポップアップで再試行
+            // (初回ユーザーはDrive/Calendarスコープの許可がまだないため)
+            oneTapFiredRef.current = false;
+            requestAccessToken("consent");
+          } else {
+            setSyncError(err);
+          }
         }
       );
 
@@ -145,7 +155,9 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         gisId.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: (_response: { credential: string }) => {
-            // One Tap established a session; silently request an access token
+            // One Tap で認証成功 → まずサイレントでアクセストークン取得を試みる
+            // 失敗した場合はエラーコールバックが consent に自動エスカレート
+            oneTapFiredRef.current = true;
             requestAccessToken("");
           },
           auto_select: true,
