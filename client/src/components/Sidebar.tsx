@@ -24,6 +24,7 @@ import {
   FileImage,
   FolderOpen,
   History,
+  Languages,
   Loader2,
   LogIn,
   LogOut,
@@ -50,6 +51,7 @@ import { SamplePickerDialog } from "@/components/SamplePickerDialog";
 import { DriveBackupDialog } from "@/components/DriveBackupDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 import { useSidebarStyle, type SidebarStyle } from "@/hooks/useSidebarStyle";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Smartphone } from "lucide-react";
 
 export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBottomSheet?: boolean } = {}) {
@@ -92,6 +94,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
   const [loading, setLoading] = useState(false);
   const [driveLoading, setDriveLoading] = useState(false);
   const { sidebarStyle, setSidebarStyle } = useSidebarStyle();
+  const { language, setLanguage, t } = useLanguage();
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHolidaySettings, setShowHolidaySettings] = useState(false);
@@ -141,17 +144,17 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     try {
       if (file.name.endsWith(TIMETABLE_FILE_EXT)) {
         const result = await loadFromNativeFile(file);
-        toast.success(`読み込み完了: ${file.name}`);
+        toast.success(`${t("toast.loaded")}: ${file.name}`);
         result.warnings.forEach((w: string) => toast.warning(w));
       } else if (file.name.endsWith(".zip")) {
         const result = await loadFromZip(file);
-        toast.success(`ZIPから読み込み完了: ${result.loadedFiles.length}ファイル`);
+        toast.success(`${t("toast.zipLoaded")}: ${result.loadedFiles.length}${language === "ja" ? "ファイル" : " files"}`);
         result.warnings.forEach((w: string) => toast.warning(w));
       } else {
-        toast.error("対応ファイル: .timetable または .zip");
+        toast.error(t("toast.supportedFiles"));
       }
     } catch (err) {
-      toast.error(`読み込みエラー: ${String(err)}`);
+      toast.error(`${t("toast.loadError")}: ${String(err)}`);
     } finally {
       setLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -170,17 +173,17 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     try {
       if (file.name.endsWith(TIMETABLE_FILE_EXT)) {
         const result = await loadFromNativeFile(file);
-        toast.success(`読み込み完了: ${file.name}`);
+        toast.success(`${t("toast.loaded")}: ${file.name}`);
         result.warnings.forEach((w: string) => toast.warning(w));
       } else if (file.name.endsWith(".zip")) {
         const result = await loadFromZip(file);
-        toast.success(`ZIPから読み込み完了: ${result.loadedFiles.length}ファイル`);
+        toast.success(`${t("toast.zipLoaded")}: ${result.loadedFiles.length}${language === "ja" ? "ファイル" : " files"}`);
         result.warnings.forEach((w: string) => toast.warning(w));
       } else {
-        toast.error("対応ファイル: .timetable または .zip");
+        toast.error(t("toast.supportedFiles"));
       }
     } catch (err) {
-      toast.error(`読み込みエラー: ${String(err)}`);
+      toast.error(`${t("toast.loadError")}: ${String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -188,7 +191,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
 
   const handleSave = () => {
     saveFile();
-    toast.success("保存しました");
+    toast.success(t("toast.saved"));
   };
 
   const handleDriveSave = async () => {
@@ -196,9 +199,9 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     setDriveLoading(true);
     try {
       await syncToDrive(currentFile, allOps);
-      toast.success("Google Driveに保存しました");
+      toast.success(t("toast.driveSaved"));
     } catch {
-      toast.error("Drive保存に失敗しました");
+      toast.error(t("toast.driveSaveFailed"));
     } finally {
       setDriveLoading(false);
     }
@@ -217,10 +220,10 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
           </div>
         );
       } else {
-        toast.error("バックアップに失敗しました");
+        toast.error(t("toast.backupFailed"));
       }
     } catch {
-      toast.error("バックアップに失敗しました");
+      toast.error(t("toast.backupFailed"));
     } finally {
       setDriveLoading(false);
     }
@@ -231,14 +234,14 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     try {
       const result = await loadFromDrive();
       if (!result) {
-        toast.info("Google Driveにデータがありませんでした");
+        toast.info(t("toast.driveEmpty"));
         return;
       }
       await loadTimetableFile(result.file);
-      toast.success("Google Driveから読み込みました");
+      toast.success(t("toast.driveLoaded"));
       result.warnings.forEach((w: string) => toast.warning(w));
     } catch {
-      toast.error("Drive読み込みに失敗しました");
+      toast.error(t("toast.driveLoadFailed"));
     } finally {
       setDriveLoading(false);
     }
@@ -250,10 +253,10 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
   const weekLabel = `${currentWeekMonday.getMonth() + 1}/${currentWeekMonday.getDate()} 〜 ${weekEnd.getMonth() + 1}/${weekEnd.getDate()}`;
 
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
-    { id: "grid", label: "週間時間割", icon: <CalendarDays size={16} /> },
-    { id: "stats", label: "クラス別集計", icon: <TableProperties size={16} /> },
-    { id: "history", label: "変更履歴", icon: <History size={16} /> },
-    { id: "audit", label: "適用ログ", icon: <Clock size={16} /> },
+    { id: "grid", label: t("sidebar.nav.grid"), icon: <CalendarDays size={16} /> },
+    { id: "stats", label: t("sidebar.nav.stats"), icon: <TableProperties size={16} /> },
+    { id: "history", label: t("sidebar.nav.history"), icon: <History size={16} /> },
+    { id: "audit", label: t("sidebar.nav.audit"), icon: <Clock size={16} /> },
   ];
 
   // 最終同期日時のフォーマット
@@ -261,9 +264,9 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     if (!date) return null;
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-    if (diff < 60000) return "たった今";
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}分前`;
-    return date.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+    if (diff < 60000) return t("common.justNow");
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}${language === "ja" ? "" : " "}${t("common.minutesAgo")}`;
+    return date.toLocaleTimeString(language === "ja" ? "ja-JP" : "en-US", { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
@@ -282,8 +285,8 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
             <CalendarDays size={14} className="text-sidebar-primary-foreground" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold leading-tight text-sidebar-foreground">時間割管理</p>
-            <p className="text-[10px] text-sidebar-foreground/50 leading-tight">Timetable Manager</p>
+            <p className="text-sm font-bold leading-tight text-sidebar-foreground">{t("app.title")}</p>
+            <p className="text-[10px] text-sidebar-foreground/50 leading-tight">{t("app.subtitle")}</p>
           </div>
           {onClose && (
             <button
@@ -314,7 +317,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                      text-xs font-medium transition-colors duration-150"
         >
           <FilePlus size={13} />
-          新規作成
+          {t("sidebar.newFile")}
         </button>
 
         {/* Open */}
@@ -326,7 +329,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                      text-xs font-medium transition-colors duration-150 border border-sidebar-border"
         >
           {loading ? <Loader2 size={13} className="animate-spin" /> : <FolderOpen size={13} />}
-          {loading ? "読み込み中..." : "ファイルを開く"}
+          {loading ? t("common.loading") : t("sidebar.openFile")}
         </button>
 
         {/* Save */}
@@ -342,7 +345,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                   }`}
               >
                 <Save size={13} />
-                <span>{isDirty ? "保存（未保存あり）" : "保存済み"}</span>
+                <span>{isDirty ? t("sidebar.saveWithUnsaved") : t("common.saved")}</span>
                 {isDirty && (
                   <span className="ml-auto w-2 h-2 rounded-full bg-amber-400 shrink-0" />
                 )}
@@ -367,8 +370,8 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                   : 'bg-blue-500/20 text-blue-400'
               }`}>
                 <BookOpen size={9} />
-                {mode === 'homeroom' && `担任: ${semester?.homeroomClass ?? '未設定'}`}
-                {mode === 'multi_subject' && '複数教科'}
+                {mode === 'homeroom' && `${t("sidebar.homeroom")}: ${semester?.homeroomClass ?? t("sidebar.notSet")}`}
+                {mode === 'multi_subject' && t("sidebar.multiSubject")}
               </span>
             )}
           </div>
@@ -380,7 +383,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
           disabled={loading}
           className="w-full text-[10px] text-sidebar-primary/70 hover:text-sidebar-primary underline text-center transition-colors mt-1"
         >
-          サンプルデータを読み込む
+          {t("sidebar.loadSample")}
         </button>
 
         {/* ─── Google Drive 連携 ─── */}
@@ -396,7 +399,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                          bg-blue-600/10 text-blue-400/70
                          text-xs font-medium border border-blue-500/20">
               <Loader2 size={13} className="animate-spin" />
-              ログイン状態を復元中...
+              {t("drive.restoring")}
             </div>
           ) : silentRestoreFailed ? (
             /* サイレントログイン失敗時: 再ログイン促進UI */
@@ -404,7 +407,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
               <div className="flex items-start gap-2 px-2 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-amber-400">
                 <AlertTriangle size={11} className="shrink-0 mt-0.5" />
                 <p className="text-[10px] leading-relaxed">
-                  Googleログインが切れました。再ログインしてください。
+                  {t("drive.loginExpired")}
                 </p>
               </div>
               <button
@@ -414,17 +417,17 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                            text-xs font-medium transition-colors duration-150 border border-blue-500/30"
               >
                 <LogIn size={13} />
-                再ログイン
+                {t("drive.relogin")}
               </button>
               <button
                 onClick={requestCookieAccess}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-md
                            bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground/60
                            text-xs font-medium transition-colors duration-150 border border-sidebar-border"
-                title="サードパーティCookieの許可をブラウザに要求します"
+                title={t("drive.requestCookieTitle")}
               >
                 <Cookie size={13} />
-                Cookie許可を要求
+                {t("drive.requestCookie")}
               </button>
             </div>
           ) : !isLoggedIn ? (
@@ -436,7 +439,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                          text-xs font-medium transition-colors duration-150 border border-blue-500/30"
             >
               <LogIn size={13} />
-              Googleでログイン
+              {t("drive.login")}
             </button>
           ) : (
             /* ログイン済み時 */
@@ -446,50 +449,50 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                 {syncStatus === "syncing" && (
                   <span className="flex items-center gap-1 text-[10px] text-blue-400">
                     <RefreshCw size={10} className="animate-spin" />
-                    同期中...
+                    {t("drive.syncing")}
                   </span>
                 )}
                 {syncStatus === "synced" && (
                   <span className="flex items-center gap-1 text-[10px] text-green-400">
                     <Cloud size={10} />
-                    {lastSyncedAt ? formatSyncTime(lastSyncedAt) + " に同期" : "同期済み"}
+                    {lastSyncedAt ? formatSyncTime(lastSyncedAt) + t("drive.syncedSuffix") : t("drive.synced")}
                   </span>
                 )}
                 {syncStatus === "error" && (
                   <span className="flex items-center gap-1 text-[10px] text-red-400" title={syncError ?? ""}>
                     <CloudOff size={10} />
-                    同期エラー
+                    {t("drive.syncError")}
                   </span>
                 )}
                 {(syncStatus === "idle") && (
                   <span className="flex items-center gap-1 text-[10px] text-sidebar-foreground/40">
                     <Cloud size={10} />
-                    Drive連携中
+                    {t("drive.connected")}
                   </span>
                 )}
                 {/* 再認証ボタン */}
                 <button
                   onClick={relogin}
                   className="flex items-center gap-1 text-[10px] text-sidebar-foreground/40 hover:text-blue-400 transition-colors"
-                  title="アカウントの権限を再確認します"
+                  title={t("drive.reauthTitle")}
                 >
                   <RefreshCw size={10} />
-                  再認証
+                  {t("drive.relogin")}
                 </button>
                 {/* ログアウトボタン（右端） */}
                 <button
                   onClick={logout}
                   className="ml-auto flex items-center gap-1 text-[10px] text-sidebar-foreground/40 hover:text-red-400 transition-colors"
-                  title="ログアウト"
+                  title={t("drive.logoutTitle")}
                 >
                   <LogOut size={10} />
-                  解除
+                  {t("drive.disconnect")}
                 </button>
               </div>
 
               {/* 自動同期の説明 */}
               <p className="text-[9px] text-sidebar-foreground/30 px-1 leading-relaxed">
-                ✓ 保存のたび自動で同期（隠しフォルダ）
+                {t("drive.autoSyncHelp")}
               </p>
 
               {/* Drive同期のみボタン（ローカル保存なし） */}
@@ -501,14 +504,14 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                              bg-blue-600/15 hover:bg-blue-600/25 text-blue-400
                              text-xs font-medium transition-colors duration-150 border border-blue-500/25
                              disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="ローカル保存なしで Drive の隠しフォルダだけ更新します"
+                  title={t("drive.syncOnlyTitle")}
                 >
                   {(driveLoading || syncStatus === "syncing") ? (
                     <Loader2 size={13} className="animate-spin" />
                   ) : (
                     <RefreshCw size={13} />
                   )}
-                  Drive同期のみ
+                  {t("drive.syncOnly")}
                 </button>
               )}
 
@@ -526,7 +529,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                 ) : (
                   <Cloud size={13} />
                 )}
-                Driveから復元
+                {t("drive.restore")}
               </button>
 
               {/* 手動バックアップボタン */}
@@ -539,27 +542,27 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                                bg-amber-600/15 hover:bg-amber-600/25 text-amber-400
                                text-xs font-medium transition-colors duration-150 border border-amber-500/25
                                disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="マイドライブ/時間割管理/ に日付付きバックアップを作成"
+                    title={t("drive.backupTitle")}
                   >
                     {backupStatus === "backing_up" ? (
                       <Loader2 size={13} className="animate-spin" />
                     ) : (
                       <CloudUpload size={13} />
                     )}
-                    マイドライブにバックアップ
+                    {t("drive.backupToMyDrive")}
                   </button>
                   {backupStatus === "done" && lastBackupAt && (
                     <p className="text-[9px] text-amber-400/70 px-1">
-                      ✓ {formatSyncTime(lastBackupAt)} にバックアップ完了
+                      ✓ {formatSyncTime(lastBackupAt)}{t("drive.backupDoneSuffix")}
                     </p>
                   )}
                   {backupStatus === "error" && (
                     <p className="text-[9px] text-red-400 px-1" title={backupError ?? ""}>
-                      ✗ バックアップ失敗
+                      ✗ {t("drive.backupFailed")}
                     </p>
                   )}
                   <p className="text-[9px] text-sidebar-foreground/25 px-1 leading-relaxed">
-                    → マイドライブ / 時間割管理 / に保存
+                    {t("drive.backupDestination")}
                   </p>
                   <button
                     onClick={() => setShowDriveBackup(true)}
@@ -568,7 +571,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                                text-xs font-medium transition-colors duration-150 border border-border/30"
                   >
                     <RefreshCw size={12} />
-                    バックアップ一覧・復元
+                    {t("drive.backupList")}
                   </button>
                 </>
               )}
@@ -601,7 +604,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
       {/* Week Navigation (only on grid tab) */}
       {activeTab === "grid" && (
         <div className="px-3 py-3 border-t border-sidebar-border">
-          <p className="text-[10px] text-sidebar-foreground/50 mb-1.5 font-medium uppercase tracking-wider">週の移動</p>
+          <p className="text-[10px] text-sidebar-foreground/50 mb-1.5 font-medium uppercase tracking-wider">{t("sidebar.weekNav")}</p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => navigateWeek(-1)}
@@ -613,7 +616,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
               onClick={goToToday}
               className="flex-1 text-[11px] py-1.5 rounded hover:bg-sidebar-accent transition-colors font-medium"
             >
-              今週
+              {t("sidebar.thisWeek")}
             </button>
             <button
               onClick={() => navigateWeek(1)}
@@ -634,11 +637,11 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                            border border-sidebar-border transition-colors"
               >
                 <CalendarDays size={11} />
-                日付で移動
+                {t("sidebar.jumpByDate")}
               </button>
               {showDatePicker && (
                 <div className="absolute bottom-full mb-1 left-0 right-0 bg-popover border border-border rounded-lg shadow-lg p-2 z-50">
-                  <p className="text-[10px] text-muted-foreground mb-1">移動先の日付を選択</p>
+                  <p className="text-[10px] text-muted-foreground mb-1">{t("sidebar.pickDate")}</p>
                   <input
                     type="date"
                     value={datePickerValue}
@@ -674,7 +677,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                 className="flex-1 h-8 bg-transparent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent disabled:opacity-30"
               >
                 <RotateCcw size={13} />
-                <span className="text-[11px] ml-1">元に戻す</span>
+                <span className="text-[11px] ml-1">{t("sidebar.undo")}</span>
                 {canUndo && (
                   <span className="ml-auto text-[10px] bg-sidebar-primary/20 text-sidebar-primary-foreground/70 rounded px-1">
                     {undoStack.length}
@@ -708,7 +711,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
       {/* Export */}
       {isLoaded && (
         <div className="px-3 py-3 border-t border-sidebar-border">
-          <p className="text-[10px] text-sidebar-foreground/50 mb-1.5 font-medium uppercase tracking-wider">エクスポート</p>
+          <p className="text-[10px] text-sidebar-foreground/50 mb-1.5 font-medium uppercase tracking-wider">{t("sidebar.export")}</p>
           <div className="space-y-0.5">
             <button
               onClick={exportEffective}
@@ -746,7 +749,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]\n                         text-blue-400 hover:text-blue-300 hover:bg-sidebar-accent transition-colors font-medium"
             >
               <CalendarDays size={12} />
-              Googleカレンダー連携
+              {t("sidebar.googleCalendar")}
             </button>
           </div>
         </div>
@@ -765,7 +768,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                          text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
             >
               <Settings size={12} />
-              学期設定を変更
+              {t("sidebar.semesterSettings")}
             </button>
             <button
               onClick={() => setShowHolidaySettings(true)}
@@ -773,7 +776,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                          text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
             >
               <CalendarDays size={12} />
-              祝日・休校日の設定
+              {t("sidebar.holidaySettings")}
             </button>
             {(mode === 'homeroom' || mode === 'multi_subject') && (
               <button
@@ -782,23 +785,48 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                            text-amber-400/80 hover:text-amber-400 hover:bg-sidebar-accent transition-colors"
               >
                 <BookOpen size={12} />
-                教科の管理
+                {t("sidebar.subjectManagement")}
               </button>
             )}
           </>
         )}
         <ColorSettingsDialog />
 
+        <div className="border-t border-sidebar-border/50 pt-2 mt-1">
+          <p className="text-[10px] text-sidebar-foreground/40 mb-1.5 px-2 font-medium uppercase tracking-wider flex items-center gap-1">
+            <Languages size={9} />
+            {t("common.language")}
+          </p>
+          <div className="flex gap-1">
+            {([
+              { value: "ja", label: t("common.japanese") },
+              { value: "en", label: t("common.english") },
+            ] as const).map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setLanguage(opt.value)}
+                className={`flex-1 text-[10px] py-1 rounded border transition-colors ${
+                  language === opt.value
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground border-sidebar-primary"
+                    : "border-sidebar-border text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* モバイルメニュー形式切り替え (デスクトップでは非表示) */}
         <div className="lg:hidden border-t border-sidebar-border/50 pt-2 mt-1">
           <p className="text-[10px] text-sidebar-foreground/40 mb-1.5 px-2 font-medium uppercase tracking-wider flex items-center gap-1">
             <Smartphone size={9} />
-            モバイルメニュー形式
+            {t("sidebar.mobileMenuStyle")}
           </p>
           <div className="flex gap-1">
             {([
-              { value: "bottom_sheet" as SidebarStyle, label: "下から開く" },
-              { value: "slide_left" as SidebarStyle, label: "左から開く" },
+              { value: "bottom_sheet" as SidebarStyle, label: t("sidebar.mobileBottomSheet") },
+              { value: "slide_left" as SidebarStyle, label: t("sidebar.mobileSlideLeft") },
             ]).map(opt => (
               <button
                 key={opt.value}

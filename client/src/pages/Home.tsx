@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGoogleDrive } from "@/contexts/GoogleDriveContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Sidebar } from "@/components/Sidebar";
 import { WeekGrid } from "@/components/WeekGrid";
 import { Inspector } from "@/components/Inspector";
@@ -38,6 +39,7 @@ export default function Home() {
   } = useTimetable();
 
   const { syncStatus, lastSyncedAt } = useGoogleDrive();
+  const { t } = useLanguage();
 
   // 未保存時間計測（最後のファイル保存 or Drive同期からの経過時間）
   const [unsavedMinutes, setUnsavedMinutes] = useState(0);
@@ -99,9 +101,9 @@ export default function Home() {
 
   // Update page title
   useEffect(() => {
-    const title = currentFile?.meta.title ?? "時間割管理";
+    const title = currentFile?.meta.title ?? t("home.titleFallback");
     document.title = isEffectivelyDirty ? `● ${title}` : title;
-  }, [currentFile, isEffectivelyDirty]);
+  }, [currentFile, isEffectivelyDirty, t]);
 
   // 保存後にリマインダーを非表示
   useEffect(() => {
@@ -177,7 +179,7 @@ export default function Home() {
             </button>
 
             <h1 className="text-sm font-bold text-foreground truncate">
-              {currentFile?.meta.title ?? "時間割管理"}
+              {currentFile?.meta.title ?? t("home.titleFallback")}
             </h1>
             {currentFile?.meta.school && (
               <span className="text-xs text-muted-foreground hidden sm:inline truncate">
@@ -193,7 +195,7 @@ export default function Home() {
             {isEffectivelyDirty && (
               <button
                 onClick={saveFile}
-                title="クリックしてローカル保存"
+                title={t("home.saveLocalTitle")}
                 className={`flex items-center gap-1 text-xs rounded px-1.5 py-0.5 border shrink-0 transition-colors hover:opacity-80 ${
                   unsavedMinutes >= 30
                     ? "bg-red-50 text-red-600 border-red-200 font-medium"
@@ -203,7 +205,7 @@ export default function Home() {
                 }`}
               >
                 <Save size={10} className="shrink-0" />
-                <span>{unsavedMinutes === -1 ? "未保存" : unsavedMinutes >= 60 ? `${Math.floor(unsavedMinutes / 60)}h未保存` : unsavedMinutes >= 1 ? `${unsavedMinutes}m未保存` : "未保存"}</span>
+                <span>{unsavedMinutes === -1 ? t("common.unsaved") : unsavedMinutes >= 60 ? `${Math.floor(unsavedMinutes / 60)}h ${t("common.unsaved")}` : unsavedMinutes >= 1 ? `${unsavedMinutes}m ${t("common.unsaved")}` : t("common.unsaved")}</span>
               </button>
             )}
           </div>
@@ -218,7 +220,7 @@ export default function Home() {
                   className="h-7 gap-1.5 text-xs sm:hidden"
                 >
                   <Save size={12} />
-                  保存
+                  {t("common.save")}
                 </Button>
               )}
               {/* Desktop: individual buttons / Mobile: collapsed into "..." menu */}
@@ -230,10 +232,10 @@ export default function Home() {
                     size="sm"
                     onClick={() => setShowPatchImport(true)}
                     className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
-                    title="パッチインポート"
+                    title={t("home.importTitle")}
                   >
                     <FileInput size={12} />
-                    <span>インポート</span>
+                    <span>{t("home.import")}</span>
                   </Button>
                   {/* エクスポート（メインボタン） */}
                   <Button
@@ -241,10 +243,10 @@ export default function Home() {
                     size="sm"
                     onClick={() => setShowExportDialog(true)}
                     className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
-                    title="エクスポート（Excel / PDF / ICS / Google連携 / 生データ）"
+                    title={t("home.exportTitle")}
                   >
                     <FileSpreadsheet size={12} />
-                    <span>エクスポート</span>
+                    <span>{t("home.export")}</span>
                   </Button>
                   {/* Googleカレンダー連携ボタン */}
                   <Button
@@ -252,10 +254,10 @@ export default function Home() {
                     size="sm"
                     onClick={() => setShowExportGCal(true)}
                     className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex text-blue-600 border-blue-300 hover:bg-blue-50"
-                    title="Googleカレンダーに直接追加"
+                    title={t("home.googleLinkTitle")}
                   >
                     <CalendarDays size={12} />
-                    <span>Google連携</span>
+                    <span>{t("home.googleLink")}</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -264,7 +266,7 @@ export default function Home() {
                     className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
                   >
                     <Printer size={12} />
-                    <span>印刷</span>
+                    <span>{t("home.print")}</span>
                   </Button>
                   {/* モバイルのみ表示する「…」メニュー */}
                   <DropdownMenu>
@@ -273,36 +275,36 @@ export default function Home() {
                         variant="outline"
                         size="sm"
                         className="h-7 w-7 p-0 print:hidden sm:hidden"
-                        title="その他の操作"
+                        title={t("home.moreActions")}
                       >
                         <MoreHorizontal size={14} />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuLabel className="text-xs">エクスポート</DropdownMenuLabel>
+                      <DropdownMenuLabel className="text-xs">{t("home.exportMenu")}</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setShowExportDialog(true)} className="text-xs gap-2">
                         <FileSpreadsheet size={12} className="text-green-600" />
-                        エクスポート…
+                        {t("home.exportMenuItem")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setShowExportGCal(true)} className="text-xs gap-2">
                         <CalendarDays size={12} className="text-blue-500" />
-                        Googleカレンダー連携…
+                        {t("home.googleCalendarMenuItem")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={exportCSV} className="text-xs gap-2">
                         <Database size={12} />
-                        生データ（CSV）
+                        {t("home.rawCsv")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setShowPatchImport(true)} className="text-xs gap-2">
                         <FileInput size={12} />
-                        パッチインポート
+                        {t("home.patchImport")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setShowPrintPreview(true)} className="text-xs gap-2">
                         <Printer size={12} />
-                        印刷プレビュー
+                        {t("home.printPreview")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

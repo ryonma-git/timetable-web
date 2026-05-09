@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { TimetableProvider } from "./contexts/TimetableContext";
 import { GradeColorProvider } from "./contexts/GradeColorContext";
 import { GoogleDriveProvider } from "./contexts/GoogleDriveContext";
+import { LanguageProvider } from "./contexts/LanguageContext";
 import Home from "./pages/Home";
 import { InstallBanner } from "./components/InstallBanner";
 import React from "react";
@@ -41,19 +42,21 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <GradeColorProvider>
-          <TimetableProvider>
-            <GoogleDriveProvider>
-            <SidebarStyleProvider>
-              <TooltipProvider>
-                <Toaster richColors position="top-right" />
-                <Router />
-                <InstallBanner />
-              </TooltipProvider>
-            </SidebarStyleProvider>
-            </GoogleDriveProvider>
-          </TimetableProvider>
-        </GradeColorProvider>
+        <LanguageProvider>
+          <GradeColorProvider>
+            <TimetableProvider>
+              <GoogleDriveProvider>
+                <SidebarStyleProvider>
+                  <TooltipProvider>
+                    <Toaster richColors position="top-right" />
+                    <Router />
+                    <InstallBanner />
+                  </TooltipProvider>
+                </SidebarStyleProvider>
+              </GoogleDriveProvider>
+            </TimetableProvider>
+          </GradeColorProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
