@@ -1,7 +1,9 @@
 # timetable-web — Claude Code 引き継ぎ書類
 
-> 最終更新: 2026年5月（v59）  
+> 最終更新: 2026年5月（v75ドキュメント方針反映）
 > 対象: Claude Code（CLI）でこのリポジトリを引き継ぐ開発者
+
+> **安定版の基準**: 暫定安定版は v74。v75 は Googleログイン永続化を含む Claude Code 実装版だが、利用者確認前のため未検証扱いとする。
 
 ---
 
@@ -17,7 +19,7 @@ CLAUDE_CODE_HANDOFF.md を読んで、このプロジェクトの概要と現状
 
 ## プロジェクト概要
 
-小学校教員向け週間時間割管理 Web アプリ。体育専科教員が授業変更（振替・入れ替え）を管理し、Excel/PDF でエクスポートできる。
+小学校教員向け週間時間割管理 Web アプリ。専科教員・担任どちらでも利用でき、授業変更（振替・入れ替え）を管理し、Excel/PDF でエクスポートできる。
 
 | 項目 | 内容 |
 |------|------|
@@ -50,6 +52,8 @@ git push
 ```
 
 デプロイ状況: https://github.com/ryonma-git/timetable-web/actions
+
+今後の修正時は、実装変更とあわせて必要に応じて `README.md`、`HANDOVER.md`、`CLAUDE_CODE_HANDOFF.md` を更新し、`main` へ push する。GitHub Pages 公開は GitHub Actions の自動デプロイに任せる。
 
 ### ⚠️ deploy.yml の変更について
 
