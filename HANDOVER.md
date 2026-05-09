@@ -207,6 +207,34 @@ const SCOPES = [
    `requestAccessToken("")` はブラウザのサードパーティ Cookie が有効な場合のみ成功する。Chrome の Privacy Sandbox 移行後は動作しなくなる可能性がある。  
    → 対策: GIS の `google.accounts.id.initialize`（One Tap）を組み合わせた ID トークン取得に移行することを検討。
 
+   **『ユーザー希望』 One Tap 実装方针（高優先度）:**
+
+   One Tap は「アクセストークン」ではなく「ID トークン（JWT）」を取得する。これを使って Drive ・カレンダー API を呼び出すには、別途で `requestAccessToken` も必要。ただし One Tap でユーザーのグーグルアカウントが確認できれば、その後の `requestAccessToken("")` （サイレント取得）の成功率が大幅に向上する。
+
+   **実装手順:**
+   ```typescript
+   // 1. client/index.html に追加（既存の GIS スクリプトの直後）
+   // 変更不要（既に読み込み済み）
+
+   // 2. GoogleDriveContext.tsx の useEffect 内に追加
+   window.google.accounts.id.initialize({
+     client_id: CLIENT_ID,
+     callback: (response: { credential: string }) => {
+       // ID トークン取得成功 → そのままサイレントで requestAccessToken を呼ぶ
+       tokenClientRef.current?.requestAccessToken({ prompt: '' });
+     },
+     auto_select: true,   // リロード時に自動選択
+     cancel_on_tap_outside: false,
+   });
+   window.google.accounts.id.prompt(); // ポップアップ表示（既ログイン時は自動スキップ）
+   ```
+
+   **注意事項:**
+   - One Tap は `https://` ドメインでのみ動作（localhost 不可）。開発時は `pnpm dev` で `http://localhost:3000` だとテスト不可能。
+   - Google Cloud Console の OAuth 許可ドメインに `timetableapp-ee4m7qag.manus.space` が登録済みなことを確認すること。
+   - `GoogleDriveContextValue` 型に変更は不要。`login()` / `relogin()` の呼び出し方はそのまま。
+   - One Tap ポップアップを非表示にする場合は `window.google.accounts.id.cancel()` を呼ぶ。
+
 2. **書き出しのバックグラウンド処理**  
    現在は sonner トーストで「ダイアログを閉じても処理継続」の UX を提供しているが、実際には処理はメインスレッドで同期的に実行されている。大量データ（全学期・全週）の PDF 生成時にブラウザが固まる場合がある。  
    → 対策: Web Worker への移行を検討。
