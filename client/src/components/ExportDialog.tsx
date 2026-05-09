@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { X, FileText, FileSpreadsheet, Loader2, CalendarDays, CheckCircle2, AlertCircle, ExternalLink, Database } from "lucide-react";
+import { X, FileText, FileSpreadsheet, Loader2, CalendarDays, CheckCircle2, AlertCircle, ExternalLink, Database, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportTimetableExcel } from "@/lib/exportUtils";
 import { toast } from "sonner";
@@ -272,6 +272,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
   const [deleteMode, setDeleteMode] = useState<"tagged" | "range">("tagged");
   const [deleteRangeStart, setDeleteRangeStart] = useState("");
   const [deleteRangeEnd, setDeleteRangeEnd] = useState("");
+  const [showDeleteSection, setShowDeleteSection] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
   const today = todayISO();
@@ -791,7 +792,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
         </div>
 
         {/* Preview area */}
-        <div className="flex-1 overflow-auto p-5 bg-gray-100">
+        <div className={format === "ics" ? "overflow-auto p-3 bg-gray-100 max-h-[160px] border-t border-border/30" : "flex-1 overflow-auto p-5 bg-gray-100"}>
           <div
             className={cn(
               "bg-white shadow-md mx-auto",
@@ -986,19 +987,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                       ) : null;
                     })()}
                   </div>
-                  {/* 追加ボタン */}
-                  <Button
-                    size="sm"
-                    onClick={handleExportGCal}
-                    disabled={weeksToPrint.length === 0 || gcalProgress.status === "running"}
-                    className="h-7 text-xs gap-1 bg-blue-600 hover:bg-blue-700 text-white shrink-0 min-w-[130px] justify-center"
-                  >
-                    {gcalProgress.status === "running" ? (
-                      <><Loader2 size={12} className="animate-spin" />追加中...</>
-                    ) : (
-                      <><CalendarDays size={12} />カレンダーに追加</>
-                    )}
-                  </Button>
+
                 </div>
                 {/* 進捗・結果表示 */}
                 {gcalProgress.status === "running" && (
@@ -1056,12 +1045,18 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                     </button>
                   </div>
                 )}
-                {/* 削除セクション */}
-                <div className="border-t border-border/50 pt-3 mt-2 space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <AlertCircle size={12} className="text-red-400 shrink-0" />
-                    <span className="text-xs font-medium text-red-400">Googleカレンダーからイベントを削除</span>
-                  </div>
+                {/* 削除セクション（折りたたみ） */}
+                <div className="border-t border-border/50 pt-2 mt-1">
+                  <button
+                    onClick={() => setShowDeleteSection(v => !v)}
+                    className="flex items-center gap-1.5 text-xs text-red-400/70 hover:text-red-400 transition-colors"
+                  >
+                    <AlertCircle size={11} className="shrink-0" />
+                    <span>Googleカレンダーからイベントを削除</span>
+                    {showDeleteSection ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                  </button>
+                  {showDeleteSection && (
+                  <div className="mt-2 space-y-2">
 
                   {/* モード選択 */}
                   {gcalDeleteProgress.status === "idle" && !showDeleteConfirm && (
@@ -1208,6 +1203,8 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                       </button>
                     </div>
                   )}
+                  </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1246,24 +1243,54 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
           </Button>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{weeksToPrint.length}週分</span>
-            <Button
-              size="sm"
-              onClick={handleExport}
-              disabled={weeksToPrint.length === 0 || isExporting}
-              className="gap-1.5 min-w-[140px]"
-            >
-              {isExporting ? (
-                <><Loader2 size={13} className="animate-spin" />処理中...</>
-              ) : format === "excel" ? (
-                <><FileSpreadsheet size={13} />Excelでダウンロード</>
-              ) : format === "raw" ? (
-                <><Database size={13} />生データを書き出し</>
-              ) : format === "ics" ? (
-                <><CalendarDays size={13} />ICSでダウンロード</>
-              ) : (
-                <><FileText size={13} />PDFでダウンロード</>
-              )}
-            </Button>
+            {/* ICSタブ: ICSダウンロード + カレンダーに追加（ログイン時のみ有効） */}
+            {format === "ics" ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleExport}
+                  disabled={weeksToPrint.length === 0 || isExporting}
+                  className="gap-1.5"
+                >
+                  {isExporting ? (
+                    <><Loader2 size={13} className="animate-spin" />処理中...</>
+                  ) : (
+                    <><CalendarDays size={13} />ICSでダウンロード</>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleExportGCal}
+                  disabled={!isLoggedIn || weeksToPrint.length === 0 || gcalProgress.status === "running"}
+                  className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white min-w-[140px] justify-center"
+                  title={!isLoggedIn ? "Googleにログインするとカレンダーに直接追加できます" : undefined}
+                >
+                  {gcalProgress.status === "running" ? (
+                    <><Loader2 size={13} className="animate-spin" />追加中...</>
+                  ) : (
+                    <><CalendarDays size={13} />カレンダーに追加</>
+                  )}
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handleExport}
+                disabled={weeksToPrint.length === 0 || isExporting}
+                className="gap-1.5 min-w-[140px]"
+              >
+                {isExporting ? (
+                  <><Loader2 size={13} className="animate-spin" />処理中...</>
+                ) : format === "excel" ? (
+                  <><FileSpreadsheet size={13} />Excelでダウンロード</>
+                ) : format === "raw" ? (
+                  <><Database size={13} />生データを書き出し</>
+                ) : (
+                  <><FileText size={13} />PDFでダウンロード</>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

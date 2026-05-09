@@ -492,6 +492,26 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                 ✓ 保存のたび自動で同期（隠しフォルダ）
               </p>
 
+              {/* Drive同期のみボタン（ローカル保存なし） */}
+              {isLoaded && (
+                <button
+                  onClick={handleDriveSave}
+                  disabled={driveLoading || syncStatus === "syncing"}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                             bg-blue-600/15 hover:bg-blue-600/25 text-blue-400
+                             text-xs font-medium transition-colors duration-150 border border-blue-500/25
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="ローカル保存なしで Drive の隠しフォルダだけ更新します"
+                >
+                  {(driveLoading || syncStatus === "syncing") ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={13} />
+                  )}
+                  Drive同期のみ
+                </button>
+              )}
+
               {/* Driveから復元ボタン */}
               <button
                 onClick={handleDriveLoad}
