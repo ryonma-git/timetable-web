@@ -540,3 +540,78 @@ export async function listCalendars(): Promise<
   };
   return data.items ?? [];
 }
+
+export interface CalendarDeleteResult {
+  deleted: number;
+  errors: number;
+  calendarId: string;
+}
+
+/**
+ * timetableApp=1 タグが付いたイベントを指定カレンダーから一括削除する。
+ * timeMin / timeMax で削除範囲を絞ることができる。
+ */
+export async function deleteCalendarEvents(
+  calendarId = "primary",
+  timeMin?: string,
+  timeMax?: string,
+  onProgress?: (done: number, total: number) => void
+): Promise<CalendarDeleteResult> {
+  const token = getAccessToken();
+  if (!token) throw new Error("アクセストークンがありません。再ログインしてください。");
+
+  // 対象イベントを収集
+  const eventIds: string[] = [];
+  let pageToken: string | undefined;
+  do {
+    const params = new URLSearchParams({
+      privateExtendedProperty: "timetableApp=1",
+      maxResults: "2500",
+      singleEvents: "true",
+    });
+    if (timeMin) params.set("timeMin", timeMin);
+    if (timeMax) params.set("timeMax", timeMax);
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const res = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) break;
+    const data = await res.json() as {
+      items: { id: string }[];
+      nextPageToken?: string;
+    };
+    for (const item of data.items ?? []) {
+      eventIds.push(item.id);
+    }
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  let deleted = 0;
+  let errors = 0;
+
+  for (let i = 0; i < eventIds.length; i++) {
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${eventIds[i]}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (res.ok || res.status === 204 || res.status === 410) {
+        deleted++;
+      } else {
+        errors++;
+      }
+    } catch {
+      errors++;
+    }
+    onProgress?.(i + 1, eventIds.length);
+    if (i < eventIds.length - 1) {
+      await new Promise(r => setTimeout(r, 60));
+    }
+  }
+  return { deleted, errors, calendarId };
+}

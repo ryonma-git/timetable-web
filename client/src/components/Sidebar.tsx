@@ -45,6 +45,7 @@ import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { ExportDialog } from "@/components/ExportDialog";
 import { SubjectSettingsDialog } from "@/components/SubjectSettingsDialog";
 import { SamplePickerDialog } from "@/components/SamplePickerDialog";
+import { DriveBackupDialog } from "@/components/DriveBackupDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 import { useSidebarStyle, type SidebarStyle } from "@/hooks/useSidebarStyle";
 import { Smartphone } from "lucide-react";
@@ -93,6 +94,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showSubjectSettings, setShowSubjectSettings] = useState(false);
   const [showSamplePicker, setShowSamplePicker] = useState(false);
+  const [showDriveBackup, setShowDriveBackup] = useState(false);
 
   // Keyboard shortcut: Ctrl/Cmd+S to save
   useEffect(() => {
@@ -487,6 +489,15 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                   <p className="text-[9px] text-sidebar-foreground/25 px-1 leading-relaxed">
                     → マイドライブ / 時間割管理 / に保存
                   </p>
+                  <button
+                    onClick={() => setShowDriveBackup(true)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                               bg-muted/30 hover:bg-muted/50 text-sidebar-foreground/60 hover:text-sidebar-foreground
+                               text-xs font-medium transition-colors duration-150 border border-border/30"
+                  >
+                    <RefreshCw size={12} />
+                    バックアップ一覧・復元
+                  </button>
                 </>
               )}
             </>
@@ -744,6 +755,8 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
       <SubjectSettingsDialog open={showSubjectSettings} onClose={() => setShowSubjectSettings(false)} />
       {/* Sample Picker Dialog */}
       <SamplePickerDialog open={showSamplePicker} onClose={() => setShowSamplePicker(false)} />
+      {/* Drive Backup Dialog */}
+      <DriveBackupDialog open={showDriveBackup} onClose={() => setShowDriveBackup(false)} />
     </aside>
   );
 }
