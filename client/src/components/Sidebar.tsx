@@ -71,9 +71,13 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     syncStatus,
     lastSyncedAt,
     syncError,
+    backupStatus,
+    lastBackupAt,
+    backupError,
     login,
     logout,
     syncToDrive,
+    backupToMyDrive,
     loadFromDrive,
   } = useGoogleDrive();
 
@@ -187,6 +191,28 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
       toast.success("Google Driveに保存しました");
     } catch {
       toast.error("Drive保存に失敗しました");
+    } finally {
+      setDriveLoading(false);
+    }
+  };
+
+  const handleDriveBackup = async () => {
+    if (!currentFile) return;
+    setDriveLoading(true);
+    try {
+      const result = await backupToMyDrive(currentFile, allOps);
+      if (result) {
+        toast.success(
+          <div>
+            <div className="font-medium">マイドライブ / {result.folderName} に保存しました</div>
+            <div className="text-xs opacity-70 mt-0.5">{result.fileName}</div>
+          </div>
+        );
+      } else {
+        toast.error("バックアップに失敗しました");
+      }
+    } catch {
+      toast.error("バックアップに失敗しました");
     } finally {
       setDriveLoading(false);
     }
@@ -407,26 +433,12 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                 </button>
               </div>
 
-              {/* Driveに保存ボタン */}
-              {isLoaded && (
-                <button
-                  onClick={handleDriveSave}
-                  disabled={driveLoading || syncStatus === "syncing"}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-md
-                             bg-green-600/20 hover:bg-green-600/30 text-green-400
-                             text-xs font-medium transition-colors duration-150 border border-green-500/30
-                             disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {(driveLoading || syncStatus === "syncing") ? (
-                    <Loader2 size={13} className="animate-spin" />
-                  ) : (
-                    <CloudUpload size={13} />
-                  )}
-                  Driveに保存
-                </button>
-              )}
+              {/* 自動同期の説明 */}
+              <p className="text-[9px] text-sidebar-foreground/30 px-1 leading-relaxed">
+                ✓ 保存のたび自動で同期（隠しフォルダ）
+              </p>
 
-              {/* Driveから読み込むボタン */}
+              {/* Driveから復元ボタン */}
               <button
                 onClick={handleDriveLoad}
                 disabled={driveLoading || syncStatus === "syncing"}
@@ -440,8 +452,43 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                 ) : (
                   <Cloud size={13} />
                 )}
-                Driveから読み込む
+                Driveから復元
               </button>
+
+              {/* 手動バックアップボタン */}
+              {isLoaded && (
+                <>
+                  <button
+                    onClick={handleDriveBackup}
+                    disabled={driveLoading || backupStatus === "backing_up"}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                               bg-amber-600/15 hover:bg-amber-600/25 text-amber-400
+                               text-xs font-medium transition-colors duration-150 border border-amber-500/25
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="マイドライブ/時間割管理/ に日付付きバックアップを作成"
+                  >
+                    {backupStatus === "backing_up" ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <CloudUpload size={13} />
+                    )}
+                    マイドライブにバックアップ
+                  </button>
+                  {backupStatus === "done" && lastBackupAt && (
+                    <p className="text-[9px] text-amber-400/70 px-1">
+                      ✓ {formatSyncTime(lastBackupAt)} にバックアップ完了
+                    </p>
+                  )}
+                  {backupStatus === "error" && (
+                    <p className="text-[9px] text-red-400 px-1" title={backupError ?? ""}>
+                      ✗ バックアップ失敗
+                    </p>
+                  )}
+                  <p className="text-[9px] text-sidebar-foreground/25 px-1 leading-relaxed">
+                    → マイドライブ / 時間割管理 / に保存
+                  </p>
+                </>
+              )}
             </>
           )}
         </div>

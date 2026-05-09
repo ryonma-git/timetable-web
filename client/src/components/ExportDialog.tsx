@@ -25,16 +25,26 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { X, FileText, FileSpreadsheet, Loader2, CalendarDays } from "lucide-react";
+import { X, FileText, FileSpreadsheet, Loader2, CalendarDays, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportTimetableExcel } from "@/lib/exportUtils";
 import { exportTimetablePdf } from "@/lib/timetablePdfExport";
 import { exportToICS, downloadICS } from "@/lib/icsExport";
+import { useGoogleDrive } from "@/contexts/GoogleDriveContext";
+import { insertCalendarEvents, listCalendars, isTokenValid, type CalendarEvent } from "@/lib/googleDrive";
 
 // ─── Types ────────────────────────────────────────────────────
 
 type RangeMode = "single" | "month" | "semester" | "from_today_n" | "from_today_all";
 type ExportFormat = "excel" | "pdf" | "ics";
+
+interface GCalProgress {
+  done: number;
+  total: number;
+  inserted: number;
+  errors: number;
+  status: "idle" | "running" | "done" | "error";
+}
 
 interface Props {
   open: boolean;
@@ -217,6 +227,7 @@ export function ExportDialog({ open, onClose }: Props) {
     currentFile,
   } = useTimetable();
   const { gradeColors } = useGradeColors();
+  const { isLoggedIn, login } = useGoogleDrive();
 
   const [format, setFormat] = useState<ExportFormat>("excel");
   const [orientation, setOrientation] = useState<"landscape" | "portrait">("landscape");
@@ -227,6 +238,12 @@ export function ExportDialog({ open, onClose }: Props) {
   const [showReason, setShowReason] = useState(true);
   const [showEmptyCells, setShowEmptyCells] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [gcalProgress, setGcalProgress] = useState<GCalProgress>({
+    done: 0, total: 0, inserted: 0, errors: 0, status: "idle",
+  });
+  const [gcalCalendars, setGcalCalendars] = useState<{ id: string; summary: string; primary?: boolean }[]>([]);
+  const [gcalCalendarId, setGcalCalendarId] = useState("primary");
+  const [gcalCalendarLoaded, setGcalCalendarLoaded] = useState(false);
 
   const printRef = useRef<HTMLDivElement>(null);
   const today = todayISO();
@@ -384,6 +401,80 @@ export function ExportDialog({ open, onClose }: Props) {
       setIsExporting(false);
     }
   }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason]);
+  // ── Export: Google Calendar ───────────────────────────────
+  const handleLoadCalendars = useCallback(async () => {
+    if (gcalCalendarLoaded) return;
+    if (!isTokenValid()) { login(); return; }
+    try {
+      const cals = await listCalendars();
+      setGcalCalendars(cals);
+      setGcalCalendarLoaded(true);
+    } catch { /* ignore */ }
+  }, [gcalCalendarLoaded, login]);
+
+  const handleExportGCal = useCallback(async () => {
+    if (!semester) return;
+    if (!isTokenValid()) { login(); return; }
+
+    const targetDates = new Set(weeksToPrint.flatMap(w => {
+      const mondayDate = typeof w === 'string' ? new Date(w + 'T00:00:00') : w;
+      return getWeekDates(mondayDate, { includeSaturday: semester.hasSaturday, includeSunday: semester.hasSunday });
+    }));
+    const filteredEntries = effectiveEntries.filter(e => targetDates.has(e.date));
+
+    const DAY_NUM_TO_KEY: Record<number, string> = {
+      0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat",
+    };
+    const getPeriodTime = (dateStr: string, periodNum: number) => {
+      const dayOfWeek = new Date(dateStr + "T00:00:00").getDay();
+      const dayKey = DAY_NUM_TO_KEY[dayOfWeek];
+      if (semester.periodTimesByDay?.[dayKey]?.[periodNum]) return semester.periodTimesByDay[dayKey][periodNum];
+      if (semester.periodTimes?.[periodNum]) return semester.periodTimes[periodNum];
+      return null;
+    };
+    const toRFC3339 = (dateStr: string, timeStr: string) => {
+      const [h, mi] = timeStr.split(":").map(Number);
+      return `${dateStr}T${String(h).padStart(2, "0")}:${String(mi).padStart(2, "0")}:00+09:00`;
+    };
+    const school = currentFile?.meta?.school;
+    const events: CalendarEvent[] = [];
+    for (const entry of filteredEntries) {
+      for (const period of entry.periods) {
+        if (!period.class && !period.subject) continue;
+        const className = period.class ?? "";
+        const subjectName = period.subject ?? "";
+        let summary = subjectName && className ? `${subjectName}（${className}）` : subjectName || className;
+        if (school) summary = `[${school}] ${summary}`;
+        const descParts = [`${period.period}限`];
+        if (period.reason) descParts.push(`備考: ${period.reason}`);
+        const timeSlot = getPeriodTime(entry.date, period.period);
+        if (timeSlot) {
+          events.push({ summary, description: descParts.join("\n"),
+            start: { dateTime: toRFC3339(entry.date, timeSlot.start), timeZone: "Asia/Tokyo" },
+            end: { dateTime: toRFC3339(entry.date, timeSlot.end), timeZone: "Asia/Tokyo" },
+          });
+        } else {
+          const d = new Date(entry.date + "T00:00:00");
+          d.setDate(d.getDate() + 1);
+          const nextDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          events.push({ summary, description: descParts.join("\n"),
+            start: { date: entry.date }, end: { date: nextDay },
+          });
+        }
+      }
+    }
+    if (events.length === 0) return;
+    setGcalProgress({ done: 0, total: events.length, inserted: 0, errors: 0, status: "running" });
+    try {
+      const result = await insertCalendarEvents(events, gcalCalendarId, (done, total) => {
+        setGcalProgress(prev => ({ ...prev, done, total }));
+      });
+      setGcalProgress(prev => ({ ...prev, inserted: result.inserted, errors: result.errors, status: "done" }));
+    } catch {
+      setGcalProgress(prev => ({ ...prev, status: "error" }));
+    }
+  }, [weeksToPrint, semester, effectiveEntries, currentFile, gcalCalendarId, login]);
+
   // ── Export: ICS ───────────────────────────────────────────
   const handleExportICS = useCallback(async () => {
     if (!semester) return;
@@ -419,7 +510,7 @@ export function ExportDialog({ open, onClose }: Props) {
   const formatButtons: { value: ExportFormat; label: string; icon: React.ReactNode; desc: string }[] = [
     { value: "excel", label: "Excel", icon: <FileSpreadsheet size={12} />, desc: ".xlsx形式でダウンロード" },
     { value: "pdf", label: "PDF", icon: <FileText size={12} />, desc: ".pdf形式でダウンロード（日本語フォント埋め込み）" },
-    { value: "ics", label: "ICS", icon: <CalendarDays size={12} />, desc: ".ics形式でダウンロード（Googleカレンダー等に取り込み可）" },
+    { value: "ics", label: "ICS / Googleカレンダー", icon: <CalendarDays size={12} />, desc: ".icsダウンロード または Googleカレンダーに直接追加" },
   ];
 
   return (
@@ -722,6 +813,78 @@ export function ExportDialog({ open, onClose }: Props) {
             </div>
           </div>
         </div>
+
+        {/* ICS タブ選択時: Googleカレンダー追加エリア */}
+        {format === "ics" && (
+          <div className="px-5 py-3 border-t border-border bg-muted/20 shrink-0 space-y-2">
+            <div className="flex items-center gap-2">
+              <CalendarDays size={13} className="text-blue-400" />
+              <span className="text-xs font-medium">Googleカレンダーに直接追加</span>
+            </div>
+            {!isLoggedIn ? (
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">ログインするとGoogleカレンダーに直接追加できます</p>
+                <Button size="sm" variant="outline" onClick={login} className="h-7 text-xs gap-1">
+                  Googleでログイン
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {/* カレンダー選択 */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">追加先:</span>
+                  <select
+                    value={gcalCalendarId}
+                    onChange={e => setGcalCalendarId(e.target.value)}
+                    onFocus={handleLoadCalendars}
+                    className="text-xs bg-background border border-border rounded px-2 py-1 text-foreground flex-1 max-w-[280px]"
+                  >
+                    <option value="primary">メインカレンダー</option>
+                    {gcalCalendars.filter(c => c.id !== "primary").map(c => (
+                      <option key={c.id} value={c.id}>{c.summary}</option>
+                    ))}
+                  </select>
+                  <Button
+                    size="sm"
+                    onClick={handleExportGCal}
+                    disabled={weeksToPrint.length === 0 || gcalProgress.status === "running"}
+                    className="h-7 text-xs gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {gcalProgress.status === "running" ? (
+                      <><Loader2 size={12} className="animate-spin" />{gcalProgress.done}/{gcalProgress.total}</>
+                    ) : (
+                      <><CalendarDays size={12} />カレンダーに追加</>
+                    )}
+                  </Button>
+                </div>
+                {/* 進捗・結果表示 */}
+                {gcalProgress.status === "done" && (
+                  <div className="flex items-center gap-1.5 text-xs text-green-500">
+                    <CheckCircle2 size={12} />
+                    {gcalProgress.inserted}件追加完了
+                    {gcalProgress.errors > 0 && (
+                      <span className="text-amber-400">(エラー: {gcalProgress.errors}件)</span>
+                    )}
+                    <a
+                      href="https://calendar.google.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-1 flex items-center gap-0.5 text-blue-400 hover:underline"
+                    >
+                      Googleカレンダーを開く <ExternalLink size={10} />
+                    </a>
+                  </div>
+                )}
+                {gcalProgress.status === "error" && (
+                  <div className="flex items-center gap-1.5 text-xs text-red-400">
+                    <AlertCircle size={12} />
+                    追加に失敗しました。トークンが切れている場合は再ログインしてください。
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-border bg-background shrink-0 flex items-center justify-between">

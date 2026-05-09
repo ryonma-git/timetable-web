@@ -1,5 +1,10 @@
-// GoogleDriveContext: manages Google Drive login state and auto-sync
+// GoogleDriveContext: manages Google Drive login state, auto-sync, and backup
 // Uses GIS implicit token flow (client_id only, no client_secret in frontend)
+//
+// 設計:
+//   syncToDrive      → appDataFolder（隠しフォルダ）への自動同期
+//   backupToMyDrive  → マイドライブ/時間割管理/ への手動バックアップ（日付付きファイル名）
+//   loadFromDrive    → appDataFolder から復元
 
 import {
   createContext,
@@ -18,6 +23,8 @@ import {
   findDriveFile,
   uploadToDrive,
   downloadFromDrive,
+  backupToDrive,
+  listBackupFiles,
 } from "@/lib/googleDrive";
 import { serializeTimetableFile, deserializeTimetableFile } from "@/lib/timetableFile";
 import type { TimetableFile } from "@/lib/timetableFile";
@@ -31,18 +38,35 @@ export type SyncStatus =
   | "error"
   | "conflict";
 
+export type BackupStatus = "idle" | "backing_up" | "done" | "error";
+
+export interface BackupFile {
+  id: string;
+  name: string;
+  modifiedTime: string;
+}
+
 export interface GoogleDriveContextValue {
   isLoggedIn: boolean;
+  /** 自動同期ステータス（appDataFolder） */
   syncStatus: SyncStatus;
   lastSyncedAt: Date | null;
   syncError: string | null;
+  /** 手動バックアップステータス（マイドライブ） */
+  backupStatus: BackupStatus;
+  lastBackupAt: Date | null;
+  backupError: string | null;
   login: () => void;
   logout: () => void;
-  /** Upload current file to Drive */
+  /** 【自動同期】appDataFolderへアップロード */
   syncToDrive: (file: TimetableFile, allOps: unknown[]) => Promise<void>;
-  /** Download from Drive and return parsed file */
+  /** 【手動バックアップ】マイドライブ/時間割管理/に日付付きファイルを作成 */
+  backupToMyDrive: (file: TimetableFile, allOps: unknown[]) => Promise<{ fileName: string; folderName: string } | null>;
+  /** appDataFolderからダウンロードして復元 */
   loadFromDrive: () => Promise<{ file: TimetableFile; warnings: string[] } | null>;
-  /** Check if Drive has a saved file */
+  /** バックアップファイル一覧を取得 */
+  getBackupFiles: () => Promise<BackupFile[]>;
+  /** appDataFolderにファイルがあるか確認 */
   hasDriveFile: () => Promise<boolean>;
 }
 
@@ -65,6 +89,9 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [backupStatus, setBackupStatus] = useState<BackupStatus>("idle");
+  const [lastBackupAt, setLastBackupAt] = useState<Date | null>(null);
+  const [backupError, setBackupError] = useState<string | null>(null);
   const gisReadyRef = useRef(false);
 
   // Initialize GIS when the script is loaded
@@ -128,6 +155,9 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     setSyncStatus("idle");
     setLastSyncedAt(null);
     setSyncError(null);
+    setBackupStatus("idle");
+    setLastBackupAt(null);
+    setBackupError(null);
     localStorage.removeItem(LOGGED_IN_KEY);
   }, []);
 
@@ -183,6 +213,47 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // 【手動バックアップ】マイドライブ/時間割管理/ に日付付きファイルを作成
+  const backupToMyDrive = useCallback(
+    async (
+      file: TimetableFile,
+      allOps: unknown[]
+    ): Promise<{ fileName: string; folderName: string } | null> => {
+      if (!isTokenValid()) {
+        setBackupError("ログインが必要です");
+        return null;
+      }
+      setBackupStatus("backing_up");
+      setBackupError(null);
+      try {
+        const fileWithOps = {
+          ...file,
+          semesters: file.semesters?.map((s, i) =>
+            i === 0 ? { ...s, allOps } : s
+          ) ?? [],
+        };
+        const content = serializeTimetableFile(fileWithOps as TimetableFile);
+        const titleHint = file.meta?.title ?? "時間割";
+        const result = await backupToDrive(content, titleHint);
+        setBackupStatus("done");
+        setLastBackupAt(new Date());
+        return { fileName: result.fileName, folderName: result.folderName };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setBackupError(msg);
+        setBackupStatus("error");
+        return null;
+      }
+    },
+    []
+  );
+
+  // バックアップファイル一覧を取得
+  const getBackupFiles = useCallback(async (): Promise<BackupFile[]> => {
+    if (!isTokenValid()) return [];
+    return await listBackupFiles();
+  }, []);
+
   const hasDriveFile = useCallback(async (): Promise<boolean> => {
     if (!isTokenValid()) return false;
     try {
@@ -200,10 +271,15 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         syncStatus,
         lastSyncedAt,
         syncError,
+        backupStatus,
+        lastBackupAt,
+        backupError,
         login,
         logout,
         syncToDrive,
+        backupToMyDrive,
         loadFromDrive,
+        getBackupFiles,
         hasDriveFile,
       }}
     >
