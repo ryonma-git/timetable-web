@@ -53,7 +53,7 @@ git push
 
 デプロイ状況: https://github.com/ryonma-git/timetable-web/actions
 
-今後の修正時は、実装変更とあわせて必要に応じて `README.md`、`HANDOVER.md`、`CLAUDE_CODE_HANDOFF.md` を更新し、`main` へ push する。GitHub Pages 公開は GitHub Actions の自動デプロイに任せる。
+今後の修正時は、実装変更とあわせて必要に応じて `README.md`、`HANDOVER.md`、`CLAUDE_CODE_HANDOFF.md` を更新し、`main` へ push する。GitHub Pages 公開は GitHub Actions の自動デプロイに任せる。push 後の報告では、ユーザーが確認しに行けるように公開ページ `https://ryonma-git.github.io/timetable-web/` を毎回貼る。
 
 ### 言語切替（v76 初期実装）
 
