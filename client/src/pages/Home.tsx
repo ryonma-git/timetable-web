@@ -3,12 +3,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
+import { useGoogleDrive } from "@/contexts/GoogleDriveContext";
 import { Sidebar } from "@/components/Sidebar";
 import { WeekGrid } from "@/components/WeekGrid";
 import { Inspector } from "@/components/Inspector";
 import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, Save, Menu, FileImage, FileText, FileSpreadsheet, FileInput, MoreHorizontal } from "lucide-react";
+import { Printer, Save, Menu, FileSpreadsheet, FileInput, MoreHorizontal, CalendarDays, Database } from "lucide-react";
 import { SemesterTabs } from "@/components/SemesterTabs";
 import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
 import { AutoRestoreDialog } from "@/components/AutoRestoreDialog";
@@ -36,39 +37,44 @@ export default function Home() {
     saveFile, exportCSV, exportEffective, exportOverride,
   } = useTimetable();
 
-  // 未保存時間計測（最後のファイル保存からの経過時間）
+  const { syncStatus, lastSyncedAt } = useGoogleDrive();
+
+  // 未保存時間計測（最後のファイル保存 or Drive同期からの経過時間）
   const [unsavedMinutes, setUnsavedMinutes] = useState(0);
-  const [showSaveReminder, setShowSaveReminder] = useState(false);
   const [reminderDismissed, setReminderDismissed] = useState(false);
+
+  // Drive同期後も「保存済み」と判断するための最終保存日時
+  // ファイル保存 or Drive同期のいずれか新しい方を使う
+  const lastSavedAt = (() => {
+    if (!lastFileSavedAt && !lastSyncedAt) return null;
+    if (!lastFileSavedAt) return lastSyncedAt;
+    if (!lastSyncedAt) return lastFileSavedAt;
+    return lastFileSavedAt > lastSyncedAt ? lastFileSavedAt : lastSyncedAt;
+  })();
+
+  // isDirty だが Drive同期完了直後は「保存済み」扱い
+  const isEffectivelyDirty = isDirty && syncStatus !== "synced";
 
   // 経過時間を毎分更新
   useEffect(() => {
     if (!isLoaded) return;
     const tick = () => {
-      if (!isDirty) {
-        setShowSaveReminder(false);
+      if (!isEffectivelyDirty) {
         setReminderDismissed(false);
         setUnsavedMinutes(0);
         return;
       }
-      // 最後のファイル保存からの経過分数（一度もファイル保存していない場合は-1）
-      if (!lastFileSavedAt) {
+      if (!lastSavedAt) {
         setUnsavedMinutes(-1);
-        // ファイルを一度も保存していない場合もリマインダー表示
-        if (!reminderDismissed) setShowSaveReminder(true);
         return;
       }
-      const mins = Math.floor((Date.now() - lastFileSavedAt.getTime()) / 60000);
+      const mins = Math.floor((Date.now() - lastSavedAt.getTime()) / 60000);
       setUnsavedMinutes(mins);
-      // 30分以上未保存ならリマインダー表示
-      if (mins >= 30 && !reminderDismissed) {
-        setShowSaveReminder(true);
-      }
     };
     tick();
     const id = setInterval(tick, 60000);
     return () => clearInterval(id);
-  }, [isLoaded, isDirty, lastFileSavedAt, reminderDismissed]);
+  }, [isLoaded, isEffectivelyDirty, lastSavedAt]);
 
   // ページ離脱時の警告（beforeunload）
   const handleBeforeUnload = useCallback((e: BeforeUnloadEvent) => {
@@ -86,6 +92,7 @@ export default function Home() {
   const { sidebarStyle } = useSidebarStyle();
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showExportGCal, setShowExportGCal] = useState(false);
   const [showPatchImport, setShowPatchImport] = useState(false);
   const [showPeriodTimes, setShowPeriodTimes] = useState(false);
   const [showHolidaySettings, setShowHolidaySettings] = useState(false);
@@ -93,24 +100,27 @@ export default function Home() {
   // Update page title
   useEffect(() => {
     const title = currentFile?.meta.title ?? "時間割管理";
-    document.title = isDirty ? `● ${title}` : title;
-  }, [currentFile, isDirty]);
+    document.title = isEffectivelyDirty ? `● ${title}` : title;
+  }, [currentFile, isEffectivelyDirty]);
 
   // 保存後にリマインダーを非表示
   useEffect(() => {
-    if (!isDirty) {
-      setShowSaveReminder(false);
+    if (!isEffectivelyDirty) {
       setReminderDismissed(false);
     }
-  }, [isDirty]);
+  }, [isEffectivelyDirty]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <AutoRestoreDialog />
 
-      {/* 未保存リマインダーはトップバーの未保存バッジに統合 */}
       <PrintPreviewDialog open={showPrintPreview} onClose={() => setShowPrintPreview(false)} />
-      <ExportDialog open={showExportDialog} onClose={() => setShowExportDialog(false)} />
+      {/* エクスポートダイアログ：通常 or GCalタブ直接開き */}
+      <ExportDialog
+        open={showExportDialog || showExportGCal}
+        onClose={() => { setShowExportDialog(false); setShowExportGCal(false); }}
+        initialTab={showExportGCal ? "ics" : undefined}
+      />
       <PatchImportDialog open={showPatchImport} onClose={() => setShowPatchImport(false)} />
       <PeriodTimesDialog open={showPeriodTimes} onOpenChange={setShowPeriodTimes} />
       <HolidaySettingsDialog open={showHolidaySettings} onOpenChange={setShowHolidaySettings} />
@@ -134,7 +144,6 @@ export default function Home() {
         </Drawer>
       ) : (
         <>
-          {/* スライドインオーバーレイ */}
           {mobileSidebarOpen && (
             <div
               className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -177,10 +186,11 @@ export default function Home() {
                 {currentFile.meta.year}
               </span>
             )}
-            {isDirty && (
+            {/* 未保存バッジ：Drive同期完了後は非表示 */}
+            {isEffectivelyDirty && (
               <button
                 onClick={saveFile}
-                title="クリックして保存"
+                title="クリックしてローカル保存"
                 className={`flex items-center gap-1 text-xs rounded px-1.5 py-0.5 border shrink-0 transition-colors hover:opacity-80 ${
                   unsavedMinutes >= 30
                     ? "bg-red-50 text-red-600 border-red-200 font-medium"
@@ -194,11 +204,10 @@ export default function Home() {
               </button>
             )}
           </div>
-
           {isLoaded && (
             <div className="flex items-center gap-1.5 shrink-0">
-              {/* Save button: モバイルのみ表示（デスクトップは未保存バッジがクリック可能） */}
-              {isDirty && (
+              {/* Save button: モバイルのみ表示 */}
+              {isEffectivelyDirty && (
                 <Button
                   variant="default"
                   size="sm"
@@ -209,11 +218,10 @@ export default function Home() {
                   保存
                 </Button>
               )}
-
               {/* Desktop: individual buttons / Mobile: collapsed into "..." menu */}
               {activeTab === "grid" && (
                 <>
-                  {/* Desktopのみ表示する個別ボタン */}
+                  {/* 生データ ドロップダウン（CSV/JSON） */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -221,12 +229,12 @@ export default function Home() {
                         size="sm"
                         className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
                       >
-                        <Download size={12} />
-                        <span>エクスポート</span>
+                        <Database size={12} />
+                        <span>生データ</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuLabel className="text-xs">データエクスポート</DropdownMenuLabel>
+                      <DropdownMenuLabel className="text-xs">生データ書き出し</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={exportCSV} className="text-xs gap-2">
                         <span className="font-mono text-muted-foreground">.csv</span>
@@ -240,11 +248,6 @@ export default function Home() {
                         <span className="font-mono text-muted-foreground">.json</span>
                         変更履歴（JSON）
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setShowExportDialog(true)} className="text-xs gap-2">
-                        <FileSpreadsheet size={12} className="text-green-600" />
-                        Excelエクスポート…
-                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <Button
@@ -257,15 +260,27 @@ export default function Home() {
                     <FileInput size={12} />
                     <span>インポート</span>
                   </Button>
+                  {/* エクスポート（メインボタン） */}
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowExportDialog(true)}
                     className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex"
-                    title="Excelエクスポート"
+                    title="エクスポート（Excel / PDF / PNG / ICS / Googleカレンダー）"
                   >
                     <FileSpreadsheet size={12} />
-                    <span>書き出し</span>
+                    <span>エクスポート</span>
+                  </Button>
+                  {/* Googleカレンダー連携ボタン */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowExportGCal(true)}
+                    className="h-7 gap-1.5 text-xs print:hidden hidden sm:flex text-blue-600 border-blue-300 hover:bg-blue-50"
+                    title="Googleカレンダーに直接追加"
+                  >
+                    <CalendarDays size={12} />
+                    <span>Gカレンダー</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -276,7 +291,6 @@ export default function Home() {
                     <Printer size={12} />
                     <span>印刷</span>
                   </Button>
-
                   {/* モバイルのみ表示する「…」メニュー */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -292,13 +306,18 @@ export default function Home() {
                     <DropdownMenuContent align="end" className="w-52">
                       <DropdownMenuLabel className="text-xs">エクスポート</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={exportCSV} className="text-xs gap-2">
-                        <Download size={12} />
-                        CSV形式でダウンロード
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setShowExportDialog(true)} className="text-xs gap-2">
                         <FileSpreadsheet size={12} className="text-green-600" />
-                        Excelエクスポート…
+                        エクスポート…
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowExportGCal(true)} className="text-xs gap-2">
+                        <CalendarDays size={12} className="text-blue-500" />
+                        Googleカレンダー連携…
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={exportCSV} className="text-xs gap-2">
+                        <Database size={12} />
+                        生データ（CSV）
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setShowPatchImport(true)} className="text-xs gap-2">
@@ -317,10 +336,8 @@ export default function Home() {
             </div>
           )}
         </div>
-
         {/* Semester tabs */}
         {isLoaded && <SemesterTabs />}
-
         {/* Content area */}
         <div className="flex-1 flex overflow-hidden relative">
           {activeTab === "grid" && (

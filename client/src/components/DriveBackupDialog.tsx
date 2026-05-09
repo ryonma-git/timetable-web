@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, HardDrive, RefreshCw, RotateCcw, AlertCircle, CheckCircle2, FileText, Trash2 } from "lucide-react";
-import { listBackupFiles, downloadFromDrive, isTokenValid } from "@/lib/googleDrive";
+import { listBackupFiles, downloadFromDrive, deleteDriveFile, isTokenValid } from "@/lib/googleDrive";
 import { useGoogleDrive } from "@/contexts/GoogleDriveContext";
 import { useTimetable } from "@/contexts/TimetableContext";
 import type { TimetableFile } from "@/lib/timetableFile";
@@ -31,6 +31,8 @@ export function DriveBackupDialog({ open, onClose }: Props) {
   const [restoring, setRestoring] = useState<string | null>(null); // fileId being restored
   const [restored, setRestored] = useState<string | null>(null);   // fileId just restored
   const [confirmRestore, setConfirmRestore] = useState<BackupFile | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<BackupFile | null>(null);
 
   const fetchFiles = useCallback(async () => {
     if (!isLoggedIn || !isTokenValid()) return;
@@ -77,6 +79,19 @@ export function DriveBackupDialog({ open, onClose }: Props) {
       });
     } catch {
       return iso;
+    }
+  };
+
+  const handleDelete = async (file: BackupFile) => {
+    setDeleting(file.id);
+    setConfirmDelete(null);
+    try {
+      await deleteDriveFile(file.id);
+      setFiles(prev => prev.filter(f => f.id !== file.id));
+    } catch (e) {
+      alert("削除に失敗しました: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -167,16 +182,51 @@ export function DriveBackupDialog({ open, onClose }: Props) {
                         </button>
                       </>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setConfirmRestore(file)}
-                        disabled={!!restoring}
-                        className="h-6 text-xs px-2 gap-1"
-                      >
-                        <RotateCcw size={11} />
-                        復元
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setConfirmRestore(file)}
+                          disabled={!!restoring || !!deleting}
+                          className="h-6 text-xs px-2 gap-1"
+                        >
+                          <RotateCcw size={11} />
+                          復元
+                        </Button>
+                        {confirmDelete?.id === file.id ? (
+                          <>
+                            <span className="text-xs text-red-400">削除しますか？</span>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDelete(file)}
+                              className="h-6 text-xs px-2"
+                            >
+                              削除
+                            </Button>
+                            <button
+                              onClick={() => setConfirmDelete(null)}
+                              className="text-xs text-muted-foreground hover:text-foreground underline"
+                            >
+                              キャンセル
+                            </button>
+                          </>
+                        ) : deleting === file.id ? (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Loader2 size={11} className="animate-spin" />
+                            削除中...
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDelete(file)}
+                            disabled={!!restoring || !!deleting}
+                            className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-red-400 transition-colors disabled:opacity-40"
+                            title="このバックアップを削除"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

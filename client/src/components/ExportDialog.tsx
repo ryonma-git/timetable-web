@@ -36,7 +36,7 @@ import { insertCalendarEvents, listCalendars, isTokenValid, deleteCalendarEvents
 // ─── Types ────────────────────────────────────────────────────
 
 type RangeMode = "single" | "month" | "semester" | "from_today_n" | "from_today_all";
-type ExportFormat = "excel" | "pdf" | "ics";
+type ExportFormat = "excel" | "pdf" | "png" | "ics";
 
 type GCalSummaryFormat = "subject_class" | "class_subject" | "subject_only" | "class_only";
 
@@ -60,6 +60,7 @@ interface GCalDeleteProgress {
 interface Props {
   open: boolean;
   onClose: () => void;
+  initialTab?: ExportFormat;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -228,7 +229,7 @@ ${isPng ? `<script>
 
 // ─── Component ───────────────────────────────────────────────
 
-export function ExportDialog({ open, onClose }: Props) {
+export function ExportDialog({ open, onClose, initialTab }: Props) {
   const {
     effectiveEntries,
     semester,
@@ -240,7 +241,11 @@ export function ExportDialog({ open, onClose }: Props) {
   const { gradeColors } = useGradeColors();
   const { isLoggedIn, login } = useGoogleDrive();
 
-  const [format, setFormat] = useState<ExportFormat>("excel");
+  const [format, setFormat] = useState<ExportFormat>(initialTab ?? "excel");
+  // openが変わったとき（ダイアログが開くとき）にinitialTabを反映
+  useEffect(() => {
+    if (open && initialTab) setFormat(initialTab);
+  }, [open, initialTab]);
   const [orientation, setOrientation] = useState<"landscape" | "portrait">("landscape");
   const [filterClass, setFilterClass] = useState<string>("__all__");
   const [rangeMode, setRangeMode] = useState<RangeMode>("single");
