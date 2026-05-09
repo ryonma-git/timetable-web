@@ -48,8 +48,6 @@ export interface BackupFile {
 
 export interface GoogleDriveContextValue {
   isLoggedIn: boolean;
-  /** ページリロード後のサイレントログイン復元中フラグ */
-  isRestoringLogin: boolean;
   /** 自動同期ステータス（appDataFolder） */
   syncStatus: SyncStatus;
   lastSyncedAt: Date | null;
@@ -88,7 +86,6 @@ const LOGGED_IN_KEY = "gdrive_logged_in";
 
 export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isRestoringLogin, setIsRestoringLogin] = useState(() => localStorage.getItem("gdrive_logged_in") === "1");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -108,7 +105,6 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         (token) => {
           if (token) {
             setIsLoggedIn(true);
-            setIsRestoringLogin(false);
             localStorage.setItem(LOGGED_IN_KEY, "1");
           }
         },
@@ -139,18 +135,11 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     const wasLoggedIn = localStorage.getItem(LOGGED_IN_KEY) === "1";
     if (wasLoggedIn && !isTokenValid()) {
       // Silent token refresh (no popup — GIS will reuse existing consent)
-      setIsRestoringLogin(true);
       try {
         requestAccessToken("");
-        // isRestoringLogin will be cleared when token callback fires (setIsLoggedIn(true))
-        // or after a timeout fallback
-        setTimeout(() => setIsRestoringLogin(false), 5000);
       } catch {
-        setIsRestoringLogin(false);
         // Ignore — user will need to log in manually
       }
-    } else {
-      setIsRestoringLogin(false);
     }
   }, [gisReady]); // runs once when GIS is ready
 
@@ -281,7 +270,6 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     <GoogleDriveContext.Provider
       value={{
         isLoggedIn,
-        isRestoringLogin,
         syncStatus,
         lastSyncedAt,
         syncError,

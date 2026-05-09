@@ -28,7 +28,6 @@ import { Switch } from "@/components/ui/switch";
 import { X, FileText, FileSpreadsheet, Loader2, CalendarDays, CheckCircle2, AlertCircle, ExternalLink, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { exportTimetableExcel } from "@/lib/exportUtils";
-import { toast } from "sonner";
 import { exportTimetablePdf } from "@/lib/timetablePdfExport";
 import { exportToICS, downloadICS } from "@/lib/icsExport";
 import { useGoogleDrive } from "@/contexts/GoogleDriveContext";
@@ -304,23 +303,6 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
       };
     });
   }, [allWeeks]);
-  // ── Month options for select (月単位モード: 月の最初の週を代表値として使用) ──
-  const monthOptions = useMemo(() => {
-    const seen = new Set<string>();
-    const opts: { value: string; label: string }[] = [];
-    for (const w of allWeeks) {
-      const d = isoToDate(w);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        opts.push({
-          value: w,
-          label: `${d.getFullYear()}年${d.getMonth() + 1}月`,
-        });
-      }
-    }
-    return opts;
-  }, [allWeeks]);
 
   // ── Auto-select closest week ─────────────────────────────────
   useMemo(() => {
@@ -407,8 +389,6 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
   const handleExportPdf = useCallback(async () => {
     if (weeksToPrint.length === 0) return;
     setIsExporting(true);
-    const toastId = toast.loading(`PDF を生成中... (${weeksToPrint.length}週分)`);
-    onClose();
     try {
       await exportTimetablePdf({
         weeksToPrint,
@@ -425,20 +405,15 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
         filename: currentFile?.meta.title ?? "時間割",
         outputType: "pdf",
       });
-      toast.success("PDF のダウンロードが完了しました", { id: toastId });
-    } catch (e) {
-      toast.error(`PDF 生成に失敗しました: ${e instanceof Error ? e.message : String(e)}`, { id: toastId });
     } finally {
       setIsExporting(false);
     }
-  }, [weeksToPrint, effectiveEntries, holidays, gradeColors, filterClass, showReason, showEmptyCells, orientation, currentFile, semLabel, onClose]);
+  }, [weeksToPrint, effectiveEntries, holidays, gradeColors, filterClass, showReason, showEmptyCells, orientation, currentFile, semLabel]);
 
   // ── Export: Excel ────────────────────────────────────────────
   const handleExportExcel = useCallback(async () => {
     if (weeksToPrint.length === 0) return;
     setIsExporting(true);
-    const toastId = toast.loading(`Excel を生成中... (${weeksToPrint.length}週分)`);
-    onClose();
     try {
       const title = currentFile?.meta.title ?? "時間割";
       await exportTimetableExcel(
@@ -449,13 +424,10 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
         gradeColors,
         showReason,
       );
-      toast.success("Excel のダウンロードが完了しました", { id: toastId });
-    } catch (e) {
-      toast.error(`Excel 生成に失敗しました: ${e instanceof Error ? e.message : String(e)}`, { id: toastId });
     } finally {
       setIsExporting(false);
     }
-  }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason, onClose]);
+  }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason]);
   // ── Export: Google Calendar ───────────────────────────────
   const handleLoadCalendars = useCallback(async () => {
     if (gcalCalendarLoaded) return;
@@ -553,8 +525,6 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
   const handleExportICS = useCallback(async () => {
     if (!semester) return;
     setIsExporting(true);
-    const toastId = toast.loading(`ICS を生成中... (${weeksToPrint.length}週分)`);
-    onClose();
     try {
       // 選択された週のエントリをフィルタリング
       const targetDates = new Set(weeksToPrint.flatMap(w => {
@@ -571,13 +541,10 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
       });
       const filename = `${currentFile?.meta?.title ?? "時間割"}.ics`;
       downloadICS(icsContent, filename);
-      toast.success("ICS のダウンロードが完了しました", { id: toastId });
-    } catch (e) {
-      toast.error(`ICS 生成に失敗しました: ${e instanceof Error ? e.message : String(e)}`, { id: toastId });
     } finally {
       setIsExporting(false);
     }
-  }, [weeksToPrint, semester, effectiveEntries, currentFile, onClose]);
+  }, [weeksToPrint, semester, effectiveEntries, currentFile]);
 
     // ── Delete from Google Calendar ─────────────────────────
   const handleDeleteGCal = useCallback(async () => {
@@ -700,10 +667,10 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                 </Label>
                 <Select value={selectedWeekMonday} onValueChange={setSelectedWeekMonday}>
                   <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder={rangeMode === "month" ? "月を選択..." : "週を選択..."} />
+                    <SelectValue placeholder="週を選択..." />
                   </SelectTrigger>
                   <SelectContent className="max-h-64 overflow-y-auto">
-                    {(rangeMode === "month" ? monthOptions : weekOptions).map(w => (
+                    {weekOptions.map(w => (
                       <SelectItem key={w.value} value={w.value} className="text-xs">
                         {w.label}
                       </SelectItem>

@@ -69,6 +69,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
 
   const {
     isLoggedIn,
+    isRestoringLogin,
     syncStatus,
     lastSyncedAt,
     syncError,
@@ -384,7 +385,15 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
             Google Drive
           </p>
 
-          {!isLoggedIn ? (
+          {isRestoringLogin ? (
+            /* サイレントログイン復元中 */
+            <div className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                         bg-blue-600/10 text-blue-400/70
+                         text-xs font-medium border border-blue-500/20">
+              <Loader2 size={13} className="animate-spin" />
+              ログイン状態を復元中...
+            </div>
+          ) : !isLoggedIn ? (
             /* 未ログイン時: ログインボタン */
             <button
               onClick={login}
