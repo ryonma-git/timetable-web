@@ -142,10 +142,17 @@ interface OverrideOp {
 ページロード
   → GIS スクリプト読み込み待ち（200ms ポーリング）
   → initGoogleAuth() でトークンクライアント初期化
+  → Google One Tap 初期化（auto_select:true、HTTPS 環境のみ有効）
+      → One Tap コールバック → requestAccessToken("") でサイレント取得
   → localStorage に "gdrive_logged_in"="1" があれば
       requestAccessToken("") でサイレント取得を試みる
   → 5秒以内にトークンが取れれば isLoggedIn=true
   → 失敗すれば silentRestoreFailed=true → 警告バナー表示
+
+トークン取得成功時
+  → 55分後に自動サイレント更新タイマーをセット（useRef管理）
+  → ページを開いている間はログインが切れない
+  → ログアウト時にタイマーをクリア
 ```
 
 ### 重要な定数（`client/src/lib/googleDrive.ts`）
@@ -204,6 +211,7 @@ const SCOPES = [
 | **v71** | ログイン永続化（isRestoringLogin）、書き出し sonner トースト（PDF/Excel/ICS）、月単位 Select 改善 |
 | **v72** | サイレントログイン失敗アラート、Cookie 許可リクエスト（Storage Access API）、再認証ボタン |
 | **v73** | Drive同期のみボタン追加（ローカル保存なし）、ICS/Google連携タブ全面改修（プレビュー縮小・削除セクション折りたたみ・フッターに「カレンダーに追加」「ICSでダウンロード」ボタン配置） |
+| **v75** | Googleログイン永続化（55分トークン自動更新タイマー + Google One Tap）← Claude Code 実装 |
 | **v74** | 全形式共通のプレビュートグル実装（「プレビューを表示/非表示」ボタン）、ICSタブはデフォルト非表示・設定項目全表示、PDF/Excelはデフォルト表示 |
 
 ---
@@ -214,39 +222,7 @@ const SCOPES = [
 
 ### 高優先度
 
-1. **GIS サイレントログインの信頼性**  
-   `requestAccessToken("")` はブラウザのサードパーティ Cookie が有効な場合のみ成功する。Chrome の Privacy Sandbox 移行後は動作しなくなる可能性がある。  
-   → 対策: GIS の `google.accounts.id.initialize`（One Tap）を組み合わせた ID トークン取得に移行することを検討。
-
-   **『ユーザー希望』 One Tap 実装方针（高優先度）:**
-
-   One Tap は「アクセストークン」ではなく「ID トークン（JWT）」を取得する。これを使って Drive ・カレンダー API を呼び出すには、別途で `requestAccessToken` も必要。ただし One Tap でユーザーのグーグルアカウントが確認できれば、その後の `requestAccessToken("")` （サイレント取得）の成功率が大幅に向上する。
-
-   **実装手順:**
-   ```typescript
-   // 1. client/index.html に追加（既存の GIS スクリプトの直後）
-   // 変更不要（既に読み込み済み）
-
-   // 2. GoogleDriveContext.tsx の useEffect 内に追加
-   window.google.accounts.id.initialize({
-     client_id: CLIENT_ID,
-     callback: (response: { credential: string }) => {
-       // ID トークン取得成功 → そのままサイレントで requestAccessToken を呼ぶ
-       tokenClientRef.current?.requestAccessToken({ prompt: '' });
-     },
-     auto_select: true,   // リロード時に自動選択
-     cancel_on_tap_outside: false,
-   });
-   window.google.accounts.id.prompt(); // ポップアップ表示（既ログイン時は自動スキップ）
-   ```
-
-   **注意事項:**
-   - One Tap は `https://` ドメインでのみ動作（localhost 不可）。開発時は `pnpm dev` で `http://localhost:3000` だとテスト不可能。
-   - Google Cloud Console の OAuth 許可ドメインに `timetableapp-ee4m7qag.manus.space` が登録済みなことを確認すること。
-   - `GoogleDriveContextValue` 型に変更は不要。`login()` / `relogin()` の呼び出し方はそのまま。
-   - One Tap ポップアップを非表示にする場合は `window.google.accounts.id.cancel()` を呼ぶ。
-
-2. **書き出しのバックグラウンド処理**  
+1. **書き出しのバックグラウンド処理**  
    現在は sonner トーストで「ダイアログを閉じても処理継続」の UX を提供しているが、実際には処理はメインスレッドで同期的に実行されている。大量データ（全学期・全週）の PDF 生成時にブラウザが固まる場合がある。  
    → 対策: Web Worker への移行を検討。
 
@@ -264,8 +240,8 @@ const SCOPES = [
 5. **Google Drive 同期エラーの詳細表示**  
    エラー時はサイドバーに「同期エラー」と表示されるだけで、エラーコードと対処法が見えない。
 
-6. **トークン期限切れの事前検知**  
-   GIS アクセストークンの有効期限は 1 時間。期限の 5 分前に自動でサイレント更新を試みる仕組みがない。
+6. ~~**トークン期限切れの事前検知**~~ ✅ **v75で実装済み**  
+   トークン取得時に 55 分後のサイレント更新タイマーを自動セット。Google One Tap も実装済み（HTTPS 環境のみ有効）。
 
 ---
 
