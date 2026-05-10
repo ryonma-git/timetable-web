@@ -35,7 +35,7 @@ export interface GoogleUser {
 
 // GIS token client type (minimal)
 interface TokenClient {
-  requestAccessToken: (overrideConfig?: { prompt?: string }) => void;
+  requestAccessToken: (overrideConfig?: { prompt?: string; login_hint?: string }) => void;
 }
 
 // GIS global type (avoid conflict with TypeScript's built-in google namespace)
@@ -115,9 +115,9 @@ export function initGoogleAuth(
   });
 }
 
-export function requestAccessToken(prompt = ""): void {
+export function requestAccessToken(prompt = "", loginHint?: string): void {
   if (!tokenClient) throw new Error("Token client not initialized");
-  tokenClient.requestAccessToken({ prompt });
+  tokenClient.requestAccessToken(loginHint ? { prompt, login_hint: loginHint } : { prompt });
 }
 
 export function revokeToken(): void {

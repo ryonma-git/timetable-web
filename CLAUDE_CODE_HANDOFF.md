@@ -1,6 +1,6 @@
 # timetable-web — Claude Code 引き継ぎ書類
 
-> 最終更新: 2026年5月（v77言語切替拡張）
+> 最終更新: 2026年5月（v78言語切替拡張）
 > 対象: Claude Code（CLI）でこのリポジトリを引き継ぐ開発者
 
 > **安定版の基準**: 暫定安定版は v74。v75以降は Claude Code / Codex 実装版だが、利用者確認前のため未検証扱いとする。ユーザーが明示しない限り、更新版を安定版とは記載しない。
@@ -55,12 +55,12 @@ git push
 
 今後の修正時は、実装変更とあわせて必要に応じて `README.md`、`HANDOVER.md`、`CLAUDE_CODE_HANDOFF.md` を更新し、`main` へ push する。GitHub Pages 公開は GitHub Actions の自動デプロイに任せる。push 後の報告では、ユーザーが確認しに行けるように公開ページ `https://ryonma-git.github.io/timetable-web/` を毎回貼る。
 
-### 言語切替（v76 初期実装）
+### 言語切替（v76〜v78 段階実装）
 
 - `client/src/contexts/LanguageContext.tsx` で `ja` / `en` の辞書と `useLanguage()` を提供する。
 - 日本語をデフォルトにし、`localStorage` の `timetable_language` に選択言語を保存する。
 - 左下メニューに日本語/英語の切替を追加済み。
-- v77時点ではサイドバー、上部操作ボタン、週間グリッド、自動復元、変更確認、学期タブまで段階対応。設定系・新規作成ウィザード・インスペクター・統計・エクスポート詳細・Google Drive/Calendar の細部は未移行が残る。
+- v78時点ではサイドバー、上部操作ボタン、週間グリッド、自動復元、変更確認、学期タブ、統計・履歴・適用ログまで段階対応。設定系・新規作成ウィザード・インスペクター・エクスポート詳細・Google Drive/Calendar の細部は未移行が残る。
 
 ### ⚠️ deploy.yml の変更について
 

@@ -107,6 +107,8 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const gisReadyRef = useRef(false);
   const [gisReady, setGisReady] = useState(false);
   const tokenRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // One Tap がコールバックを呼び出したかを追跡するフラグ
+  const oneTapFiredRef = useRef(false);
 
   // Initialize GIS when the script is loaded
   useEffect(() => {
@@ -118,6 +120,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       initGoogleAuth(
         (token) => {
           if (token) {
+            oneTapFiredRef.current = false;
             // Clear previous auto-refresh timer and set a new one for 55 min
             if (tokenRefreshTimerRef.current) {
               clearTimeout(tokenRefreshTimerRef.current);
@@ -134,7 +137,14 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         },
         (err) => {
           console.error("GIS auth error:", err);
-          setSyncError(err);
+          if (oneTapFiredRef.current) {
+            // One Tap 後のサイレント取得失敗 → consent ポップアップで再試行
+            // (初回ユーザーはDrive/Calendarスコープの許可がまだないため)
+            oneTapFiredRef.current = false;
+            requestAccessToken("consent");
+          } else {
+            setSyncError(err);
+          }
         }
       );
 
@@ -144,9 +154,28 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       if (gisId) {
         gisId.initialize({
           client_id: GOOGLE_CLIENT_ID,
-          callback: (_response: { credential: string }) => {
-            // One Tap established a session; silently request an access token
-            requestAccessToken("");
+          callback: (response: { credential: string }) => {
+            // One Tap JWT からメールアドレスを取り出して login_hint に使う
+            // （GIS がどのアカウントを使うか特定できないとサイレント取得が失敗する）
+            let loginHint: string | undefined;
+            try {
+              const payload = JSON.parse(
+                atob(response.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+              );
+              loginHint = typeof payload.email === "string" ? payload.email : undefined;
+            } catch { /* ignore */ }
+
+            const wasLoggedIn = localStorage.getItem(LOGGED_IN_KEY) === "1";
+            if (wasLoggedIn) {
+              // 既存ユーザー: login_hint 付きでサイレント取得
+              // 失敗した場合はエラーコールバックが consent にエスカレート
+              oneTapFiredRef.current = true;
+              requestAccessToken("", loginHint);
+            } else {
+              // 初回ユーザー: ユーザー操作コンテキスト内で直接 consent へ
+              // (エラーコールバック経由だとポップアップブロッカーに弾かれる)
+              requestAccessToken("consent");
+            }
           },
           auto_select: true,
           cancel_on_tap_outside: false,
