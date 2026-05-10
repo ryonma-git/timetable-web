@@ -148,40 +148,8 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
         }
       );
 
-      // Google One Tap — HTTPS only (no-op on localhost)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const gisId = (gis.accounts as any)?.id as { initialize: Function; prompt: Function } | undefined;
-      if (gisId) {
-        gisId.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: (response: { credential: string }) => {
-            // One Tap JWT からメールアドレスを取り出して login_hint に使う
-            // （GIS がどのアカウントを使うか特定できないとサイレント取得が失敗する）
-            let loginHint: string | undefined;
-            try {
-              const payload = JSON.parse(
-                atob(response.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
-              );
-              loginHint = typeof payload.email === "string" ? payload.email : undefined;
-            } catch { /* ignore */ }
-
-            const wasLoggedIn = localStorage.getItem(LOGGED_IN_KEY) === "1";
-            if (wasLoggedIn) {
-              // 既存ユーザー: login_hint 付きでサイレント取得
-              // 失敗した場合はエラーコールバックが consent にエスカレート
-              oneTapFiredRef.current = true;
-              requestAccessToken("", loginHint);
-            } else {
-              // 初回ユーザー: ユーザー操作コンテキスト内で直接 consent へ
-              // (エラーコールバック経由だとポップアップブロッカーに弾かれる)
-              requestAccessToken("consent");
-            }
-          },
-          auto_select: true,
-          cancel_on_tap_outside: false,
-        });
-        gisId.prompt();
-      }
+      // Google One Tap は一時無効化（初回ユーザーへの自動ポップアップが鬱陶しいため）
+      // 再有効化する場合はこのブロックを復元すること
 
       gisReadyRef.current = true;
       setGisReady(true);
