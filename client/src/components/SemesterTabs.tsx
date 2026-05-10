@@ -159,17 +159,18 @@ export function SemesterTabs() {
   // Build tab labels
   const semesters = currentFile.semesters;
   if (!semesters || semesters.length <= 1) {
-    // Single semester: show minimal indicator
-    if (!semester) return null;
+    const activeSemester = semester ?? semesters?.[0]?.semester ?? null;
     return (
       <div className="flex items-center gap-2 px-3 py-1 border-b border-border bg-muted/30">
-        <span className="text-xs text-muted-foreground font-medium">
-          {getSemesterLabel(semester, language, t)}
-        </span>
+        {activeSemester && (
+          <span className="text-xs text-muted-foreground font-medium">
+            {getSemesterLabel(activeSemester, language, t)}
+          </span>
+        )}
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="h-6 px-2 gap-1 text-xs text-muted-foreground hover:text-foreground"
+          className="h-6 px-2 gap-1 text-xs"
           onClick={() => setAddDialogOpen(true)}
         >
           <Plus size={11} />
@@ -179,7 +180,7 @@ export function SemesterTabs() {
           open={addDialogOpen}
           onClose={() => setAddDialogOpen(false)}
           onAdd={addSemester}
-          currentSemester={semester}
+          currentSemester={activeSemester}
         />
       </div>
     );
