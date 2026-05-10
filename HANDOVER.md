@@ -220,6 +220,7 @@ const SCOPES = [
 | **v80** | 「学期を追加」ボタンをテキスト付きに変更し視認性を改善。Claude Code 実装。ただし未検証のため安定版扱いしない |
 | **v81** | SemesterTabsバグ修正（semesters配列形式でsemesterがnullになる問題）、Google One Tap無効化。Claude Code 実装。ただし未検証のため安定版扱いしない |
 | **v82** | ログイン成功時にメールをlocalStorageに保存し、サイレント復元時のlogin_hintとして使用（復元成功率を向上）。Claude Code 実装。ただし未検証のため安定版扱いしない |
+| **v83** | SemesterTabsの`if (!semester) return null`ガードを削除し、`semesters[0].semester`へのフォールバックを追加。新形式ファイルでも「学期を追加」ボタンが常時表示されるよう修正。Claude Code 実装。ただし未検証のため安定版扱いしない |
 
 ---
 
