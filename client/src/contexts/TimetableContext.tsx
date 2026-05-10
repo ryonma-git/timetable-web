@@ -720,7 +720,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     <TimetableContext.Provider value={{
       baseEntries, effectiveEntries, pendingOps, allOps, auditLog, overrideMeta,
       isLoaded, isDirty, lastFileSavedAt, currentFile, loadedFileName,
-      semester: currentFile?.semester ?? null,
+      semester: currentFile?.semester ?? currentFile?.semesters?.[activeSemesterIndex]?.semester ?? null,
       mode, setMode,
       subjects, addSubject, updateSubject, removeSubject, reorderSubjects,
       activeTab, setActiveTab,

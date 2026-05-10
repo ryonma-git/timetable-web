@@ -6,10 +6,8 @@
 
 import { useRef, useState, useEffect } from "react";
 import {
-  AlertTriangle,
   BookOpen,
   CalendarDays,
-  Cookie,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -84,7 +82,6 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     login,
     logout,
     relogin,
-    requestCookieAccess,
     syncToDrive,
     backupToMyDrive,
     loadFromDrive,
@@ -402,45 +399,32 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
               {t("drive.restoring")}
             </div>
           ) : silentRestoreFailed ? (
-            /* サイレントログイン失敗時: 再ログイン促進UI */
-            <div className="space-y-1.5">
-              <div className="flex items-start gap-2 px-2 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-amber-400">
-                <AlertTriangle size={11} className="shrink-0 mt-0.5" />
-                <p className="text-[10px] leading-relaxed">
-                  {t("drive.loginExpired")}
-                </p>
-              </div>
+            /* サイレントログイン失敗時: 控えめな再ログイン */
+            <div className="space-y-1">
+              <p className="text-[10px] text-amber-400/70 px-1 leading-relaxed">
+                {t("drive.loginExpired")}
+              </p>
               <button
                 onClick={login}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md
-                           bg-blue-600/20 hover:bg-blue-600/30 text-blue-400
-                           text-xs font-medium transition-colors duration-150 border border-blue-500/30"
+                className="text-[10px] text-sidebar-foreground/50 hover:text-sidebar-foreground/80
+                           underline underline-offset-2 px-1 transition-colors"
               >
-                <LogIn size={13} />
                 {t("drive.relogin")}
-              </button>
-              <button
-                onClick={requestCookieAccess}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md
-                           bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground/60
-                           text-xs font-medium transition-colors duration-150 border border-sidebar-border"
-                title={t("drive.requestCookieTitle")}
-              >
-                <Cookie size={13} />
-                {t("drive.requestCookie")}
               </button>
             </div>
           ) : !isLoggedIn ? (
-            /* 未ログイン時: ログインボタン */
-            <button
-              onClick={login}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-md
-                         bg-blue-600/20 hover:bg-blue-600/30 text-blue-400
-                         text-xs font-medium transition-colors duration-150 border border-blue-500/30"
-            >
-              <LogIn size={13} />
-              {t("drive.login")}
-            </button>
+            /* 未ログイン時: 控えめなヒント */
+            <p className="text-[10px] text-sidebar-foreground/35 px-1 leading-relaxed">
+              <button
+                onClick={login}
+                className="text-sidebar-foreground/50 hover:text-sidebar-foreground/70
+                           underline underline-offset-2 transition-colors"
+              >
+                {t("drive.login")}
+              </button>
+              {" "}
+              {language === "ja" ? "すると自動バックアップが使えます" : "to enable auto-backup"}
+            </p>
           ) : (
             /* ログイン済み時 */
             <>
