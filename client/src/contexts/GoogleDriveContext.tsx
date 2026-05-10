@@ -154,11 +154,28 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       if (gisId) {
         gisId.initialize({
           client_id: GOOGLE_CLIENT_ID,
-          callback: (_response: { credential: string }) => {
-            // One Tap で認証成功 → まずサイレントでアクセストークン取得を試みる
-            // 失敗した場合はエラーコールバックが consent に自動エスカレート
-            oneTapFiredRef.current = true;
-            requestAccessToken("");
+          callback: (response: { credential: string }) => {
+            // One Tap JWT からメールアドレスを取り出して login_hint に使う
+            // （GIS がどのアカウントを使うか特定できないとサイレント取得が失敗する）
+            let loginHint: string | undefined;
+            try {
+              const payload = JSON.parse(
+                atob(response.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+              );
+              loginHint = typeof payload.email === "string" ? payload.email : undefined;
+            } catch { /* ignore */ }
+
+            const wasLoggedIn = localStorage.getItem(LOGGED_IN_KEY) === "1";
+            if (wasLoggedIn) {
+              // 既存ユーザー: login_hint 付きでサイレント取得
+              // 失敗した場合はエラーコールバックが consent にエスカレート
+              oneTapFiredRef.current = true;
+              requestAccessToken("", loginHint);
+            } else {
+              // 初回ユーザー: ユーザー操作コンテキスト内で直接 consent へ
+              // (エラーコールバック経由だとポップアップブロッカーに弾かれる)
+              requestAccessToken("consent");
+            }
           },
           auto_select: true,
           cancel_on_tap_outside: false,
