@@ -162,18 +162,18 @@ export function SemesterTabs() {
     // Single semester: show minimal indicator
     if (!semester) return null;
     return (
-      <div className="flex items-center gap-1 px-3 py-1 border-b border-border bg-muted/30">
+      <div className="flex items-center gap-2 px-3 py-1 border-b border-border bg-muted/30">
         <span className="text-xs text-muted-foreground font-medium">
           {getSemesterLabel(semester, language, t)}
         </span>
         <Button
           variant="ghost"
           size="sm"
-          className="h-5 w-5 p-0 ml-1 text-muted-foreground hover:text-foreground"
+          className="h-6 px-2 gap-1 text-xs text-muted-foreground hover:text-foreground"
           onClick={() => setAddDialogOpen(true)}
-          title={t("semester.add")}
         >
-          <Plus size={10} />
+          <Plus size={11} />
+          {t("semester.add")}
         </Button>
         <AddSemesterDialog
           open={addDialogOpen}
