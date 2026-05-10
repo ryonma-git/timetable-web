@@ -218,6 +218,8 @@ const SCOPES = [
 | **v78** | 英語表示範囲を統計・履歴・適用ログ画面へ拡張。Codex 実装。ただし未検証のため安定版扱いしない |
 | **v79** | One Tapログイン修正（login_hint追加でGISがアカウント特定、初回/既存ユーザー分岐）。Claude Code 実装。ただし未検証のため安定版扱いしない |
 | **v80** | 「学期を追加」ボタンをテキスト付きに変更し視認性を改善。Claude Code 実装。ただし未検証のため安定版扱いしない |
+| **v81** | SemesterTabsバグ修正（semesters配列形式でsemesterがnullになる問題）、Google One Tap無効化。Claude Code 実装。ただし未検証のため安定版扱いしない |
+| **v82** | ログイン成功時にメールをlocalStorageに保存し、サイレント復元時のlogin_hintとして使用（復元成功率を向上）。Claude Code 実装。ただし未検証のため安定版扱いしない |
 
 ---
 
