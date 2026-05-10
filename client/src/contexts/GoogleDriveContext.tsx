@@ -21,6 +21,7 @@ import {
   requestAccessToken,
   revokeToken,
   isTokenValid,
+  fetchUserEmail,
   findDriveFile,
   uploadToDrive,
   downloadFromDrive,
@@ -93,6 +94,7 @@ export function useGoogleDrive(): GoogleDriveContextValue {
 // ─── Provider ────────────────────────────────────────────────────────────────
 
 const LOGGED_IN_KEY = "gdrive_logged_in";
+const USER_EMAIL_KEY = "gdrive_user_email";
 
 export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -123,13 +125,19 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
               clearTimeout(tokenRefreshTimerRef.current);
             }
             tokenRefreshTimerRef.current = setTimeout(() => {
-              requestAccessToken("");
+              const savedEmail = localStorage.getItem(USER_EMAIL_KEY) ?? undefined;
+              requestAccessToken("", savedEmail);
             }, 55 * 60 * 1000);
 
             setIsLoggedIn(true);
             setIsRestoringLogin(false);
             setSilentRestoreFailed(false);
             localStorage.setItem(LOGGED_IN_KEY, "1");
+
+            // ログイン成功時にメールを取得・保存（次回のサイレント復元で login_hint に使う）
+            fetchUserEmail(token).then((email) => {
+              if (email) localStorage.setItem(USER_EMAIL_KEY, email);
+            });
           }
         },
         (err) => {
@@ -162,10 +170,11 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     if (!gisReady) return;
     const wasLoggedIn = localStorage.getItem(LOGGED_IN_KEY) === "1";
     if (wasLoggedIn && !isTokenValid()) {
-      // Silent token refresh (no popup — GIS will reuse existing consent)
+      // Silent token refresh — login_hint でアカウントを特定し成功率を上げる
       setIsRestoringLogin(true);
       try {
-        requestAccessToken("");
+        const savedEmail = localStorage.getItem(USER_EMAIL_KEY) ?? undefined;
+        requestAccessToken("", savedEmail);
         // isRestoringLogin will be cleared when token callback fires (setIsLoggedIn(true))
         // or after a timeout fallback
         setTimeout(() => {
@@ -242,6 +251,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     setLastBackupAt(null);
     setBackupError(null);
     localStorage.removeItem(LOGGED_IN_KEY);
+    localStorage.removeItem(USER_EMAIL_KEY);
   }, []);
 
   const syncToDrive = useCallback(

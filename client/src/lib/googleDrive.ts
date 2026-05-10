@@ -125,6 +125,19 @@ export function revokeToken(): void {
   tokenExpiresAt = 0;
 }
 
+export async function fetchUserEmail(token: string): Promise<string | null> {
+  try {
+    const resp = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return typeof data.email === "string" ? data.email : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Drive API helpers ───────────────────────────────────────────────────────
 
 async function driveRequest(
