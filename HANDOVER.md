@@ -222,6 +222,7 @@ const SCOPES = [
 | **v82** | ログイン成功時にメールをlocalStorageに保存し、サイレント復元時のlogin_hintとして使用（復元成功率を向上）。Claude Code 実装。ただし未検証のため安定版扱いしない |
 | **v83** | SemesterTabsの`if (!semester) return null`ガードを削除し、`semesters[0].semester`へのフォールバックを追加。新形式ファイルでも「学期を追加」ボタンが常時表示されるよう修正。Claude Code 実装 |
 | **v84** | `semesters:[]`（空配列）を持つ旧形式ファイルで`semesterCount=0`になり「学期を追加」が非表示になる問題を修正。`||`演算子でゼロ長配列をフォールバックし旧`semester`フィールドで判断。**Claude Code 実装。安定版（タグ: `stable-v84`）** |
+| **v85** | 指導計画画面を追加（学年×教科単位の授業計画管理）。`TeachingUnit`/`LessonPlanEntry`/`GradeSubjectPlan`型定義追加、TimetableContext CRUD追加、Sidebar「指導計画」タブ追加、TeachingPlanViewコンポーネント新規作成（グリッド表示・インライン編集・単元管理・クラス別授業コマ自動集計）。既存ファイルとの後方互換性あり。Claude Code 実装。未検証 |
 
 ---
 
