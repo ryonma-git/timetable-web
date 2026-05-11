@@ -557,7 +557,10 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   }, [currentFile]);
 
   // ─── Multi-semester management ───────────────────────────────────
-  const semesterCount = currentFile?.semesters?.length ?? (currentFile ? 1 : 0);
+  // semesters: [] (空配列) のときは旧フォーマットの semester フィールドで判断する
+  const semesterCount = (currentFile?.semesters?.length || 0) > 0
+    ? currentFile!.semesters!.length
+    : (currentFile?.semester ? 1 : 0);
 
   const setActiveSemesterIndex = useCallback((idx: number) => {
     if (!currentFile) return;
