@@ -87,9 +87,10 @@ interface UnitCellProps {
   unitColorIdx: number;
   onSelect: (unitId: string) => void;
   disabled?: boolean;
+  isFromPlan?: boolean;   // trueなら自動計画から割り当てた行
 }
 
-function UnitCell({ unit, units, unitColorIdx, onSelect, disabled }: UnitCellProps) {
+function UnitCell({ unit, units, unitColorIdx, onSelect, disabled, isFromPlan }: UnitCellProps) {
   const [open, setOpen] = useState(false);
 
   if (disabled) {
@@ -105,7 +106,7 @@ function UnitCell({ unit, units, unitColorIdx, onSelect, disabled }: UnitCellPro
         onChange={e => { onSelect(e.target.value); setOpen(false); }}
         onBlur={() => setOpen(false)}
       >
-        <option value="">— なし</option>
+        <option value="">— なし（計画に戻す）</option>
         {units.map(u => (
           <option key={u.id} value={u.id}>{u.name}</option>
         ))}
@@ -117,11 +118,16 @@ function UnitCell({ unit, units, unitColorIdx, onSelect, disabled }: UnitCellPro
     <button
       className="text-left w-full group/unit"
       onClick={() => setOpen(true)}
-      title="クリックして単元を設定"
+      title={isFromPlan ? "自動計画（クリックで手動変更）" : "クリックして単元を変更"}
     >
       {unit ? (
-        <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-medium", getUnitColor(unitColorIdx))}>
+        <span className={cn(
+          "text-[10px] px-1.5 py-0.5 rounded border font-medium",
+          getUnitColor(unitColorIdx),
+          isFromPlan && "border-dashed opacity-70",
+        )}>
           {unit.name}
+          {isFromPlan && <span className="ml-0.5 text-[8px] opacity-50">計</span>}
         </span>
       ) : (
         <span className="text-[10px] text-muted-foreground/40 italic group-hover/unit:text-muted-foreground">
@@ -163,8 +169,16 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
     setTimeout(() => startEdit(newUnit), 50);
   };
 
+  const totalPlanned = units.reduce((s, u) => s + (u.plannedPeriods || 0), 0);
+
   return (
     <div className="space-y-1">
+      <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-border/50">
+        <span className="text-[10px] text-muted-foreground">単元を順番に並べ、計画コマ数を設定すると自動割り振りされます</span>
+        {totalPlanned > 0 && (
+          <span className="text-[10px] font-medium text-primary shrink-0 ml-2">計 {totalPlanned}コマ</span>
+        )}
+      </div>
       {units.map((u, idx) => (
         <div key={u.id} className="flex items-center gap-2 group">
           <GripVertical size={12} className="text-muted-foreground shrink-0" />
@@ -176,14 +190,14 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
               <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-6 text-xs flex-1" autoFocus
                 onKeyDown={e => { if (e.key === "Enter") commitEdit(u.id); if (e.key === "Escape") setEditingId(null); }} />
               <Input value={editPeriods} onChange={e => setEditPeriods(e.target.value)} className="h-6 text-xs w-14" type="number" min={1} />
-              <span className="text-xs text-muted-foreground shrink-0">コマ目安</span>
+              <span className="text-xs text-muted-foreground shrink-0">コマ</span>
               <button onClick={() => commitEdit(u.id)} className="text-green-600 hover:text-green-700"><Check size={12} /></button>
               <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-foreground"><X size={12} /></button>
             </>
           ) : (
             <>
               <span className="text-xs flex-1 truncate">{u.name}</span>
-              <span className="text-[10px] text-muted-foreground shrink-0">{u.plannedPeriods}コマ目安</span>
+              <span className="text-[10px] font-medium text-primary shrink-0">{u.plannedPeriods}コマ</span>
               <button onClick={() => startEdit(u)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"><Pencil size={11} /></button>
               <button onClick={() => onChange(units.filter(x => x.id !== u.id))} className="opacity-0 group-hover:opacity-100 text-destructive/60 hover:text-destructive"><Trash2 size={11} /></button>
             </>
@@ -206,6 +220,8 @@ interface LessonRowProps {
   unit: TeachingUnit | null;
   unitColorIdx: number;
   unitPeriod: number;            // 動的計算済み
+  effectiveUnitId: string;       // 計画 or 手動override の実効unitId
+  isFromPlan: boolean;           // trueなら自動計画から割り当て（手動変更なし）
   units: TeachingUnit[];
   classSlots: Record<string, Array<{ date: string; period: number; weekday_jp: string }>>;
   classes: string[];
@@ -217,7 +233,7 @@ interface LessonRowProps {
 }
 
 function LessonRow({
-  lessonNumber, entry, unit, unitColorIdx, unitPeriod, units,
+  lessonNumber, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, units,
   classSlots, classes, isSkip, onSave, onToggleSkip, onInsertBefore, onDelete,
 }: LessonRowProps) {
   const [editing, setEditing] = useState(false);
@@ -227,7 +243,7 @@ function LessonRow({
   const commit = () => {
     onSave({
       id: entry?.id ?? nanoid(8),
-      unitId: entry?.unitId ?? "",
+      unitId: effectiveUnitId,   // 計画由来でも正しいunitIdを保存
       unitPeriod,
       content: content.trim(),
       notes: notes.trim() || undefined,
@@ -245,7 +261,7 @@ function LessonRow({
   const handleUnitSelect = (unitId: string) => {
     onSave({
       id: entry?.id ?? nanoid(8),
-      unitId,
+      unitId,                    // "" = 計画に戻す
       unitPeriod,
       content: entry?.content ?? "",
       notes: entry?.notes,
@@ -256,7 +272,9 @@ function LessonRow({
   return (
     <tr className={cn(
       "border-b border-border/40 group/row transition-colors",
-      isSkip ? "bg-muted/30 opacity-60" : "hover:bg-muted/20",
+      isSkip ? "bg-muted/30 opacity-60" :
+      isFromPlan ? "bg-blue-50/20 hover:bg-blue-50/40 dark:bg-blue-950/10" :
+      "hover:bg-muted/20",
       editing && "bg-muted/30",
     )}>
       {/* No. セル: クリックでスキップ切替、ホバーで行操作 */}
@@ -298,6 +316,7 @@ function LessonRow({
           unitColorIdx={unitColorIdx}
           onSelect={handleUnitSelect}
           disabled={isSkip}
+          isFromPlan={isFromPlan}
         />
       </td>
 
@@ -385,11 +404,23 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
     return result;
   }, [effectiveEntries, classes, plan.subject]);
 
-  // 行数: timetableスロット数 と lessons配列の大きい方
+  // 計画レイアウト（単元順 × plannedPeriods で自動導出）
+  const plannedRows = useMemo(() => {
+    const rows: Array<{ unitId: string; unitPeriod: number }> = [];
+    for (const unit of plan.units) {
+      const periods = Math.max(0, unit.plannedPeriods || 0);
+      for (let i = 0; i < periods; i++) {
+        rows.push({ unitId: unit.id, unitPeriod: i + 1 });
+      }
+    }
+    return rows;
+  }, [plan.units]);
+
+  // 行数: timetableスロット数・lessons配列・計画行数の最大値
   const maxSlots = useMemo(() => {
     const fromSlots = classes.map(cls => (classSlots[cls] ?? []).length);
-    return Math.max(plan.lessons.length, ...fromSlots, 0);
-  }, [classSlots, classes, plan.lessons.length]);
+    return Math.max(plan.lessons.length, ...fromSlots, plannedRows.length, 0);
+  }, [classSlots, classes, plan.lessons.length, plannedRows.length]);
 
   // 単元→インデックスマップ（カラー用）
   const unitIndexMap = useMemo(() => {
@@ -398,7 +429,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
     return m;
   }, [plan.units]);
 
-  // 行データ生成 + unitPeriodを動的計算
+  // 行データ生成：計画(plannedRows) と 実績(lessons) をマージ
   const rows = useMemo(() => {
     const lessonsByNum = new Map<number, LessonPlanEntry>();
     plan.lessons.forEach((l, i) => lessonsByNum.set(i + 1, l));
@@ -408,22 +439,28 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
     return Array.from({ length: maxSlots }, (_, i) => {
       const n = i + 1;
       const entry = lessonsByNum.get(n) ?? null;
+      const plannedSlot = plannedRows[i] ?? null;
       const isSkip = entry?.isSkip ?? false;
-      const unitId = entry?.unitId ?? "";
-      const unit = unitId ? (plan.units.find(u => u.id === unitId) ?? null) : null;
+
+      // 実績unitIdが空 → 計画のunitIdにフォールバック
+      const overrideUnitId = entry?.unitId ?? "";
+      const effectiveUnitId = overrideUnitId || (plannedSlot?.unitId ?? "");
+      const isFromPlan = !overrideUnitId && !!plannedSlot?.unitId;
+
+      const unit = effectiveUnitId ? (plan.units.find(u => u.id === effectiveUnitId) ?? null) : null;
       const unitColorIdx = unit ? (unitIndexMap.get(unit.id) ?? 0) : 0;
 
       // isSkipでない行だけunitPeriodをカウント
       let unitPeriod = 0;
-      if (unitId && !isSkip) {
-        const count = (unitCounts.get(unitId) ?? 0) + 1;
-        unitCounts.set(unitId, count);
+      if (effectiveUnitId && !isSkip) {
+        const count = (unitCounts.get(effectiveUnitId) ?? 0) + 1;
+        unitCounts.set(effectiveUnitId, count);
         unitPeriod = count;
       }
 
-      return { n, entry, unit, unitColorIdx, unitId, unitPeriod, isSkip };
+      return { n, entry, unit, unitColorIdx, effectiveUnitId, unitPeriod, isSkip, isFromPlan };
     });
-  }, [maxSlots, plan.lessons, plan.units, unitIndexMap]);
+  }, [maxSlots, plan.lessons, plan.units, unitIndexMap, plannedRows]);
 
   // lessons配列を更新するヘルパー（不足分を自動補完）
   const updateLesson = useCallback((lessonNumber: number, saved: LessonPlanEntry) => {
@@ -475,6 +512,9 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
       <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
         <span className="font-semibold text-foreground text-sm">{plan.grade} {plan.subject}</span>
         <span>全{maxSlots}コマ</span>
+        {plannedRows.length > 0 && (
+          <span className="text-blue-600/80">計画{plannedRows.length}コマ自動割り振り</span>
+        )}
         {filledCount > 0 && <span className="text-emerald-600">{filledCount}コマ入力済み</span>}
         {skipCount > 0 && <span className="text-orange-500">{skipCount}コマ実施なし</span>}
         <span>対象クラス: {classes.join("・")}</span>
@@ -532,7 +572,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                 </td>
               </tr>
             ) : (
-              rows.map(({ n, entry, unit, unitColorIdx, unitPeriod, isSkip }) => (
+              rows.map(({ n, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, isSkip }) => (
                 <LessonRow
                   key={n}
                   lessonNumber={n}
@@ -541,6 +581,8 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                   unit={unit}
                   unitColorIdx={unitColorIdx}
                   unitPeriod={unitPeriod}
+                  effectiveUnitId={effectiveUnitId}
+                  isFromPlan={isFromPlan}
                   units={plan.units}
                   classSlots={classSlots}
                   classes={classes}
