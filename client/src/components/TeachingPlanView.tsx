@@ -1,7 +1,7 @@
 // TeachingPlanView.tsx
-// 指導計画画面：学年×教科単位で、通し番号・単元・内容予定・クラス別実施日を管理する
+// 指導計画画面：時間割から学年×教科を自動抽出し、一覧+テーブルで管理
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { nanoid } from "nanoid";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { GradeSubjectPlan, TeachingUnit, LessonPlanEntry } from "@/lib/timetableFile";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Trash2, BookOpen, ChevronDown, Pencil, Check, X, GripVertical,
+  Plus, Trash2, BookOpen, ChevronDown, Pencil, Check, X, GripVertical, FileText,
 } from "lucide-react";
 import {
   Dialog,
@@ -23,7 +23,6 @@ import { Label } from "@/components/ui/label";
 
 // ─── 計算ロジック ─────────────────────────────────────────────
 
-/** クラス×教科で有効な授業スロットを日付順に返す */
 function computeClassLessonSlots(
   effectiveEntries: TimetableEntry[],
   targetClass: string,
@@ -41,7 +40,6 @@ function computeClassLessonSlots(
   return slots;
 }
 
-/** 有効エントリから学年・教科の組み合わせ一覧を抽出 */
 function extractGradeSubjectCombos(
   effectiveEntries: TimetableEntry[],
 ): Array<{ grade: string; subject: string; classes: string[] }> {
@@ -81,110 +79,7 @@ function getUnitColor(idx: number) {
   return UNIT_COLORS[idx % UNIT_COLORS.length];
 }
 
-// ─── 新規指導計画作成ダイアログ ───────────────────────────────
-
-interface NewPlanDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onCreate: (plan: GradeSubjectPlan) => void;
-  combos: Array<{ grade: string; subject: string; classes: string[] }>;
-  existingIds: Set<string>;
-}
-
-function NewPlanDialog({ open, onClose, onCreate, combos, existingIds }: NewPlanDialogProps) {
-  const [grade, setGrade] = useState(combos[0]?.grade ?? "");
-  const [subject, setSubject] = useState(combos[0]?.subject ?? "");
-  const [customGrade, setCustomGrade] = useState("");
-  const [customSubject, setCustomSubject] = useState("");
-  const [useCustom, setUseCustom] = useState(combos.length === 0);
-
-  const finalGrade = useCustom ? customGrade : grade;
-  const finalSubject = useCustom ? customSubject : subject;
-  const planId = `${finalGrade}|||${finalSubject}`;
-  const alreadyExists = existingIds.has(planId);
-
-  const handleCreate = () => {
-    if (!finalGrade || !finalSubject || alreadyExists) return;
-    onCreate({
-      id: planId,
-      grade: finalGrade,
-      subject: finalSubject,
-      units: [],
-      lessons: [],
-    });
-    onClose();
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="text-sm font-semibold">指導計画を新規作成</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3 py-2">
-          {combos.length > 0 && (
-            <div className="flex items-center gap-2">
-              <button
-                className={cn("text-xs px-2 py-1 rounded border", !useCustom ? "bg-primary text-primary-foreground border-primary" : "border-border")}
-                onClick={() => setUseCustom(false)}
-              >時間割から選択</button>
-              <button
-                className={cn("text-xs px-2 py-1 rounded border", useCustom ? "bg-primary text-primary-foreground border-primary" : "border-border")}
-                onClick={() => setUseCustom(true)}
-              >手動入力</button>
-            </div>
-          )}
-          {!useCustom && combos.length > 0 ? (
-            <>
-              <div className="space-y-1">
-                <Label className="text-xs">学年</Label>
-                <select
-                  className="w-full h-8 text-xs border border-border rounded px-2 bg-background"
-                  value={grade}
-                  onChange={e => { setGrade(e.target.value); setSubject(""); }}
-                >
-                  {Array.from(new Set(combos.map(c => c.grade))).map(g => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">教科</Label>
-                <select
-                  className="w-full h-8 text-xs border border-border rounded px-2 bg-background"
-                  value={subject}
-                  onChange={e => setSubject(e.target.value)}
-                >
-                  {combos.filter(c => c.grade === grade).map(c => (
-                    <option key={c.subject} value={c.subject}>{c.subject}</option>
-                  ))}
-                </select>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="space-y-1">
-                <Label className="text-xs">学年（例: 5年）</Label>
-                <Input value={customGrade} onChange={e => setCustomGrade(e.target.value)} className="h-8 text-xs" placeholder="5年" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">教科（例: 理科）</Label>
-                <Input value={customSubject} onChange={e => setCustomSubject(e.target.value)} className="h-8 text-xs" placeholder="理科" />
-              </div>
-            </>
-          )}
-          {alreadyExists && <p className="text-xs text-destructive">この学年・教科の指導計画はすでに存在します</p>}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" size="sm" onClick={onClose} className="h-7 text-xs">キャンセル</Button>
-          <Button size="sm" onClick={handleCreate} disabled={!finalGrade || !finalSubject || alreadyExists} className="h-7 text-xs">作成</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ─── 単元編集ダイアログ ────────────────────────────────────────
+// ─── 単元編集パネル ────────────────────────────────────────────
 
 interface UnitEditorProps {
   units: TeachingUnit[];
@@ -248,7 +143,7 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
   );
 }
 
-// ─── レッスン行（インライン編集） ────────────────────────────────
+// ─── レッスン行 ────────────────────────────────────────────────
 
 interface LessonRowProps {
   lessonNumber: number;
@@ -258,13 +153,12 @@ interface LessonRowProps {
   classSlots: Record<string, Array<{ date: string; period: number; weekday_jp: string }>>;
   classes: string[];
   onSave: (entry: LessonPlanEntry) => void;
-  planId: string;
   unitId: string;
   unitPeriod: number;
 }
 
 function LessonRow({
-  lessonNumber, entry, unit, unitColorIdx, classSlots, classes, onSave, planId, unitId, unitPeriod,
+  lessonNumber, entry, unit, unitColorIdx, classSlots, classes, onSave, unitId, unitPeriod,
 }: LessonRowProps) {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(entry?.content ?? "");
@@ -289,26 +183,22 @@ function LessonRow({
 
   return (
     <tr className={cn("border-b border-border/40 hover:bg-muted/20 group", editing && "bg-muted/30")}>
-      {/* 通し番号 */}
       <td className="px-2 py-1.5 text-center text-xs text-muted-foreground font-mono w-8 shrink-0">
         {lessonNumber}
       </td>
-      {/* 単元 */}
       <td className="px-2 py-1.5 w-28">
         {unit ? (
           <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium", getUnitColor(unitColorIdx))}>
             {unit.name}
           </span>
         ) : (
-          <span className="text-[10px] text-muted-foreground">-</span>
+          <span className="text-[10px] text-muted-foreground">—</span>
         )}
       </td>
-      {/* 単元内 */}
       <td className="px-2 py-1.5 text-center text-xs text-muted-foreground w-10">
         {unitPeriod}
       </td>
-      {/* 内容予定 */}
-      <td className="px-2 py-1.5 min-w-[140px]">
+      <td className="px-2 py-1.5 min-w-[160px]">
         {editing ? (
           <div className="flex flex-col gap-1">
             <Input
@@ -332,28 +222,27 @@ function LessonRow({
           </div>
         ) : (
           <div
-            className="flex items-center gap-1 cursor-pointer"
+            className="flex items-center gap-1 cursor-pointer min-h-[24px]"
             onClick={() => { setContent(entry?.content ?? ""); setNotes(entry?.notes ?? ""); setEditing(true); }}
           >
-            <span className={cn("text-xs", entry?.content ? "text-foreground" : "text-muted-foreground/50 italic")}>
-              {entry?.content || "（未入力）"}
+            <span className={cn("text-xs", entry?.content ? "text-foreground" : "text-muted-foreground/40 italic")}>
+              {entry?.content || "クリックして入力…"}
             </span>
             <Pencil size={10} className="opacity-0 group-hover:opacity-60 text-muted-foreground shrink-0" />
           </div>
         )}
       </td>
-      {/* クラス別日付 */}
       {classes.map(cls => {
         const slots = classSlots[cls] ?? [];
         const slot = slots[lessonNumber - 1];
         return (
-          <td key={cls} className="px-2 py-1.5 text-center text-[10px] w-20">
+          <td key={cls} className="px-2 py-1.5 text-center text-[10px] w-20 whitespace-nowrap">
             {slot ? (
               <span className="text-foreground">
                 {slot.date.slice(5).replace("-", "/")} {slot.weekday_jp}{slot.period}
               </span>
             ) : (
-              <span className="text-muted-foreground/40">実施なし</span>
+              <span className="text-muted-foreground/30">—</span>
             )}
           </td>
         );
@@ -375,7 +264,6 @@ interface PlanTableProps {
 function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateUnits }: PlanTableProps) {
   const [showUnits, setShowUnits] = useState(false);
 
-  // クラス別コマスロットをメモ化
   const classSlots = useMemo(() => {
     const result: Record<string, Array<{ date: string; period: number; weekday_jp: string }>> = {};
     for (const cls of classes) {
@@ -384,42 +272,31 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
     return result;
   }, [effectiveEntries, classes, plan.subject]);
 
-  // 全クラスの最大コマ数 → 行数を決定
   const maxSlots = useMemo(() => {
-    return Math.max(
-      plan.lessons.length,
-      ...classes.map(cls => (classSlots[cls] ?? []).length),
-    );
+    const fromSlots = classes.map(cls => (classSlots[cls] ?? []).length);
+    return Math.max(plan.lessons.length, ...fromSlots, 0);
   }, [classSlots, classes, plan.lessons.length]);
 
-  // 単元→インデックスマップ（カラー用）
   const unitIndexMap = useMemo(() => {
     const m = new Map<string, number>();
     plan.units.forEach((u, i) => m.set(u.id, i));
     return m;
   }, [plan.units]);
 
-  // 行ごとの単元・unitPeriodを計算
-  // lessons配列にないスロット番号（N > lessons.length）はnullエントリとして表示
   const rows = useMemo(() => {
-    const result = [];
-    // lessonをunitId→単元内カウントでグループ化して表示
-    // 単元割り当てのないスロットはnull扱い
     const lessonsByNum = new Map<number, LessonPlanEntry>();
     plan.lessons.forEach((l, i) => lessonsByNum.set(i + 1, l));
-
-    for (let n = 1; n <= maxSlots; n++) {
+    return Array.from({ length: maxSlots }, (_, i) => {
+      const n = i + 1;
       const entry = lessonsByNum.get(n) ?? null;
       const unit = entry ? (plan.units.find(u => u.id === entry.unitId) ?? null) : null;
       const unitColorIdx = unit ? (unitIndexMap.get(unit.id) ?? 0) : 0;
-      result.push({ n, entry, unit, unitColorIdx, unitId: entry?.unitId ?? "", unitPeriod: entry?.unitPeriod ?? n });
-    }
-    return result;
+      return { n, entry, unit, unitColorIdx, unitId: entry?.unitId ?? "", unitPeriod: entry?.unitPeriod ?? n };
+    });
   }, [maxSlots, plan.lessons, plan.units, unitIndexMap]);
 
   const handleSaveLesson = useCallback((lessonNumber: number, saved: LessonPlanEntry) => {
     const next = [...plan.lessons];
-    // 足りない行を埋める
     while (next.length < lessonNumber) {
       next.push({ id: nanoid(8), unitId: "", unitPeriod: next.length + 1, content: "" });
     }
@@ -427,16 +304,32 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
     onUpdateLessons(next);
   }, [plan.lessons, onUpdateLessons]);
 
+  const filledCount = plan.lessons.filter(l => l.content).length;
+
   return (
     <div className="space-y-3">
+      {/* ヘッダー情報バー */}
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span className="font-semibold text-foreground text-sm">{plan.grade} {plan.subject}</span>
+        <span>全{maxSlots}コマ</span>
+        <span className="text-emerald-600">{filledCount > 0 ? `${filledCount}コマ入力済み` : "未入力"}</span>
+        <span>対象クラス: {classes.join("・")}</span>
+      </div>
+
       {/* 単元管理パネル */}
       <div className="border border-border rounded-md">
         <button
           className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium hover:bg-muted/30"
           onClick={() => setShowUnits(!showUnits)}
         >
-          <span>単元管理（{plan.units.length}件）</span>
-          <ChevronDown size={12} className={cn("transition-transform", showUnits && "rotate-180")} />
+          <span className="flex items-center gap-1.5">
+            <GripVertical size={11} className="text-muted-foreground" />
+            単元管理
+            {plan.units.length > 0 && (
+              <span className="text-[10px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">{plan.units.length}件</span>
+            )}
+          </span>
+          <ChevronDown size={12} className={cn("transition-transform text-muted-foreground", showUnits && "rotate-180")} />
         </button>
         {showUnits && (
           <div className="px-3 py-2 border-t border-border">
@@ -449,21 +342,21 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
       <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-muted/50 text-xs text-muted-foreground">
+            <tr className="bg-muted/50 text-xs text-muted-foreground border-b border-border">
               <th className="px-2 py-2 text-center w-8 font-medium">No.</th>
               <th className="px-2 py-2 w-28 font-medium">単元</th>
               <th className="px-2 py-2 text-center w-10 font-medium">単元内</th>
-              <th className="px-2 py-2 min-w-[140px] font-medium">内容予定</th>
+              <th className="px-2 py-2 min-w-[160px] font-medium">内容予定</th>
               {classes.map(cls => (
                 <th key={cls} className="px-2 py-2 text-center w-20 font-medium">{cls}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {maxSlots === 0 ? (
               <tr>
                 <td colSpan={4 + classes.length} className="px-4 py-8 text-center text-xs text-muted-foreground">
-                  時間割にデータがありません。授業コマを追加すると自動で表示されます。
+                  時間割にデータがありません。週間時間割でコマを追加すると自動で表示されます。
                 </td>
               </tr>
             ) : (
@@ -477,7 +370,6 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                   classSlots={classSlots}
                   classes={classes}
                   onSave={(saved) => handleSaveLesson(n, saved)}
-                  planId={plan.id}
                   unitId={unitId}
                   unitPeriod={unitPeriod}
                 />
@@ -486,13 +378,58 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
           </tbody>
         </table>
       </div>
-
-      {maxSlots > 0 && (
-        <p className="text-[10px] text-muted-foreground">
-          全{maxSlots}コマ　内容入力済み: {plan.lessons.filter(l => l.content).length}コマ
-        </p>
-      )}
     </div>
+  );
+}
+
+// ─── 手動追加ダイアログ ────────────────────────────────────────
+
+interface ManualAddDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onCreate: (plan: GradeSubjectPlan) => void;
+  existingIds: Set<string>;
+}
+
+function ManualAddDialog({ open, onClose, onCreate, existingIds }: ManualAddDialogProps) {
+  const [grade, setGrade] = useState("");
+  const [subject, setSubject] = useState("");
+
+  const planId = `${grade.trim()}|||${subject.trim()}`;
+  const alreadyExists = existingIds.has(planId);
+
+  const handleCreate = () => {
+    if (!grade.trim() || !subject.trim() || alreadyExists) return;
+    onCreate({ id: planId, grade: grade.trim(), subject: subject.trim(), units: [], lessons: [] });
+    setGrade(""); setSubject("");
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-xs">
+        <DialogHeader>
+          <DialogTitle className="text-sm font-semibold">手動で学年×教科を追加</DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground -mt-1">時間割に存在しない組み合わせを手動で追加します</p>
+        <div className="space-y-3 py-1">
+          <div className="space-y-1">
+            <Label className="text-xs">学年（例: 5年）</Label>
+            <Input value={grade} onChange={e => setGrade(e.target.value)} className="h-8 text-xs" placeholder="5年" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">教科（例: 理科）</Label>
+            <Input value={subject} onChange={e => setSubject(e.target.value)} className="h-8 text-xs" placeholder="理科"
+              onKeyDown={e => e.key === "Enter" && handleCreate()} />
+          </div>
+          {alreadyExists && <p className="text-xs text-destructive">この組み合わせはすでに存在します</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" size="sm" onClick={onClose} className="h-7 text-xs">キャンセル</Button>
+          <Button size="sm" onClick={handleCreate} disabled={!grade.trim() || !subject.trim() || alreadyExists} className="h-7 text-xs">追加</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -504,28 +441,71 @@ export function TeachingPlanView() {
     teachingPlans,
     upsertTeachingPlan,
     removeTeachingPlan,
-    updateTeachingPlanLessons,
-    updateTeachingPlanUnits,
     isLoaded,
   } = useTimetable();
 
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [newPlanOpen, setNewPlanOpen] = useState(false);
+  // 時間割から学年×教科を自動抽出
+  const combos = useMemo(() => extractGradeSubjectCombos(effectiveEntries), [effectiveEntries]);
+
+  // 既存プランMap
+  const planMap = useMemo(() => {
+    const m = new Map<string, GradeSubjectPlan>();
+    for (const p of teachingPlans) m.set(p.id, p);
+    return m;
+  }, [teachingPlans]);
+
+  // 手動追加されたプランのうち、combosに含まれないものをリストアップ
+  const manualOnlyPlans = useMemo(() => {
+    const comboIds = new Set(combos.map(c => `${c.grade}|||${c.subject}`));
+    return teachingPlans.filter(p => !comboIds.has(p.id));
+  }, [teachingPlans, combos]);
+
+  // 選択中の combo key
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showManualAdd, setShowManualAdd] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // 時間割から学年×教科の組み合わせを抽出
-  const combos = useMemo(() => extractGradeSubjectCombos(effectiveEntries), [effectiveEntries]);
+  // 初回: 最初の combo を自動選択
+  useEffect(() => {
+    if (combos.length > 0 && !selectedId) {
+      setSelectedId(`${combos[0].grade}|||${combos[0].subject}`);
+    }
+  }, [combos, selectedId]);
+
   const existingIds = useMemo(() => new Set(teachingPlans.map(p => p.id)), [teachingPlans]);
 
-  // 選択中のplan
-  const activePlan = teachingPlans.find(p => p.id === selectedPlanId) ?? teachingPlans[0] ?? null;
-  const activeId = activePlan?.id ?? null;
+  // 選択中のplan（存在しない場合は空のphantomを生成）
+  const activePlan = useMemo((): GradeSubjectPlan | null => {
+    if (!selectedId) return null;
+    if (planMap.has(selectedId)) return planMap.get(selectedId)!;
+    // timetableのcomboから生成
+    const parts = selectedId.split("|||");
+    if (parts.length !== 2) return null;
+    return { id: selectedId, grade: parts[0], subject: parts[1], units: [], lessons: [] };
+  }, [selectedId, planMap]);
 
-  // activePlanに対応するクラスリスト
-  const activePlanClasses = useMemo(() => {
+  // 選択中のplanに対応するクラスリスト
+  const activeClasses = useMemo(() => {
     if (!activePlan) return [];
-    return combos.find(c => c.grade === activePlan.grade && c.subject === activePlan.subject)?.classes ?? [];
-  }, [activePlan, combos]);
+    return combos.find(c => c.grade === activePlan.grade && c.subject === activePlan.subject)?.classes
+      ?? manualOnlyPlans.find(p => p.id === activePlan.id)
+        ? [] // 手動追加で時間割にない場合
+        : [];
+  }, [activePlan, combos, manualOnlyPlans]);
+
+  // コマ数を計算（サイドバー表示用）
+  const slotCountMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const combo of combos) {
+      const id = `${combo.grade}|||${combo.subject}`;
+      const maxCount = Math.max(
+        ...combo.classes.map(cls => computeClassLessonSlots(effectiveEntries, cls, combo.subject).length),
+        0
+      );
+      m.set(id, maxCount);
+    }
+    return m;
+  }, [combos, effectiveEntries]);
 
   if (!isLoaded) {
     return (
@@ -535,86 +515,122 @@ export function TeachingPlanView() {
     );
   }
 
+  const allSidebarItems: Array<{ id: string; grade: string; subject: string; fromTimetable: boolean }> = [
+    ...combos.map(c => ({ id: `${c.grade}|||${c.subject}`, grade: c.grade, subject: c.subject, fromTimetable: true })),
+    ...manualOnlyPlans.map(p => ({ id: p.id, grade: p.grade, subject: p.subject, fromTimetable: false })),
+  ];
+
   return (
-    <div className="flex flex-col h-full">
-      {/* ヘッダー */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/20 shrink-0">
-        <BookOpen size={14} className="text-muted-foreground" />
-        <span className="text-sm font-semibold">指導計画</span>
-        <span className="text-xs text-muted-foreground ml-1">（教科担任モード）</span>
-        <div className="flex-1" />
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 text-xs gap-1"
-          onClick={() => setNewPlanOpen(true)}
-        >
-          <Plus size={11} />
-          新規作成
-        </Button>
-      </div>
-
-      {/* タブ（学年×教科） */}
-      {teachingPlans.length > 0 && (
-        <div className="flex items-center gap-0.5 px-2 py-1 border-b border-border bg-muted/10 overflow-x-auto shrink-0">
-          {teachingPlans.map(plan => (
-            <div key={plan.id} className="flex items-center group shrink-0">
-              <button
-                onClick={() => setSelectedPlanId(plan.id)}
-                className={cn(
-                  "px-3 py-1 text-xs rounded-t font-medium transition-colors",
-                  plan.id === activeId
-                    ? "bg-background text-foreground border border-b-background border-border -mb-px z-10"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                {plan.grade} {plan.subject}
-              </button>
-              <button
-                onClick={() => setConfirmDeleteId(plan.id)}
-                className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 hover:text-destructive transition-all ml-0.5"
-                title="削除"
-              >
-                <X size={10} />
-              </button>
-            </div>
-          ))}
+    <div className="flex h-full overflow-hidden">
+      {/* ── 左サイドバー: 学年×教科一覧 ── */}
+      <div className="w-48 shrink-0 border-r border-border flex flex-col bg-muted/10">
+        <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+          <span className="text-xs font-semibold text-muted-foreground">学年 × 教科</span>
+          <span className="text-[10px] text-muted-foreground">{allSidebarItems.length}件</span>
         </div>
-      )}
 
-      {/* コンテンツ */}
-      <div className="flex-1 overflow-auto p-4">
-        {teachingPlans.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
-            <BookOpen size={32} className="text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">指導計画がまだありません</p>
-            <p className="text-xs text-muted-foreground">
-              「新規作成」で学年×教科の指導計画を追加してください。<br />
-              時間割データから授業コマ数が自動計算されます。
-            </p>
-            <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setNewPlanOpen(true)}>
-              <Plus size={11} />
-              指導計画を新規作成
-            </Button>
-          </div>
-        ) : activePlan ? (
-          <PlanTable
-            key={activePlan.id}
-            plan={activePlan}
-            classes={activePlanClasses}
-            effectiveEntries={effectiveEntries}
-            onUpdateLessons={(lessons) => updateTeachingPlanLessons(activePlan.id, lessons)}
-            onUpdateUnits={(units) => updateTeachingPlanUnits(activePlan.id, units)}
-          />
-        ) : null}
+        <div className="flex-1 overflow-y-auto">
+          {allSidebarItems.length === 0 ? (
+            <div className="px-3 py-6 text-xs text-muted-foreground text-center">
+              <BookOpen size={20} className="mx-auto mb-2 opacity-30" />
+              時間割に教科データがありません
+            </div>
+          ) : (
+            allSidebarItems.map(item => {
+              const hasPlan = planMap.has(item.id);
+              const plan = planMap.get(item.id);
+              const filledCount = plan?.lessons.filter(l => l.content).length ?? 0;
+              const totalCount = slotCountMap.get(item.id) ?? 0;
+              const isSelected = selectedId === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setSelectedId(item.id)}
+                  className={cn(
+                    "w-full text-left px-3 py-2.5 border-b border-border/30 transition-colors group",
+                    isSelected
+                      ? "bg-primary/10 border-l-2 border-l-primary text-foreground"
+                      : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-medium truncate">{item.grade} {item.subject}</span>
+                    {hasPlan && filledCount > 0 && (
+                      <span className="text-[9px] bg-emerald-100 text-emerald-700 rounded px-1 shrink-0">
+                        {filledCount}/{totalCount}
+                      </span>
+                    )}
+                  </div>
+                  {item.fromTimetable && totalCount > 0 && (
+                    <div className="text-[9px] text-muted-foreground mt-0.5">
+                      {totalCount}コマ
+                      {!hasPlan && <span className="ml-1 opacity-60">（未入力）</span>}
+                    </div>
+                  )}
+                  {!item.fromTimetable && (
+                    <div className="text-[9px] text-muted-foreground mt-0.5 opacity-60">手動追加</div>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* 手動追加ボタン */}
+        <div className="p-2 border-t border-border">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="w-full h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+            onClick={() => setShowManualAdd(true)}
+          >
+            <Plus size={11} />
+            手動で追加
+          </Button>
+        </div>
       </div>
 
-      {/* 新規作成ダイアログ */}
-      <NewPlanDialog
-        open={newPlanOpen}
-        onClose={() => setNewPlanOpen(false)}
-        onCreate={(plan) => { upsertTeachingPlan(plan); setSelectedPlanId(plan.id); }}
-        combos={combos}
+      {/* ── 右側: テーブル ── */}
+      <div className="flex-1 overflow-auto p-4">
+        {activePlan ? (
+          <>
+            <PlanTable
+              key={activePlan.id}
+              plan={activePlan}
+              classes={activeClasses}
+              effectiveEntries={effectiveEntries}
+              onUpdateLessons={(lessons) => upsertTeachingPlan({ ...activePlan, lessons })}
+              onUpdateUnits={(units) => upsertTeachingPlan({ ...activePlan, units })}
+            />
+            {/* 削除ボタン（保存済みのみ表示） */}
+            {planMap.has(activePlan.id) && (
+              <div className="mt-6 pt-4 border-t border-border/50">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1 text-destructive/60 hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setConfirmDeleteId(activePlan.id)}
+                >
+                  <Trash2 size={11} />
+                  この指導計画のデータを削除
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+            <FileText size={32} className="text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">左から学年×教科を選択してください</p>
+          </div>
+        )}
+      </div>
+
+      {/* 手動追加ダイアログ */}
+      <ManualAddDialog
+        open={showManualAdd}
+        onClose={() => setShowManualAdd(false)}
+        onCreate={(plan) => { upsertTeachingPlan(plan); setSelectedId(plan.id); }}
         existingIds={existingIds}
       />
 
@@ -622,10 +638,10 @@ export function TeachingPlanView() {
       <Dialog open={!!confirmDeleteId} onOpenChange={() => setConfirmDeleteId(null)}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle className="text-sm">指導計画を削除しますか？</DialogTitle>
+            <DialogTitle className="text-sm">指導計画データを削除しますか？</DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground py-2">
-            入力した授業内容がすべて削除されます。この操作は取り消せません。
+            入力した授業内容・単元データがすべて削除されます。この操作は取り消せません。
           </p>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setConfirmDeleteId(null)} className="h-7 text-xs">キャンセル</Button>
@@ -636,7 +652,7 @@ export function TeachingPlanView() {
               onClick={() => {
                 if (confirmDeleteId) {
                   removeTeachingPlan(confirmDeleteId);
-                  if (selectedPlanId === confirmDeleteId) setSelectedPlanId(null);
+                  if (selectedId === confirmDeleteId) setSelectedId(null);
                 }
                 setConfirmDeleteId(null);
               }}
