@@ -149,10 +149,11 @@ export interface TeachingUnit {
 /** 1コマ分の授業計画エントリ（通し番号はlessons配列のindex+1） */
 export interface LessonPlanEntry {
   id: string;
-  unitId: string;         // 所属TeachingUnit.id
-  unitPeriod: number;     // 単元内通し番号（1-based）
+  unitId: string;         // 所属TeachingUnit.id（未設定は""）
+  unitPeriod: number;     // 単元内通し番号（1-based、動的再計算）
   content: string;        // 内容予定
   notes?: string;
+  isSkip?: boolean;       // true = このコマは実施なし（後のコマとの対応をずらす）
   // 将来: classOverrides?: ClassLessonOverride[]  クラス個別割り込み用
 }
 
