@@ -487,11 +487,8 @@ export function TeachingPlanView() {
   // 選択中のplanに対応するクラスリスト
   const activeClasses = useMemo(() => {
     if (!activePlan) return [];
-    return combos.find(c => c.grade === activePlan.grade && c.subject === activePlan.subject)?.classes
-      ?? manualOnlyPlans.find(p => p.id === activePlan.id)
-        ? [] // 手動追加で時間割にない場合
-        : [];
-  }, [activePlan, combos, manualOnlyPlans]);
+    return combos.find(c => c.grade === activePlan.grade && c.subject === activePlan.subject)?.classes ?? [];
+  }, [activePlan, combos]);
 
   // コマ数を計算（サイドバー表示用）
   const slotCountMap = useMemo(() => {
