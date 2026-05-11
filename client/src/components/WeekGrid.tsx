@@ -3,7 +3,7 @@
 // Week grid with drag-and-drop, today highlight, class color coding (1-6 grades)
 // Phase 3: 教科表示対応（single_subject/homeroom/multi_subjectモード）
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { PeriodTimesDialog } from "@/components/PeriodTimesDialog";
 import { LLMImportDialog } from "@/components/LLMImportDialog";
@@ -69,6 +69,7 @@ export function WeekGrid() {
     goToToday,
     goToDate,
     updateWeekPatternOverride,
+    teachingPlans,
   } = useTimetable();
   const { language, t } = useLanguage();
   // 最後にクリックしたセル（Shift範囲選択の起点）
@@ -95,6 +96,7 @@ export function WeekGrid() {
   const [llmImportMode, setLlmImportMode] = useState<"timetable" | "period_times" | "schedule">("timetable");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
+  const [showLessonPlan, setShowLessonPlan] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const today = todayISO();
   const formatDisplayDate = useCallback((dateStr: string) => {
@@ -142,6 +144,40 @@ export function WeekGrid() {
   // holidays: HolidayEntry[] → 日付のSetとname mapに変換
   const holidayDates = new Set(holidays.map(h => h.date));
   const holidayNameMap = new Map(holidays.map(h => [h.date, h.name ?? t("weekGrid.schoolClosed")]));
+
+  // 指導計画ルックアップ: "class|subject|date|period" → { lessonNo, content, unitName }
+  const lessonPlanLookup = useMemo(() => {
+    const map = new Map<string, { lessonNo: number; content: string; unitName: string }>();
+    if (!teachingPlans?.length) return map;
+    // TimetableEntry[] を PeriodSlot+date のフラットリストに変換
+    const flatSlots = effectiveEntries.flatMap(e =>
+      e.periods.map(p => ({ date: e.date, period: p.period, cls: p.class, subject: p.subject }))
+    );
+    for (const plan of teachingPlans) {
+      const gradePrefix = plan.grade.endsWith("年") ? plan.grade : plan.grade + "年";
+      const classesInPlan = new Set(
+        flatSlots
+          .filter(s => s.subject === plan.subject && s.cls?.startsWith(gradePrefix))
+          .map(s => s.cls!)
+      );
+      for (const cls of Array.from(classesInPlan)) {
+        const classSlots = flatSlots
+          .filter(s => s.cls === cls && s.subject === plan.subject)
+          .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.period - b.period);
+        classSlots.forEach((slot, idx) => {
+          const lesson = plan.lessons[idx];
+          if (!lesson) return;
+          const unit = plan.units.find(u => u.id === lesson.unitId);
+          map.set(`${cls}|${plan.subject}|${slot.date}|${slot.period}`, {
+            lessonNo: idx + 1,
+            content: lesson.content,
+            unitName: unit?.name ?? "",
+          });
+        });
+      }
+    }
+    return map;
+  }, [teachingPlans, effectiveEntries]);
 
   // Determine if this week shows Saturday/Sunday
   const weekMondayStr = formatDate(currentWeekMonday);
@@ -666,6 +702,31 @@ export function WeekGrid() {
           </DropdownMenu>
         )}
 
+        {/* 指導計画表示トグル: teachingPlansが1件以上ある場合のみ表示 */}
+        {teachingPlans?.length > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-7 gap-1.5 text-xs",
+                  showLessonPlan
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                    : ""
+                )}
+                onClick={() => setShowLessonPlan(v => !v)}
+              >
+                <BookOpen size={11} />
+                指導計画
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              {showLessonPlan ? "指導計画の表示をOFF" : "セルに指導計画の内容を表示"}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
         {/* Period times + Weekend temporary class buttons */}
         {isLoaded && (
           <div className="flex items-center gap-1.5 ml-auto">
@@ -962,7 +1023,7 @@ export function WeekGrid() {
                         )}
                         className={cn(
                           "period-cell rounded border cursor-pointer px-2 py-1 flex flex-col justify-between select-none",
-                          showSubject ? "h-[60px]" : "h-[52px]",
+                          showLessonPlan ? "h-[80px]" : showSubject ? "h-[60px]" : "h-[52px]",
                           isSelected && !multiSelectMode && "ring-2 ring-primary ring-inset",
                           isMultiSelected && "ring-2 ring-amber-500 ring-inset bg-amber-50/80",
                           (isDragSrc || isTouchDragSrc) && "opacity-40 scale-95",
@@ -1041,6 +1102,23 @@ export function WeekGrid() {
                                 </span>
                               )}
                             </>
+                          );
+                        })()}
+                        {/* 指導計画表示 */}
+                        {showLessonPlan && slot.class && slot.subject && (() => {
+                          const info = lessonPlanLookup.get(`${slot.class}|${slot.subject}|${date}|${period}`);
+                          if (!info) return null;
+                          return (
+                            <div className="flex flex-col gap-0.5 border-t border-black/10 pt-0.5 mt-0.5">
+                              <span className="text-[8px] font-medium leading-tight text-emerald-700/80 truncate">
+                                {info.lessonNo}時 {info.unitName}
+                              </span>
+                              {info.content && (
+                                <span className="text-[8px] leading-tight text-foreground/60 line-clamp-2">
+                                  {info.content}
+                                </span>
+                              )}
+                            </div>
                           );
                         })()}
                       </div>
