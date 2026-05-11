@@ -211,7 +211,7 @@ const SCOPES = [
 | **v71** | ログイン永続化（isRestoringLogin）、書き出し sonner トースト（PDF/Excel/ICS）、月単位 Select 改善 |
 | **v72** | サイレントログイン失敗アラート、Cookie 許可リクエスト（Storage Access API）、再認証ボタン |
 | **v73** | Drive同期のみボタン追加（ローカル保存なし）、ICS/Google連携タブ全面改修（プレビュー縮小・削除セクション折りたたみ・フッターに「カレンダーに追加」「ICSでダウンロード」ボタン配置） |
-| **v74** | 全形式共通のプレビュートグル実装（「プレビューを表示/非表示」ボタン）、ICSタブはデフォルト非表示・設定項目全表示、PDF/Excelはデフォルト表示。暫定安定版 |
+| **v74** | 全形式共通のプレビュートグル実装（「プレビューを表示/非表示」ボタン）、ICSタブはデフォルト非表示・設定項目全表示、PDF/Excelはデフォルト表示。旧安定版 |
 | **v75** | Googleログイン永続化（55分トークン自動更新タイマー + Google One Tap）← Claude Code 実装。ただし未検証のため安定版扱いしない |
 | **v76** | 言語切替の初期実装（`LanguageContext`、左下メニューの日本語/英語切替、サイドバー/上部操作の一部英語化）。Codex 実装。ただし未検証のため安定版扱いしない |
 | **v77** | 英語表示範囲を週間グリッド、自動復元、変更確認、学期タブへ拡張。Codex 実装。ただし未検証のため安定版扱いしない |
@@ -220,7 +220,8 @@ const SCOPES = [
 | **v80** | 「学期を追加」ボタンをテキスト付きに変更し視認性を改善。Claude Code 実装。ただし未検証のため安定版扱いしない |
 | **v81** | SemesterTabsバグ修正（semesters配列形式でsemesterがnullになる問題）、Google One Tap無効化。Claude Code 実装。ただし未検証のため安定版扱いしない |
 | **v82** | ログイン成功時にメールをlocalStorageに保存し、サイレント復元時のlogin_hintとして使用（復元成功率を向上）。Claude Code 実装。ただし未検証のため安定版扱いしない |
-| **v83** | SemesterTabsの`if (!semester) return null`ガードを削除し、`semesters[0].semester`へのフォールバックを追加。新形式ファイルでも「学期を追加」ボタンが常時表示されるよう修正。Claude Code 実装。ただし未検証のため安定版扱いしない |
+| **v83** | SemesterTabsの`if (!semester) return null`ガードを削除し、`semesters[0].semester`へのフォールバックを追加。新形式ファイルでも「学期を追加」ボタンが常時表示されるよう修正。Claude Code 実装 |
+| **v84** | `semesters:[]`（空配列）を持つ旧形式ファイルで`semesterCount=0`になり「学期を追加」が非表示になる問題を修正。`||`演算子でゼロ長配列をフォールバックし旧`semester`フィールドで判断。**Claude Code 実装。安定版（タグ: `stable-v84`）** |
 
 ---
 
