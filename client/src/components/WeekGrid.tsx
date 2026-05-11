@@ -154,6 +154,14 @@ export function WeekGrid() {
       e.periods.map(p => ({ date: e.date, period: p.period, cls: p.class, subject: p.subject }))
     );
     for (const plan of teachingPlans) {
+      // v89: 計画レイアウト（単元順 × plannedPeriods）を導出し、lessonがない行の単元名として使用
+      const plannedUnitIds: string[] = [];
+      for (const unit of plan.units) {
+        for (let i = 0; i < (unit.plannedPeriods || 0); i++) {
+          plannedUnitIds.push(unit.id);
+        }
+      }
+
       const gradePrefix = plan.grade.endsWith("年") ? plan.grade : plan.grade + "年";
       const classesInPlan = new Set(
         flatSlots
@@ -166,12 +174,17 @@ export function WeekGrid() {
           .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.period - b.period);
         classSlots.forEach((slot, idx) => {
           const lesson = plan.lessons[idx];
-          if (!lesson) return;
-          const unit = plan.units.find(u => u.id === lesson.unitId);
+          // 実績unitId → 計画unitId の順でフォールバック
+          const effectiveUnitId = lesson?.unitId || plannedUnitIds[idx] || "";
+          const unit = effectiveUnitId ? plan.units.find(u => u.id === effectiveUnitId) : undefined;
+          const content = lesson?.content ?? "";
+          const unitName = unit?.name ?? "";
+          // 表示すべき情報がなければスキップ
+          if (!content && !unitName) return;
           map.set(`${cls}|${plan.subject}|${slot.date}|${slot.period}`, {
             lessonNo: idx + 1,
-            content: lesson.content,
-            unitName: unit?.name ?? "",
+            content,
+            unitName,
           });
         });
       }

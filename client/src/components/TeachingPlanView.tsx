@@ -226,6 +226,8 @@ interface LessonRowProps {
   classSlots: Record<string, Array<{ date: string; period: number; weekday_jp: string }>>;
   classes: string[];
   isSkip: boolean;
+  today: string;                 // YYYY-MM-DD
+  classProgress: Record<string, ClassProgress>;
   onSave: (entry: LessonPlanEntry) => void;
   onToggleSkip: () => void;
   onInsertBefore: () => void;
@@ -234,7 +236,7 @@ interface LessonRowProps {
 
 function LessonRow({
   lessonNumber, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, units,
-  classSlots, classes, isSkip, onSave, onToggleSkip, onInsertBefore, onDelete,
+  classSlots, classes, isSkip, today, classProgress, onSave, onToggleSkip, onInsertBefore, onDelete,
 }: LessonRowProps) {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(entry?.content ?? "");
@@ -363,14 +365,34 @@ function LessonRow({
         )}
       </td>
 
-      {/* クラス別実施日 */}
+      {/* クラス別実施日（今日/次回/済みをハイライト） */}
       {classes.map(cls => {
         const slots = classSlots[cls] ?? [];
         const slot = slots[lessonNumber - 1];
+        const prog = classProgress[cls];
+        const rowIdx = lessonNumber - 1; // 0-based
+        const isPast = !isSkip && slot && slot.date < today;
+        const isToday = !isSkip && slot && prog?.todayRowIndices.includes(rowIdx);
+        const isNext = !isSkip && !isToday && slot && prog?.nextRowIdx === rowIdx;
+
         return (
-          <td key={cls} className="px-2 py-1.5 text-center text-[10px] w-20 whitespace-nowrap">
+          <td key={cls} className={cn(
+            "px-2 py-1.5 text-center text-[10px] w-20 whitespace-nowrap transition-colors",
+            isPast && "bg-muted/20",
+            isToday && "bg-amber-50 dark:bg-amber-950/20",
+            isNext && "bg-green-50 dark:bg-green-950/20",
+          )}>
             {slot ? (
-              <span className={cn(isSkip ? "line-through text-muted-foreground/40" : "text-foreground")}>
+              <span className={cn(
+                isSkip ? "line-through text-muted-foreground/30" :
+                isPast ? "text-muted-foreground/50" :
+                isToday ? "text-amber-700 font-semibold dark:text-amber-400" :
+                isNext ? "text-green-700 font-semibold dark:text-green-400" :
+                "text-foreground",
+              )}>
+                {isPast && <span className="mr-0.5 text-emerald-500">✓</span>}
+                {isToday && <span className="mr-0.5">▶</span>}
+                {isNext && !isToday && <span className="mr-0.5 text-green-500">→</span>}
                 {slot.date.slice(5).replace("-", "/")} {slot.weekday_jp}{slot.period}
               </span>
             ) : (
@@ -381,6 +403,15 @@ function LessonRow({
       })}
     </tr>
   );
+}
+
+// ─── クラス進捗型 ────────────────────────────────────────────
+
+interface ClassProgress {
+  completedCount: number;  // 今日より前に完了したコマ数
+  totalSlots: number;      // 全スロット数
+  nextRowIdx: number | null; // 次回授業の行インデックス（0-based）
+  todayRowIndices: number[]; // 今日の授業行インデックス（0-based）
 }
 
 // ─── 計画テーブル ─────────────────────────────────────────────
@@ -503,6 +534,39 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
     onUpdateLessons(next);
   }, [plan.lessons, onUpdateLessons]);
 
+  // 今日の日付
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  // クラス別進捗（完了数・次回行インデックス・今日の行インデックス）
+  const classProgress = useMemo((): Record<string, ClassProgress> => {
+    const result: Record<string, ClassProgress> = {};
+    for (const cls of classes) {
+      const slots = classSlots[cls] ?? [];
+      let completedCount = 0;
+      const todayRowIndices: number[] = [];
+      let nextRowIdx: number | null = null;
+      for (let i = 0; i < slots.length; i++) {
+        const d = slots[i].date;
+        if (d < today) {
+          completedCount++;
+        } else if (d === today) {
+          todayRowIndices.push(i);
+        } else {
+          if (nextRowIdx === null) nextRowIdx = i;
+        }
+      }
+      // 今日の授業がある場合、nextRowIdx = 今日の最初の行
+      const effectiveNext = todayRowIndices.length > 0 ? todayRowIndices[0] : nextRowIdx;
+      result[cls] = { completedCount, totalSlots: slots.length, nextRowIdx: effectiveNext, todayRowIndices };
+    }
+    return result;
+  }, [classSlots, classes, today]);
+
+  // クラス間の最大完了数（進捗ギャップ計算用）
+  const maxCompleted = useMemo(() =>
+    Math.max(0, ...classes.map(c => classProgress[c]?.completedCount ?? 0)),
+  [classes, classProgress]);
+
   const filledCount = plan.lessons.filter(l => l.content && !l.isSkip).length;
   const skipCount = plan.lessons.filter(l => l.isSkip).length;
 
@@ -545,6 +609,40 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
         )}
       </div>
 
+      {/* クラス別進捗サマリー */}
+      {classes.length > 0 && (
+        <div className="flex items-center gap-4 flex-wrap text-[10px]">
+          {classes.map(cls => {
+            const prog = classProgress[cls];
+            if (!prog || prog.totalSlots === 0) return null;
+            const pct = Math.round(prog.completedCount / prog.totalSlots * 100);
+            const gap = maxCompleted - prog.completedCount;
+            return (
+              <div key={cls} className="flex items-center gap-1.5">
+                <span className="text-muted-foreground shrink-0">{cls}</span>
+                <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={cn("h-full rounded-full transition-all",
+                      gap > 0 ? "bg-orange-400" : "bg-emerald-500"
+                    )}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className={cn("shrink-0", gap > 0 ? "text-orange-500" : "text-muted-foreground")}>
+                  {prog.completedCount}/{prog.totalSlots}
+                  {gap > 0 ? ` (−${gap})` : prog.completedCount === prog.totalSlots ? " ✓" : ""}
+                </span>
+              </div>
+            );
+          })}
+          {maxCompleted > 0 && (
+            <span className="text-muted-foreground/50 ml-1">
+              ▶ = 今日　→ = 次回　✓ = 済み
+            </span>
+          )}
+        </div>
+      )}
+
       {/* 操作ヒント */}
       <p className="text-[10px] text-muted-foreground/60 -mt-1">
         No.をクリック → 実施なし切替 ／ 行にホバー → 行の挿入・削除 ／ 単元セルをクリック → 単元割り当て
@@ -559,9 +657,32 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
               <th className="px-2 py-2 w-32 font-medium">単元</th>
               <th className="px-2 py-2 text-center w-10 font-medium">単元内</th>
               <th className="px-2 py-2 min-w-[160px] font-medium">内容予定</th>
-              {classes.map(cls => (
-                <th key={cls} className="px-2 py-2 text-center w-20 font-medium">{cls}</th>
-              ))}
+              {classes.map(cls => {
+                const prog = classProgress[cls];
+                const gap = prog ? maxCompleted - prog.completedCount : 0;
+                return (
+                  <th key={cls} className="px-2 py-2 text-center w-20 font-medium">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span>{cls}</span>
+                      {prog && prog.totalSlots > 0 && (
+                        <span className={cn(
+                          "text-[9px] font-normal rounded px-1.5 py-0.5",
+                          prog.completedCount === prog.totalSlots
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            : prog.completedCount > 0
+                            ? "bg-muted text-muted-foreground"
+                            : "text-muted-foreground/50",
+                        )}>
+                          {prog.completedCount}/{prog.totalSlots}完了
+                        </span>
+                      )}
+                      {gap > 0 && (
+                        <span className="text-[9px] text-orange-500 font-normal">-{gap}遅れ</span>
+                      )}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -587,6 +708,8 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                   classSlots={classSlots}
                   classes={classes}
                   isSkip={isSkip}
+                  today={today}
+                  classProgress={classProgress}
                   onSave={(saved) => updateLesson(n, saved)}
                   onToggleSkip={() => toggleSkip(n)}
                   onInsertBefore={() => insertRowBefore(n)}
