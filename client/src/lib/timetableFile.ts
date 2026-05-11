@@ -135,6 +135,37 @@ export interface SemesterMeta {
   homeroomTeacherSchedule?: Record<string, Record<number, string | null>>;
 }
 
+// ─── Teaching Plan (指導計画) ──────────────────────────────────
+
+/** 単元（Unit）マスタ */
+export interface TeachingUnit {
+  id: string;
+  name: string;           // 単元名
+  plannedPeriods: number; // 目安コマ数
+  color?: string;         // 表示カラー（Tailwind bg class or hex）
+  notes?: string;
+}
+
+/** 1コマ分の授業計画エントリ（通し番号はlessons配列のindex+1） */
+export interface LessonPlanEntry {
+  id: string;
+  unitId: string;         // 所属TeachingUnit.id
+  unitPeriod: number;     // 単元内通し番号（1-based）
+  content: string;        // 内容予定
+  notes?: string;
+  // 将来: classOverrides?: ClassLessonOverride[]  クラス個別割り込み用
+}
+
+/** 学年×教科 単位の指導計画 */
+export interface GradeSubjectPlan {
+  id: string;
+  grade: string;          // "4年", "5年", "6年" 等
+  subject: string;        // "理科", "英語" 等
+  units: TeachingUnit[];  // 単元マスタ（順序付き）
+  lessons: LessonPlanEntry[]; // フラット配列（index+1 = 通し番号）
+  // 将来: classOverrides?: ClassPlanOverride[]  クラス別逸脱管理用
+}
+
 /** 複数学期の1学期分のデータ */
 export interface SemesterData {
   /** 学期メタ情報 */
@@ -181,6 +212,8 @@ export interface TimetableFile {
   activeSemesterIndex?: number;
   /** 教科リスト（全モードで使用可能） */
   subjects?: SubjectDef[];
+  /** 指導計画（学年×教科単位、後方互換：省略時はnull扱い） */
+  teachingPlans?: GradeSubjectPlan[];
 }
 
 export interface LoadResult {

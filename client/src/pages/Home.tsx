@@ -9,6 +9,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { WeekGrid } from "@/components/WeekGrid";
 import { Inspector } from "@/components/Inspector";
 import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
+import { TeachingPlanView } from "@/components/TeachingPlanView";
 import { Button } from "@/components/ui/button";
 import { Printer, Save, Menu, FileSpreadsheet, FileInput, MoreHorizontal, CalendarDays, Database } from "lucide-react";
 import { SemesterTabs } from "@/components/SemesterTabs";
@@ -326,6 +327,7 @@ export default function Home() {
           {activeTab === "stats" && <StatsView />}
           {activeTab === "history" && <HistoryView />}
           {activeTab === "audit" && <AuditView />}
+          {activeTab === "teachingPlan" && <TeachingPlanView />}
         </div>
       </main>
     </div>

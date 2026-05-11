@@ -255,6 +255,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
     { id: "grid", label: t("sidebar.nav.grid"), icon: <CalendarDays size={16} /> },
     { id: "stats", label: t("sidebar.nav.stats"), icon: <TableProperties size={16} /> },
+    { id: "teachingPlan", label: t("sidebar.nav.teachingPlan"), icon: <BookOpen size={16} /> },
     { id: "history", label: t("sidebar.nav.history"), icon: <History size={16} /> },
     { id: "audit", label: t("sidebar.nav.audit"), icon: <Clock size={16} /> },
   ];

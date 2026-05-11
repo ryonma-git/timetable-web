@@ -33,6 +33,9 @@ import {
   SemesterMeta,
   SemesterData,
   SubjectDef,
+  GradeSubjectPlan,
+  TeachingUnit,
+  LessonPlanEntry,
   LoadResult,
   ZipImportResult,
   deserializeTimetableFile,
@@ -45,7 +48,7 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────
 
-export type ActiveTab = "grid" | "stats" | "history" | "audit";
+export type ActiveTab = "grid" | "stats" | "history" | "audit" | "teachingPlan";
 
 export interface HistoryEntry {
   ops: OverrideOp[];
@@ -149,6 +152,15 @@ interface TimetableContextValue {
   addSemester: (data: SemesterData) => void;
   removeSemester: (idx: number) => void;
   switchToSemester: (idx: number) => void;
+
+  // Teaching Plans（指導計画）
+  teachingPlans: GradeSubjectPlan[];
+  upsertTeachingPlan: (plan: GradeSubjectPlan) => void;
+  removeTeachingPlan: (id: string) => void;
+  /** 指導計画のlessons配列を更新（単元・コマ内容の編集） */
+  updateTeachingPlanLessons: (planId: string, lessons: LessonPlanEntry[]) => void;
+  /** 指導計画のunits配列を更新 */
+  updateTeachingPlanUnits: (planId: string, units: TeachingUnit[]) => void;
 }
 
 // ─── LocalStorage key ────────────────────────────────────────
@@ -719,6 +731,50 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setIsDirty(true);
   }, [currentFile]);
 
+  // ─── Teaching Plan CRUD ──────────────────────────────────────
+  const teachingPlans: GradeSubjectPlan[] = currentFile?.teachingPlans ?? [];
+
+  const upsertTeachingPlan = useCallback((plan: GradeSubjectPlan) => {
+    if (!currentFile) return;
+    const existing = currentFile.teachingPlans ?? [];
+    const idx = existing.findIndex(p => p.id === plan.id);
+    const next = idx >= 0
+      ? existing.map((p, i) => i === idx ? plan : p)
+      : [...existing, plan];
+    setCurrentFile({ ...currentFile, teachingPlans: next, meta: { ...currentFile.meta, updatedAt: new Date().toISOString() } });
+    setIsDirty(true);
+  }, [currentFile]);
+
+  const removeTeachingPlan = useCallback((id: string) => {
+    if (!currentFile) return;
+    setCurrentFile({
+      ...currentFile,
+      teachingPlans: (currentFile.teachingPlans ?? []).filter(p => p.id !== id),
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    });
+    setIsDirty(true);
+  }, [currentFile]);
+
+  const updateTeachingPlanLessons = useCallback((planId: string, lessons: LessonPlanEntry[]) => {
+    if (!currentFile) return;
+    setCurrentFile({
+      ...currentFile,
+      teachingPlans: (currentFile.teachingPlans ?? []).map(p => p.id === planId ? { ...p, lessons } : p),
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    });
+    setIsDirty(true);
+  }, [currentFile]);
+
+  const updateTeachingPlanUnits = useCallback((planId: string, units: TeachingUnit[]) => {
+    if (!currentFile) return;
+    setCurrentFile({
+      ...currentFile,
+      teachingPlans: (currentFile.teachingPlans ?? []).map(p => p.id === planId ? { ...p, units } : p),
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    });
+    setIsDirty(true);
+  }, [currentFile]);
+
   return (
     <TimetableContext.Provider value={{
       baseEntries, effectiveEntries, pendingOps, allOps, auditLog, overrideMeta,
@@ -752,6 +808,11 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       addSemester,
       removeSemester,
       switchToSemester,
+      teachingPlans,
+      upsertTeachingPlan,
+      removeTeachingPlan,
+      updateTeachingPlanLessons,
+      updateTeachingPlanUnits,
     }}>
       {children}
     </TimetableContext.Provider>
