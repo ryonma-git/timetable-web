@@ -25,6 +25,31 @@ export interface PeriodSlot {
   homeroomTeacher?: string | null;
 }
 
+/**
+ * 日次イベント（v91追加）
+ * その日に予定されている行事・会議・式典など。コマへの影響有無とは独立に保存する。
+ * 始業式・運動会・個人懇談・全校集会・避難訓練・職員会議など。
+ */
+export interface DailyEvent {
+  /** 一意ID（nanoid） */
+  id: string;
+  /** イベント名（例: "運動会", "職員会議"） */
+  title: string;
+  /** カテゴリ（任意・表示色用） */
+  category?: "ceremony" | "event" | "meeting" | "drill" | "holiday" | "other";
+  /** 備考 */
+  notes?: string;
+  /** 開始時刻 HH:MM（任意） */
+  timeStart?: string;
+  /** 終了時刻 HH:MM（任意） */
+  timeEnd?: string;
+  /**
+   * このイベントが授業に影響を与えるか（メタ情報、表示用）
+   * 実際の授業削除は別の OverrideOp（clear_period_class等）で行う
+   */
+  affectsClasses?: boolean;
+}
+
 export interface TimetableEntry {
   date: string;         // "YYYY-MM-DD"
   weekday: string;      // "Mon", "Tue", ...
@@ -32,6 +57,8 @@ export interface TimetableEntry {
   periods: PeriodSlot[];
   /** set_day_reason で設定された日付レベルの理由・メモ */
   dayReason?: string;
+  /** v91: 日次イベント配列（add_day_event/remove_day_event/update_day_event で操作） */
+  dayEvents?: DailyEvent[];
 }
 
 export interface EffectiveBundle {
@@ -43,7 +70,11 @@ export type OverrideOpType =
   | "clear_period_class"
   | "set_period_class"
   | "set_period_reason"
-  | "set_day_reason";
+  | "set_day_reason"
+  // v91: 日次イベント操作（コマ計算には影響しない、純粋な予定表用）
+  | "add_day_event"
+  | "remove_day_event"
+  | "update_day_event";
 
 export interface OverrideOp {
   id?: string;
@@ -67,6 +98,10 @@ export interface OverrideOp {
    * 担任クラスの担当教員（二重レイヤー管理 / C案用）
    */
   homeroomTeacher?: string | null;
+  /** v91: add_day_event/update_day_event 用のイベント本体 */
+  event?: DailyEvent;
+  /** v91: remove_day_event/update_day_event 用の対象イベントID */
+  event_id?: string;
 }
 
 export interface OverrideBundle {
@@ -198,6 +233,8 @@ function deepCopyEntries(entries: TimetableEntry[]): TimetableEntry[] {
     ...e,
     periods: e.periods.map(p => ({ ...p })),
     // dayReason は spread で引き継がれる（明示的に記載して意図を明確化）
+    // v91: dayEvents も配列なので独立コピー（参照共有でベース破壊を防止）
+    dayEvents: e.dayEvents ? e.dayEvents.map(ev => ({ ...ev })) : undefined,
   }));
 }
 
@@ -345,6 +382,40 @@ export function applyOverrides(
         });
         break;
       }
+      // v91: 日次イベント操作（periods は一切変更しない、純粋な予定表）
+      case "add_day_event": {
+        if (!op.event || !op.event.id || !op.event.title) break;
+        if (!entries[idx].dayEvents) entries[idx].dayEvents = [];
+        // 同一IDが既にあれば追加しない（冪等）
+        if (!entries[idx].dayEvents!.some(e => e.id === op.event!.id)) {
+          entries[idx].dayEvents!.push(op.event);
+        }
+        audit.push({
+          id: nanoid(), level: "info", message: "add_day_event",
+          date: op.date, opType: op.op,
+        });
+        break;
+      }
+      case "remove_day_event": {
+        if (!op.event_id || !entries[idx].dayEvents) break;
+        entries[idx].dayEvents = entries[idx].dayEvents!.filter(e => e.id !== op.event_id);
+        audit.push({
+          id: nanoid(), level: "info", message: "remove_day_event",
+          date: op.date, opType: op.op,
+        });
+        break;
+      }
+      case "update_day_event": {
+        if (!op.event_id || !op.event || !entries[idx].dayEvents) break;
+        const evIdx = entries[idx].dayEvents!.findIndex(e => e.id === op.event_id);
+        if (evIdx === -1) break;
+        entries[idx].dayEvents![evIdx] = { ...op.event, id: op.event_id };
+        audit.push({
+          id: nanoid(), level: "info", message: "update_day_event",
+          date: op.date, opType: op.op,
+        });
+        break;
+      }
     }
   }
 
@@ -417,6 +488,19 @@ export function buildReasonOp(
   date: string, period: number, reason: string, replace = true
 ): OverrideOp {
   return { id: nanoid(), op: "set_period_reason", date, period, reason, replace };
+}
+
+// v91: 日次イベント用ビルダー
+export function buildAddDayEventOp(date: string, event: DailyEvent): OverrideOp {
+  return { id: nanoid(), op: "add_day_event", date, event };
+}
+
+export function buildRemoveDayEventOp(date: string, eventId: string): OverrideOp {
+  return { id: nanoid(), op: "remove_day_event", date, event_id: eventId };
+}
+
+export function buildUpdateDayEventOp(date: string, eventId: string, event: DailyEvent): OverrideOp {
+  return { id: nanoid(), op: "update_day_event", date, event_id: eventId, event };
 }
 
 // ─── Stats Calculation ──────────────────────────────────────────

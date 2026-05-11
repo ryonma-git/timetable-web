@@ -28,7 +28,8 @@ import {
 } from "@/lib/llmImport";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { OverrideOp } from "@/lib/timetable";
+import type { OverrideOp, DailyEvent } from "@/lib/timetable";
+import { nanoid } from "nanoid";
 
 export type LLMImportMode = "timetable" | "period_times" | "schedule";
 
@@ -76,19 +77,58 @@ function parsePeriodTimesJSON(json: string): {
   }
 }
 
-// ─── 年間予定表JSONのパース（OverrideOp配列） ───────────────────────
-function parseScheduleJSON(json: string): OverrideOp[] | null {
+// ─── 年間予定表JSONのパース（v91: events + ops 2層構造） ───────────────────────
+interface ParsedSchedule {
+  ops: OverrideOp[];
+  events: Array<{ date: string; event: DailyEvent }>;
+}
+
+function parseScheduleJSON(json: string): ParsedSchedule | null {
   try {
     const parsed = JSON.parse(json);
-    const ops = parsed.ops ?? parsed;
-    if (!Array.isArray(ops)) return null;
-    // 最低限のバリデーション
-    const valid = ops.filter((op: unknown) => {
-      if (typeof op !== "object" || op === null) return false;
+    // events: 旧形式（events配列なし）でも動作するように optional
+    const rawEvents = Array.isArray(parsed.events) ? parsed.events : [];
+    const rawOps = Array.isArray(parsed.ops) ? parsed.ops : (Array.isArray(parsed) ? parsed : []);
+
+    // events パース：YYYY-MM-DD形式・空titleを除外、テンプレ用プレースホルダ"YYYY-MM-DD"も除外
+    const events: Array<{ date: string; event: DailyEvent }> = [];
+    for (const e of rawEvents) {
+      if (typeof e !== "object" || e === null) continue;
+      const obj = e as Record<string, unknown>;
+      const date = typeof obj.date === "string" ? obj.date : "";
+      const title = typeof obj.title === "string" ? obj.title.trim() : "";
+      if (!date || !title) continue;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue; // テンプレ"YYYY-MM-DD"は弾く
+      const validCats = ["ceremony", "event", "meeting", "drill", "holiday", "other"];
+      const category = typeof obj.category === "string" && validCats.includes(obj.category)
+        ? obj.category as DailyEvent["category"]
+        : "other";
+      events.push({
+        date,
+        event: {
+          id: nanoid(8),
+          title,
+          category,
+          notes: typeof obj.notes === "string" ? obj.notes : undefined,
+          timeStart: typeof obj.timeStart === "string" ? obj.timeStart : undefined,
+          timeEnd: typeof obj.timeEnd === "string" ? obj.timeEnd : undefined,
+          affectsClasses: typeof obj.affectsClasses === "boolean" ? obj.affectsClasses : undefined,
+        },
+      });
+    }
+
+    // ops パース：date がテンプレ"YYYY-MM-DD"のものは除外
+    const ops: OverrideOp[] = [];
+    for (const op of rawOps) {
+      if (typeof op !== "object" || op === null) continue;
       const o = op as Record<string, unknown>;
-      return typeof o.op === "string" && typeof o.date === "string";
-    });
-    return valid.length > 0 ? valid as OverrideOp[] : null;
+      if (typeof o.op !== "string" || typeof o.date !== "string") continue;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(o.date)) continue;
+      ops.push(op as OverrideOp);
+    }
+
+    if (events.length === 0 && ops.length === 0) return null;
+    return { ops, events };
   } catch {
     return null;
   }
@@ -183,14 +223,30 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
       setImportSuccess(true);
       setImportJson("");
     } else {
-      // schedule mode
-      const ops = parseScheduleJSON(importJson);
-      if (!ops) {
-        setParseError("年間予定表JSONの形式が正しくありません。ops配列を含むJSONをコピーしてください。");
+      // schedule mode (v91: events + ops 2層)
+      const parsed = parseScheduleJSON(importJson);
+      if (!parsed) {
+        setParseError("年間予定表JSONの形式が正しくありません。events配列またはops配列を含むJSONをコピーしてください。");
         return;
       }
-      applyOps(ops, "年間予定表LLMインポート");
-      toast.success(`${ops.length}件の行事・休講情報を適用しました。`);
+      // events を add_day_event op に変換
+      const eventOps: OverrideOp[] = parsed.events.map(({ date, event }) => ({
+        id: nanoid(8),
+        op: "add_day_event" as const,
+        date,
+        event,
+      }));
+      // events → ops の順で適用（events先に入れて、後でopsで上書き/カット）
+      const allOps = [...eventOps, ...parsed.ops];
+      if (allOps.length === 0) {
+        setParseError("適用すべきイベント・操作が見つかりませんでした。");
+        return;
+      }
+      applyOps(allOps, "年間予定表LLMインポート");
+      const msgs: string[] = [];
+      if (parsed.events.length > 0) msgs.push(`${parsed.events.length}件の予定`);
+      if (parsed.ops.length > 0) msgs.push(`${parsed.ops.length}件の授業変更`);
+      toast.success(`${msgs.join("・")}を適用しました。`);
       setImportSuccess(true);
       setImportJson("");
     }

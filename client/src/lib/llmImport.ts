@@ -153,7 +153,17 @@ export function generatePeriodTimesPrompt(): string {
 入力済みのJSONのみを出力してください。説明文は不要です。`;
 }
 
-// ─── 年間予定表JSONテンプレート（override形式） ─────────────────────
+// ─── 年間予定表JSONテンプレート（v91: events + ops 2層構造） ─────────────────────
+
+export interface ScheduleEventEntry {
+  date: string;             // YYYY-MM-DD
+  title: string;            // イベント名（例: "運動会", "職員会議"）
+  category?: "ceremony" | "event" | "meeting" | "drill" | "holiday" | "other";
+  notes?: string;
+  timeStart?: string;       // HH:MM（任意）
+  timeEnd?: string;
+  affectsClasses?: boolean; // 授業に影響するか（メタ情報、ops生成のヒント）
+}
 
 export interface ScheduleImportTemplate {
   _description: string;
@@ -161,6 +171,9 @@ export interface ScheduleImportTemplate {
   _available_classes: string[];
   _override_op_types: string;
   user_rules: string;
+  /** v91: その日に予定されているすべてのイベント（コマ影響の有無に関わらず） */
+  events: ScheduleEventEntry[];
+  /** 既存: ユーザールールに基づくコマ削除等の操作 */
   ops: Array<{
     op: string;
     date: string;
@@ -174,27 +187,30 @@ export interface ScheduleImportTemplate {
 
 export function generateScheduleTemplate(semester: SemesterMeta): ScheduleImportTemplate {
   return {
-    _description: "年間予定表インポート用JSONテンプレート（Timetable Manager）",
+    _description: "年間予定表インポート用JSONテンプレート（Timetable Manager v91）",
     _instructions: [
-      "ops配列に休講・変更情報をOverrideOp形式で入力してください。",
-      "op: 'clear_period_class' → 特定コマを休講にする（period指定）",
-      "op: 'set_day_reason' → 日全体に理由を設定する（period不要）",
-      "op: 'set_period_reason' → 特定コマに理由を設定する",
-      "period: 1〜6の数字、または全コマ休講の場合は clear_all_classes: true を使う",
-      "date: YYYY-MM-DD形式",
-      "reason: 休講理由（例: '運動会', '遠足', '学校行事'）",
-      "target_class: nullの場合は全クラス対象",
+      "【Step 1】events配列 → 年間予定表に書かれているすべての予定（始業式・運動会・職員会議・避難訓練など）を、授業への影響の有無に関わらずすべて列挙してください。",
+      "【Step 2】ops配列 → user_rules に基づき、授業を実際にカット・変更すべきものだけをOverrideOp形式で記述してください。",
+      "events.category: ceremony(式典) / event(行事) / meeting(会議) / drill(訓練) / holiday(休日) / other",
+      "ops.op: 'clear_period_class' → 特定コマを休講にする / 'set_day_reason' → 日全体に理由 / 'set_period_reason' → 特定コマに理由",
+      "ops.period: 1〜6、または全コマ休講の場合は clear_all_classes: true を使う",
+      "date: YYYY-MM-DD形式 / target_class: nullの場合は全クラス対象",
     ].join(" / "),
     _available_classes: semester.classList ?? [],
     _override_op_types: "clear_period_class | set_day_reason | set_period_reason",
-    user_rules: "（ここにユーザーが個別ルールを記入します。例: 運動会は全コマ休講、遠足は4限まで授業あり5,6限は休講など）",
+    user_rules: "（任意：行事ごとのコマ削除ルールを記入。例：運動会は全コマ休講、遠足は午前のみ休講、職員会議はコマに影響なし、など）",
+    events: [
+      { date: "YYYY-MM-DD", title: "始業式", category: "ceremony", affectsClasses: true },
+      { date: "YYYY-MM-DD", title: "職員会議", category: "meeting", affectsClasses: false },
+      { date: "YYYY-MM-DD", title: "運動会", category: "event", affectsClasses: true },
+    ],
     ops: [
       {
         op: "clear_period_class",
         date: "YYYY-MM-DD",
         period: 1,
         target_class: null,
-        reason: "学校行事",
+        reason: "運動会",
         clear_all_classes: true,
       },
       {
@@ -211,26 +227,35 @@ export function generateSchedulePrompt(semester: SemesterMeta, userRules: string
   const startDate = semester.startDate ?? "（開始日未設定）";
   const endDate = semester.endDate ?? "（終了日未設定）";
   const rulesSection = userRules.trim()
-    ? `\n【ユーザーが指定した個別ルール】\n${userRules.trim()}\n`
-    : "";
-  return `あなたは学校の年間予定表を読み取り、休講・行事情報をJSONに変換するアシスタントです。
-添付された年間予定表の画像を見て、以下のJSONテンプレートのops配列に情報を入力してください。
+    ? `\n【コマ削除ルール（ユーザー指定）】\n${userRules.trim()}\n`
+    : "\n（コマ削除ルールが指定されていません。授業に影響しそうな行事はaffectsClasses:trueにしますが、ops生成は控えめにしてください。）\n";
+  return `あなたは学校の年間予定表を読み取り、JSON化するアシスタントです。
+添付された年間予定表の画像を見て、テンプレートの2つの配列を以下の手順で埋めてください。
 
 【学期情報】
 - 学期期間: ${startDate} 〜 ${endDate}
 - 利用可能なクラス: ${classList}
 ${rulesSection}
-【入力ルール】
-- 行事・休校日をops配列に追加してください。
-- 全クラスが休講の場合は clear_all_classes: true を設定してください。
-- 特定クラスのみ休講の場合は target_class にクラス名を指定してください。
-- 日全体に理由を付ける場合は op: 'set_day_reason' を使ってください。
-- 特定コマを休講にする場合は op: 'clear_period_class' を使い、period（1〜6）を指定してください。
-- 日付はYYYY-MM-DD形式で入力してください。
-- 読み取れない情報は含めないでください。
+【Step 1: events配列を埋める】
+年間予定表に記載されている**すべての予定**を列挙してください。
+- 授業への影響の有無は関係ありません。職員会議・PTA・避難訓練・式典など、書かれているものは全て拾います。
+- 各イベント: { date, title, category, affectsClasses }
+  - date: YYYY-MM-DD（複数日にまたがる行事は各日に1件ずつ）
+  - title: 行事名そのまま（例: "運動会", "始業式", "個人懇談"）
+  - category: ceremony(式典) / event(行事) / meeting(会議) / drill(訓練) / holiday(休日) / other
+  - affectsClasses: その行事が通常授業を中断しそうなら true、そうでなければ false
+- カレンダー左欄の「祝日」「振替休日」もevents配列に含めてください（category: "holiday"）。
+
+【Step 2: ops配列を埋める】
+**コマ削除ルール**に該当する行事のみ、OverrideOp形式で記述してください。
+- ルール未指定または影響なしの行事はopsに含めません。
+- 全クラス全コマ休講: clear_all_classes: true
+- 特定コマ休講: period指定 (1〜6)
+- 特定クラスのみ: target_class指定
+- 日全体に理由を残したい: op: 'set_day_reason'
 
 【出力形式】
-入力済みのJSONのみを出力してください。説明文は不要です。`;
+テンプレートの構造を保ったまま、入力済みのJSONのみを出力してください。説明文・コメント・余計な装飾は不要です。`;
 }
 
 // ─── ファイルダウンロード ────────────────────────────────────────
