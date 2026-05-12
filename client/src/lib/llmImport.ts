@@ -158,7 +158,7 @@ export function generatePeriodTimesPrompt(): string {
 export interface ScheduleEventEntry {
   date: string;             // YYYY-MM-DD
   title: string;            // イベント名（例: "運動会", "職員会議"）
-  category?: "ceremony" | "event" | "meeting" | "drill" | "holiday" | "other";
+  category?: "ceremony" | "event" | "work" | "student" | "holiday" | "other";
   notes?: string;
   timeStart?: string;       // HH:MM（任意）
   timeEnd?: string;
@@ -191,7 +191,7 @@ export function generateScheduleTemplate(semester: SemesterMeta): ScheduleImport
     _instructions: [
       "【Step 1】events配列 → 年間予定表に書かれているすべての予定（始業式・運動会・職員会議・避難訓練など）を、授業への影響の有無に関わらずすべて列挙してください。",
       "【Step 2】ops配列 → user_rules に基づき、授業を実際にカット・変更すべきものだけをOverrideOp形式で記述してください。",
-      "events.category: ceremony(式典) / event(行事) / meeting(会議) / drill(訓練) / holiday(休日) / other",
+      "events.category: ceremony(式典: 始業式・卒業式) / event(行事: 運動会・遠足・参観日) / work(業務: 職員会議・研修) / student(学級: 懇談・避難訓練・健康診断) / holiday(休日) / other",
       "ops.op: 'clear_period_class' → 特定コマを休講にする / 'set_day_reason' → 日全体に理由 / 'set_period_reason' → 特定コマに理由",
       "ops.period: 1〜6、または全コマ休講の場合は clear_all_classes: true を使う",
       "date: YYYY-MM-DD形式 / target_class: nullの場合は全クラス対象",
@@ -201,8 +201,9 @@ export function generateScheduleTemplate(semester: SemesterMeta): ScheduleImport
     user_rules: "（任意：行事ごとのコマ削除ルールを記入。例：運動会は全コマ休講、遠足は午前のみ休講、職員会議はコマに影響なし、など）",
     events: [
       { date: "YYYY-MM-DD", title: "始業式", category: "ceremony", affectsClasses: true },
-      { date: "YYYY-MM-DD", title: "職員会議", category: "meeting", affectsClasses: false },
+      { date: "YYYY-MM-DD", title: "職員会議", category: "work", affectsClasses: false },
       { date: "YYYY-MM-DD", title: "運動会", category: "event", affectsClasses: true },
+      { date: "YYYY-MM-DD", title: "避難訓練", category: "student", affectsClasses: false },
     ],
     ops: [
       {
@@ -242,7 +243,13 @@ ${rulesSection}
 - 各イベント: { date, title, category, affectsClasses }
   - date: YYYY-MM-DD（複数日にまたがる行事は各日に1件ずつ）
   - title: 行事名そのまま（例: "運動会", "始業式", "個人懇談"）
-  - category: ceremony(式典) / event(行事) / meeting(会議) / drill(訓練) / holiday(休日) / other
+  - category:
+    - ceremony : 式典（始業式・終業式・入学式・卒業式 など）
+    - event    : 行事（運動会・遠足・参観日・全校集会・文化祭 など）
+    - work     : 業務（職員会議・研修・PTA・教員業務 など）
+    - student  : 学級（個人懇談・家庭訪問・避難訓練・健康診断 など、児童に関する活動）
+    - holiday  : 休日（休校日・祝日・振替休日）
+    - other    : 上記以外
   - affectsClasses: その行事が通常授業を中断しそうなら true、そうでなければ false
 - カレンダー左欄の「祝日」「振替休日」もevents配列に含めてください（category: "holiday"）。
 

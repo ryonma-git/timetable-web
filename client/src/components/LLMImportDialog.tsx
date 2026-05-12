@@ -99,9 +99,13 @@ function parseScheduleJSON(json: string): ParsedSchedule | null {
       const title = typeof obj.title === "string" ? obj.title.trim() : "";
       if (!date || !title) continue;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue; // テンプレ"YYYY-MM-DD"は弾く
-      const validCats = ["ceremony", "event", "meeting", "drill", "holiday", "other"];
-      const category = typeof obj.category === "string" && validCats.includes(obj.category)
-        ? obj.category as DailyEvent["category"]
+      const validCats = ["ceremony", "event", "work", "student", "holiday", "other"];
+      // 旧カテゴリ名のフォールバック互換（drill→student, meeting→work）
+      let rawCat = typeof obj.category === "string" ? obj.category : "other";
+      if (rawCat === "drill") rawCat = "student";
+      if (rawCat === "meeting") rawCat = "work";
+      const category = validCats.includes(rawCat)
+        ? rawCat as DailyEvent["category"]
         : "other";
       events.push({
         date,

@@ -35,8 +35,16 @@ export interface DailyEvent {
   id: string;
   /** イベント名（例: "運動会", "職員会議"） */
   title: string;
-  /** カテゴリ（任意・表示色用） */
-  category?: "ceremony" | "event" | "meeting" | "drill" | "holiday" | "other";
+  /**
+   * カテゴリ（任意・表示色用）
+   * - ceremony: 式典（始業式・入学式・卒業式・終業式）
+   * - event:    行事（運動会・遠足・参観日・全校集会・文化祭）
+   * - work:     業務（職員会議・研修・PTA・教員業務）
+   * - student:  学級（個人懇談・家庭訪問・避難訓練・健康診断・身体測定）
+   * - holiday:  休日（休校日・祝日・振替休日）
+   * - other:    その他
+   */
+  category?: "ceremony" | "event" | "work" | "student" | "holiday" | "other";
   /** 備考 */
   notes?: string;
   /** 開始時刻 HH:MM（任意） */
@@ -48,6 +56,18 @@ export interface DailyEvent {
    * 実際の授業削除は別の OverrideOp（clear_period_class等）で行う
    */
   affectsClasses?: boolean;
+  /**
+   * 対象クラス（v91拡張・将来用）
+   * - undefined / [] : 全校対象
+   * - 配列: 特定クラスのみ対象（例: ["5年1組", "5年2組"]）
+   */
+  targetClasses?: string[];
+  /**
+   * 対象学年（v91拡張・将来用）
+   * - undefined / [] : 全学年対象
+   * - 配列: 特定学年のみ（例: ["5年", "6年"]）
+   */
+  targetGrades?: string[];
 }
 
 export interface TimetableEntry {

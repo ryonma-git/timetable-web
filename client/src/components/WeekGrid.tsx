@@ -7,7 +7,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { HolidaySettingsDialog } from "@/components/HolidaySettingsDialog";
 import { PeriodTimesDialog } from "@/components/PeriodTimesDialog";
 import { LLMImportDialog } from "@/components/LLMImportDialog";
-import { DayEventsBar } from "@/components/DayEventsBar";
+import { DayEventsCell } from "@/components/DayEventsBar";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -856,13 +856,8 @@ export function WeekGrid() {
         </div>
       )}
 
-      {/* v91: 日次予定欄（年間予定表の素直なイベント一覧） */}
-      <div className="mt-3">
-        <DayEventsBar weekDates={weekDates} />
-      </div>
-
       {/* Grid */}
-      <div className="mt-2 overflow-x-auto">
+      <div className="mt-3 overflow-x-auto">
         <table className="w-full border-collapse" style={{ minWidth: 600 }}>
           <thead>
             <tr>
@@ -932,6 +927,27 @@ export function WeekGrid() {
             </tr>
           </thead>
           <tbody>
+            {/* v91: 予定行（コマと並列の一行、最上段） */}
+            <tr className="group bg-muted/5">
+              <td className="text-center text-xs text-muted-foreground font-medium py-1 pr-2 border-b border-border/50 w-14">
+                <div className="flex flex-col items-center gap-0.5">
+                  <CalendarDays size={11} className="text-muted-foreground/60" />
+                  <span className="text-[9px] text-muted-foreground/60 leading-none">予定</span>
+                </div>
+              </td>
+              {weekDates.map(date => (
+                <td
+                  key={date}
+                  className={cn(
+                    "border-b border-border/40 align-top px-1 py-0.5 min-w-[80px]",
+                    holidayDates.has(date) && "bg-muted/30",
+                  )}
+                >
+                  <DayEventsCell date={date} events={entryByDate.get(date)?.dayEvents ?? []} />
+                </td>
+              ))}
+              <td className="w-14 border-b border-border/40" />
+            </tr>
             {[1, 2, 3, 4, 5, 6].map(period => (
               <tr key={period} className="group">
                 <td className="text-center text-xs text-muted-foreground font-medium py-1 pr-2 border-b border-border/50 w-14">

@@ -22,8 +22,8 @@ import { cn } from "@/lib/utils";
 const CATEGORY_STYLES: Record<NonNullable<DailyEvent["category"]>, string> = {
   ceremony: "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800",
   event:    "bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800",
-  meeting:  "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
-  drill:    "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800",
+  work:     "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
+  student:  "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800",
   holiday:  "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
   other:    "bg-muted text-muted-foreground border-border",
 };
@@ -31,10 +31,19 @@ const CATEGORY_STYLES: Record<NonNullable<DailyEvent["category"]>, string> = {
 const CATEGORY_LABELS: Record<NonNullable<DailyEvent["category"]>, string> = {
   ceremony: "式典",
   event:    "行事",
-  meeting:  "会議",
-  drill:    "訓練",
+  work:     "業務",
+  student:  "学級",
   holiday:  "休日",
   other:    "その他",
+};
+
+const CATEGORY_HINTS: Record<NonNullable<DailyEvent["category"]>, string> = {
+  ceremony: "始業式・入学式・卒業式",
+  event:    "運動会・遠足・参観日・全校集会",
+  work:     "職員会議・研修・PTA",
+  student:  "懇談・家庭訪問・避難訓練・健康診断",
+  holiday:  "休校日・祝日",
+  other:    "上記以外",
 };
 
 function getCategoryStyle(category: DailyEvent["category"]) {
@@ -102,6 +111,7 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
           <button
             key={c}
             onClick={() => setCategory(c)}
+            title={CATEGORY_HINTS[c]}
             className={cn(
               "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
               category === c ? getCategoryStyle(c) + " ring-1 ring-current" : "text-muted-foreground border-border hover:bg-muted/50",
@@ -111,6 +121,7 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
           </button>
         ))}
       </div>
+      <p className="text-[9px] text-muted-foreground/60 -mt-0.5">{CATEGORY_HINTS[category]}</p>
       <Input
         value={notes}
         onChange={e => setNotes(e.target.value)}
@@ -140,7 +151,7 @@ interface DayEventsCellProps {
   events: DailyEvent[];
 }
 
-function DayEventsCell({ date, events }: DayEventsCellProps) {
+export function DayEventsCell({ date, events }: DayEventsCellProps) {
   const [editing, setEditing] = useState<{ event: DailyEvent | null } | null>(null);
 
   return (
