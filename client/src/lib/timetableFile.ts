@@ -166,6 +166,19 @@ export interface TeachingUnit {
   lessons?: UnitLesson[];
 }
 
+/**
+ * v97: クラス別の計画行オーバーライド
+ * 1組だけ進まなかった・別の内容を実施した・メモを残したい等を表現
+ */
+export interface ClassLessonOverride {
+  /** このクラスはこの行を予定通り進められなかった（耳鼻科検診で半分しか進めなかった等） */
+  delayed?: boolean;
+  /** このクラスだけ違う内容を実施した（任意） */
+  content?: string;
+  /** クラス固有メモ（任意） */
+  note?: string;
+}
+
 /** 1コマ分の授業計画エントリ（通し番号はlessons配列のindex+1） */
 export interface LessonPlanEntry {
   id: string;
@@ -173,8 +186,9 @@ export interface LessonPlanEntry {
   unitPeriod: number;     // 単元内通し番号（1-based、動的再計算）
   content: string;        // 内容予定
   notes?: string;
-  isSkip?: boolean;       // true = このコマは実施なし（後のコマとの対応をずらす）
-  // 将来: classOverrides?: ClassLessonOverride[]  クラス個別割り込み用
+  isSkip?: boolean;       // v96で編集UI廃止、表示のみ後方互換用
+  /** v97: クラス別オーバーライド（クラス名→上書き内容） */
+  classOverrides?: Record<string, ClassLessonOverride>;
 }
 
 /** 学年×教科 単位の指導計画 */

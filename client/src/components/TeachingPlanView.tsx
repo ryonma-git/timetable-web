@@ -4,13 +4,14 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { nanoid } from "nanoid";
 import { useTimetable } from "@/contexts/TimetableContext";
-import { GradeSubjectPlan, TeachingUnit, LessonPlanEntry } from "@/lib/timetableFile";
+import { GradeSubjectPlan, TeachingUnit, LessonPlanEntry, ClassLessonOverride } from "@/lib/timetableFile";
 import { TimetableEntry } from "@/lib/timetable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Trash2, BookOpen, ChevronDown, ChevronRight, Pencil, Check, X, GripVertical, FileText, Ban,
+  Plus, Trash2, BookOpen, ChevronDown, ChevronRight, Pencil, Check, X, GripVertical, FileText, Ban, AlertTriangle,
 } from "lucide-react";
 import {
   Dialog,
@@ -280,6 +281,153 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
   );
 }
 
+// ─── クラス列セルのPopover（v97 Phase1: 遅延マーク・メモ） ──────────
+
+interface ClassCellPopoverProps {
+  cls: string;
+  slot: { date: string; period: number; weekday_jp: string } | undefined;
+  isPast: boolean;
+  isToday: boolean;
+  isNext: boolean;
+  isSkip: boolean;
+  isDelayed: boolean;
+  hasNote: boolean;
+  hasAnyOverride: boolean;
+  override: ClassLessonOverride | undefined;
+  onSave: (next: ClassLessonOverride | null) => void;
+}
+
+function ClassCellPopover({
+  cls, slot, isPast, isToday, isNext, isSkip, isDelayed, hasNote, hasAnyOverride, override, onSave,
+}: ClassCellPopoverProps) {
+  const [open, setOpen] = useState(false);
+  const [delayed, setDelayed] = useState(!!override?.delayed);
+  const [note, setNote] = useState(override?.note ?? "");
+
+  // popover開閉時に現状値を読み直し
+  useEffect(() => {
+    if (open) {
+      setDelayed(!!override?.delayed);
+      setNote(override?.note ?? "");
+    }
+  }, [open, override]);
+
+  const commit = () => {
+    const trimmedNote = note.trim();
+    const next: ClassLessonOverride = {};
+    if (delayed) next.delayed = true;
+    if (trimmedNote) next.note = trimmedNote;
+    if (override?.content) next.content = override.content; // contentは別UIで設定するので保持のみ
+    // すべて空ならnullを返す（削除）
+    const hasAny = next.delayed || next.note || next.content;
+    onSave(hasAny ? next : null);
+    setOpen(false);
+  };
+
+  const clearAll = () => {
+    setDelayed(false);
+    setNote("");
+    onSave(null);
+    setOpen(false);
+  };
+
+  const dateLabel = slot ? `${slot.date.slice(5).replace("-", "/")} ${slot.weekday_jp}${slot.period}` : null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className={cn(
+            "w-full py-1.5 px-1 rounded text-[10px] transition-colors hover:bg-muted/30 cursor-pointer",
+            isSkip && "line-through text-muted-foreground/30",
+          )}
+          title={hasAnyOverride
+            ? `${cls}: ${isDelayed ? "進まなかった " : ""}${hasNote ? "メモあり " : ""}（クリックで編集）`
+            : `${cls}: クリックでメモ・遅延マーク`}
+        >
+          {slot ? (
+            <span className={cn(
+              "inline-flex items-center gap-0.5",
+              isSkip ? "" :
+              isDelayed ? "text-orange-700 font-semibold dark:text-orange-300" :
+              isPast ? "text-muted-foreground/60" :
+              isToday ? "text-amber-700 font-semibold dark:text-amber-400" :
+              isNext ? "text-green-700 font-semibold dark:text-green-400" :
+              "text-foreground",
+            )}>
+              {isPast && !isDelayed && <span className="text-emerald-500">✓</span>}
+              {isToday && !isDelayed && <span>▶</span>}
+              {isNext && !isToday && !isDelayed && <span className="text-green-500">→</span>}
+              {isDelayed && <AlertTriangle size={9} className="text-orange-500 shrink-0" />}
+              <span>{dateLabel}</span>
+              {hasNote && <Pencil size={8} className="text-muted-foreground/50 shrink-0" />}
+            </span>
+          ) : (
+            <span className="text-muted-foreground/30">—</span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-3" align="center">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+            <span className="text-xs font-semibold">{cls}</span>
+            {dateLabel && <span className="text-[10px] text-muted-foreground">{dateLabel}</span>}
+          </div>
+
+          {/* 遅延マークトグル */}
+          <label className="flex items-center gap-2 cursor-pointer text-xs">
+            <input
+              type="checkbox"
+              checked={delayed}
+              onChange={e => setDelayed(e.target.checked)}
+              className="w-3.5 h-3.5"
+            />
+            <span className="flex items-center gap-1">
+              <AlertTriangle size={11} className="text-orange-500" />
+              進まなかった
+            </span>
+          </label>
+          <p className="text-[9px] text-muted-foreground/70 ml-5 -mt-1">
+            授業は実施したが、計画通り進められなかった場合
+          </p>
+
+          {/* メモ */}
+          <div className="pt-1">
+            <Label className="text-[10px] text-muted-foreground">クラス固有メモ</Label>
+            <Input
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="例: 耳鼻科検診で半分のみ"
+              className="h-7 text-xs mt-0.5"
+              onKeyDown={e => {
+                if (e.key === "Enter") commit();
+                if (e.key === "Escape") setOpen(false);
+              }}
+            />
+          </div>
+
+          <div className="flex justify-between gap-2 pt-1">
+            {hasAnyOverride ? (
+              <Button variant="ghost" size="sm" onClick={clearAll}
+                className="h-6 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10">
+                <X size={10} className="mr-0.5" />すべて解除
+              </Button>
+            ) : <span />}
+            <div className="flex gap-1 ml-auto">
+              <Button variant="ghost" size="sm" onClick={() => setOpen(false)} className="h-6 text-[11px]">
+                キャンセル
+              </Button>
+              <Button size="sm" onClick={commit} className="h-6 text-[11px]">
+                <Check size={10} className="mr-0.5" />保存
+              </Button>
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ─── レッスン行 ────────────────────────────────────────────────
 
 interface LessonRowProps {
@@ -298,11 +446,13 @@ interface LessonRowProps {
   today: string;
   classProgress: Record<string, ClassProgress>;
   onSave: (entry: LessonPlanEntry) => void;
+  /** v97 Phase1: クラス別オーバーライドの保存 */
+  onSaveClassOverride: (cls: string, override: ClassLessonOverride | null) => void;
 }
 
 function LessonRow({
   lessonNumber, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, planContent, units,
-  classSlots, classes, isSkip, today, classProgress, onSave,
+  classSlots, classes, isSkip, today, classProgress, onSave, onSaveClassOverride,
 }: LessonRowProps) {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(entry?.content ?? "");
@@ -426,7 +576,7 @@ function LessonRow({
         )}
       </td>
 
-      {/* クラス別実施日（今日/次回/済みをハイライト） */}
+      {/* クラス別実施日（今日/次回/済み + v97: クラス別遅延マーク） */}
       {classes.map(cls => {
         const slots = classSlots[cls] ?? [];
         const slot = slots[lessonNumber - 1];
@@ -435,30 +585,33 @@ function LessonRow({
         const isPast = !isSkip && slot && slot.date < today;
         const isToday = !isSkip && slot && prog?.todayRowIndices.includes(rowIdx);
         const isNext = !isSkip && !isToday && slot && prog?.nextRowIdx === rowIdx;
+        // v97 Phase1: クラス別オーバーライド
+        const override = entry?.classOverrides?.[cls];
+        const isDelayed = !!override?.delayed;
+        const hasNote = !!(override?.note || override?.content);
+        const hasAnyOverride = isDelayed || hasNote;
 
         return (
           <td key={cls} className={cn(
-            "px-2 py-1.5 text-center text-[10px] w-20 whitespace-nowrap transition-colors",
-            isPast && "bg-muted/20",
-            isToday && "bg-amber-50 dark:bg-amber-950/20",
-            isNext && "bg-green-50 dark:bg-green-950/20",
+            "px-1 py-0 text-center text-[10px] w-20 whitespace-nowrap transition-colors",
+            isPast && !isDelayed && "bg-muted/20",
+            isToday && !isDelayed && "bg-amber-50 dark:bg-amber-950/20",
+            isNext && !isDelayed && "bg-green-50 dark:bg-green-950/20",
+            isDelayed && "bg-orange-100/70 dark:bg-orange-900/30",
           )}>
-            {slot ? (
-              <span className={cn(
-                isSkip ? "line-through text-muted-foreground/30" :
-                isPast ? "text-muted-foreground/50" :
-                isToday ? "text-amber-700 font-semibold dark:text-amber-400" :
-                isNext ? "text-green-700 font-semibold dark:text-green-400" :
-                "text-foreground",
-              )}>
-                {isPast && <span className="mr-0.5 text-emerald-500">✓</span>}
-                {isToday && <span className="mr-0.5">▶</span>}
-                {isNext && !isToday && <span className="mr-0.5 text-green-500">→</span>}
-                {slot.date.slice(5).replace("-", "/")} {slot.weekday_jp}{slot.period}
-              </span>
-            ) : (
-              <span className="text-muted-foreground/30">—</span>
-            )}
+            <ClassCellPopover
+              cls={cls}
+              slot={slot}
+              isPast={isPast}
+              isToday={isToday}
+              isNext={isNext}
+              isSkip={isSkip}
+              isDelayed={isDelayed}
+              hasNote={hasNote}
+              hasAnyOverride={hasAnyOverride}
+              override={override}
+              onSave={(next) => onSaveClassOverride(cls, next)}
+            />
           </td>
         );
       })}
@@ -568,6 +721,27 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
       next.push({ id: nanoid(8), unitId: "", unitPeriod: next.length + 1, content: "" });
     }
     next[lessonNumber - 1] = saved;
+    onUpdateLessons(next);
+  }, [plan.lessons, onUpdateLessons]);
+
+  // v97 Phase1: クラス別オーバーライドを更新
+  const updateClassOverride = useCallback((lessonNumber: number, cls: string, override: ClassLessonOverride | null) => {
+    const next = [...plan.lessons];
+    while (next.length < lessonNumber) {
+      next.push({ id: nanoid(8), unitId: "", unitPeriod: next.length + 1, content: "" });
+    }
+    const current = next[lessonNumber - 1];
+    const existing = current.classOverrides ?? {};
+    const newOverrides: Record<string, ClassLessonOverride> = { ...existing };
+    if (override === null) {
+      delete newOverrides[cls];
+    } else {
+      newOverrides[cls] = override;
+    }
+    next[lessonNumber - 1] = {
+      ...current,
+      classOverrides: Object.keys(newOverrides).length > 0 ? newOverrides : undefined,
+    };
     onUpdateLessons(next);
   }, [plan.lessons, onUpdateLessons]);
 
@@ -686,7 +860,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
 
       {/* 操作ヒント */}
       <p className="text-[10px] text-muted-foreground/60 -mt-1">
-        単元セルをクリック → 単元を変更 ／ 内容予定をクリック → 編集（薄字は単元マスター） ／ 計画行数の変更は単元管理パネルでコマ数を調整
+        単元セルをクリック → 単元を変更 ／ 内容予定をクリック → 編集（薄字は単元マスター） ／ 計画行数の変更は単元管理パネルでコマ数を調整 ／ <span className="text-orange-600/80 font-medium">クラスの実施日セルをクリック → そのクラスだけ「進まなかった」マーク・メモ追加</span>
       </p>
 
       {/* テーブル */}
@@ -752,6 +926,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                   today={today}
                   classProgress={classProgress}
                   onSave={(saved) => updateLesson(n, saved)}
+                  onSaveClassOverride={(cls, ov) => updateClassOverride(n, cls, ov)}
                 />
               ))
             )}
