@@ -36,15 +36,17 @@ export interface DailyEvent {
   /** イベント名（例: "運動会", "職員会議"） */
   title: string;
   /**
-   * カテゴリ（任意・表示色用）
+   * カテゴリ（表示色・分類用、任意文字列）
+   * 既定タグ（既知の色とラベルを持つ）:
    * - ceremony: 式典（始業式・入学式・卒業式・終業式）
    * - event:    行事（運動会・遠足・参観日・全校集会・文化祭）
    * - work:     業務（職員会議・研修・PTA・教員業務）
    * - student:  学級（個人懇談・家庭訪問・避難訓練・健康診断・身体測定）
    * - holiday:  休日（休校日・祝日・振替休日）
    * - other:    その他
+   * 上記以外の任意文字列も許容（カスタムタグ、文字列ハッシュで自動カラー割り当て）
    */
-  category?: "ceremony" | "event" | "work" | "student" | "holiday" | "other";
+  category?: string;
   /** 備考 */
   notes?: string;
   /** 開始時刻 HH:MM（任意） */

@@ -243,13 +243,13 @@ ${rulesSection}
 - 各イベント: { date, title, category, affectsClasses }
   - date: YYYY-MM-DD（複数日にまたがる行事は各日に1件ずつ）
   - title: 行事名そのまま（例: "運動会", "始業式", "個人懇談"）
-  - category:
+  - category: **必ず以下の6つから選んでください**。当てはまらない or 迷う場合は "other" にしてください（独自カテゴリ名は作らない）。
     - ceremony : 式典（始業式・終業式・入学式・卒業式 など）
     - event    : 行事（運動会・遠足・参観日・全校集会・文化祭 など）
     - work     : 業務（職員会議・研修・PTA・教員業務 など）
     - student  : 学級（個人懇談・家庭訪問・避難訓練・健康診断 など、児童に関する活動）
     - holiday  : 休日（休校日・祝日・振替休日）
-    - other    : 上記以外
+    - other    : 上記いずれにも明確に該当しない場合
   - affectsClasses: その行事が通常授業を中断しそうなら true、そうでなければ false
 - カレンダー左欄の「祝日」「振替休日」もevents配列に含めてください（category: "holiday"）。
 
