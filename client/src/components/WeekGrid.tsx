@@ -927,19 +927,19 @@ export function WeekGrid() {
             </tr>
           </thead>
           <tbody>
-            {/* v91: 予定行（コマと並列の一行、最上段） */}
-            <tr className="group bg-muted/5">
-              <td className="text-center text-xs text-muted-foreground font-medium py-1 pr-2 border-b border-border/50 w-14">
+            {/* v91-v95: 予定行（コマと並列の一行、最上段） */}
+            <tr className="group bg-blue-50/40 dark:bg-blue-950/15 border-b-2 border-blue-200/50 dark:border-blue-900/30">
+              <td className="text-center text-xs font-medium py-1.5 pr-2 border-b border-border/50 w-14 align-middle">
                 <div className="flex flex-col items-center gap-0.5">
-                  <CalendarDays size={11} className="text-muted-foreground/60" />
-                  <span className="text-[9px] text-muted-foreground/60 leading-none">予定</span>
+                  <CalendarDays size={13} className="text-blue-600/70 dark:text-blue-400/70" />
+                  <span className="text-[10px] text-blue-700/80 dark:text-blue-300/80 leading-none font-semibold">予定</span>
                 </div>
               </td>
               {weekDates.map(date => (
                 <td
                   key={date}
                   className={cn(
-                    "border-b border-border/40 align-top px-1 py-0.5 min-w-[80px]",
+                    "border-b border-border/40 align-top px-1.5 py-1 min-w-[80px] min-h-[36px]",
                     holidayDates.has(date) && "bg-muted/30",
                   )}
                 >
