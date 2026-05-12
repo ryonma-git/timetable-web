@@ -283,34 +283,32 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
 // ─── レッスン行 ────────────────────────────────────────────────
 
 interface LessonRowProps {
-  lessonNumber: number;          // 通し番号（isSkipでも表示上のNo.）
-  contentIndex: number;          // isSkipを除いた実コンテンツ番号
+  lessonNumber: number;
   entry: LessonPlanEntry | null;
   unit: TeachingUnit | null;
   unitColorIdx: number;
-  unitPeriod: number;            // 動的計算済み
-  effectiveUnitId: string;       // 計画 or 手動override の実効unitId
-  isFromPlan: boolean;           // trueなら自動計画から割り当て（手動変更なし）
-  planContent: string;           // v94: 単元マスターからの計画内容（薄字フォールバック用）
+  unitPeriod: number;
+  effectiveUnitId: string;
+  isFromPlan: boolean;
+  planContent: string;
   units: TeachingUnit[];
   classSlots: Record<string, Array<{ date: string; period: number; weekday_jp: string }>>;
   classes: string[];
-  isSkip: boolean;
-  today: string;                 // YYYY-MM-DD
+  isSkip: boolean;                // v96: 旧データのみ表示用（編集UI廃止）
+  today: string;
   classProgress: Record<string, ClassProgress>;
   onSave: (entry: LessonPlanEntry) => void;
-  onToggleSkip: () => void;
-  onInsertBefore: () => void;
-  onDelete: () => void;
 }
 
 function LessonRow({
   lessonNumber, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, planContent, units,
-  classSlots, classes, isSkip, today, classProgress, onSave, onToggleSkip, onInsertBefore, onDelete,
+  classSlots, classes, isSkip, today, classProgress, onSave,
 }: LessonRowProps) {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(entry?.content ?? "");
   const [notes, setNotes] = useState(entry?.notes ?? "");
+  // v96: ホバー状態をReact stateで管理（再レンダリング時にCSS hoverが残留する問題の修正）
+  const [rowHovered, setRowHovered] = useState(false);
 
   const commit = () => {
     onSave({
@@ -342,43 +340,29 @@ function LessonRow({
   };
 
   return (
-    <tr className={cn(
-      "border-b border-border/40 group/row transition-colors",
-      isSkip ? "bg-muted/30 opacity-60" :
-      isFromPlan ? "bg-blue-50/20 hover:bg-blue-50/40 dark:bg-blue-950/10" :
-      "hover:bg-muted/20",
-      editing && "bg-muted/30",
-    )}>
-      {/* No. セル: クリックでスキップ切替、ホバーで行操作 */}
+    <tr
+      onMouseEnter={() => setRowHovered(true)}
+      onMouseLeave={() => setRowHovered(false)}
+      className={cn(
+        "border-b border-border/40 transition-colors",
+        isSkip ? "bg-muted/30 opacity-60" :
+        isFromPlan ? "bg-blue-50/20 dark:bg-blue-950/10" :
+        "",
+        rowHovered && !isSkip && (isFromPlan ? "bg-blue-50/40" : "bg-muted/20"),
+        editing && "bg-muted/30",
+      )}
+    >
+      {/* No. セル */}
       <td className="px-1 py-1.5 text-center w-12 shrink-0 relative">
         <div className="flex flex-col items-center gap-0.5">
-          <button
-            onClick={onToggleSkip}
-            title={isSkip
-              ? "計画に戻す（単元コマカウントを進める対象に戻す）"
-              : "計画コマから除外する：行事等で授業が消えたとき、この行を「実施なし」にすると単元の通し番号(○時)カウントから外れ、後続の行が繰り上がります"}
+          <span
             className={cn(
-              "text-xs font-mono w-6 h-5 rounded flex items-center justify-center transition-colors",
-              isSkip
-                ? "bg-muted text-muted-foreground line-through"
-                : "text-muted-foreground hover:bg-orange-100 hover:text-orange-600"
+              "text-xs font-mono w-6 h-5 rounded flex items-center justify-center",
+              isSkip ? "bg-muted text-muted-foreground line-through" : "text-muted-foreground"
             )}
           >
             {isSkip ? <Ban size={10} /> : lessonNumber}
-          </button>
-          {/* ホバー時の行挿入・削除ボタン */}
-          <div className="opacity-0 group-hover/row:opacity-100 flex gap-0.5 transition-opacity">
-            <button
-              onClick={onInsertBefore}
-              title="この行の前に空行を挿入"
-              className="text-[9px] text-muted-foreground hover:text-blue-600 hover:bg-blue-50 rounded px-0.5"
-            >+行</button>
-            <button
-              onClick={onDelete}
-              title="この行を削除"
-              className="text-[9px] text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded px-0.5"
-            >削除</button>
-          </div>
+          </span>
         </div>
       </td>
 
@@ -587,36 +571,9 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
     onUpdateLessons(next);
   }, [plan.lessons, onUpdateLessons]);
 
-  // 行の前に空行を挿入
-  const insertRowBefore = useCallback((lessonNumber: number) => {
-    const next = [...plan.lessons];
-    while (next.length < lessonNumber - 1) {
-      next.push({ id: nanoid(8), unitId: "", unitPeriod: 0, content: "" });
-    }
-    const emptyEntry: LessonPlanEntry = { id: nanoid(8), unitId: "", unitPeriod: 0, content: "", isSkip: false };
-    next.splice(lessonNumber - 1, 0, emptyEntry);
-    onUpdateLessons(next);
-  }, [plan.lessons, onUpdateLessons]);
-
-  // 行を削除（後ろをつめる）
-  const deleteRow = useCallback((lessonNumber: number) => {
-    const next = [...plan.lessons];
-    if (lessonNumber <= next.length) {
-      next.splice(lessonNumber - 1, 1);
-    }
-    onUpdateLessons(next);
-  }, [plan.lessons, onUpdateLessons]);
-
-  // スキップトグル
-  const toggleSkip = useCallback((lessonNumber: number) => {
-    const next = [...plan.lessons];
-    while (next.length < lessonNumber) {
-      next.push({ id: nanoid(8), unitId: "", unitPeriod: 0, content: "" });
-    }
-    const current = next[lessonNumber - 1];
-    next[lessonNumber - 1] = { ...current, isSkip: !current.isSkip };
-    onUpdateLessons(next);
-  }, [plan.lessons, onUpdateLessons]);
+  // v96: 行の挿入・削除・スキップトグルは廃止
+  // 計画行数の変更は単元管理パネルでplannedPeriodsを編集することで行う
+  // クラス別の進度差分は今後の classOverrides 機構で対応予定
 
   // 今日の日付
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -729,7 +686,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
 
       {/* 操作ヒント */}
       <p className="text-[10px] text-muted-foreground/60 -mt-1">
-        No.をクリック → 計画から除外（行事等で消えたコマを単元カウントから外す） ／ 行にホバー → 行の挿入・削除 ／ 単元セルをクリック → 単元割り当て ／ 単元管理パネルで単元マスター（薄字部分）を編集
+        単元セルをクリック → 単元を変更 ／ 内容予定をクリック → 編集（薄字は単元マスター） ／ 計画行数の変更は単元管理パネルでコマ数を調整
       </p>
 
       {/* テーブル */}
@@ -781,7 +738,6 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                 <LessonRow
                   key={n}
                   lessonNumber={n}
-                  contentIndex={n}
                   entry={entry}
                   unit={unit}
                   unitColorIdx={unitColorIdx}
@@ -796,9 +752,6 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                   today={today}
                   classProgress={classProgress}
                   onSave={(saved) => updateLesson(n, saved)}
-                  onToggleSkip={() => toggleSkip(n)}
-                  onInsertBefore={() => insertRowBefore(n)}
-                  onDelete={() => deleteRow(n)}
                 />
               ))
             )}
@@ -806,16 +759,6 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
         </table>
       </div>
 
-      {maxSlots > 0 && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 text-xs gap-1 text-muted-foreground"
-          onClick={() => insertRowBefore(maxSlots + 1)}
-        >
-          <Plus size={10} /> 末尾に行を追加
-        </Button>
-      )}
     </div>
   );
 }
