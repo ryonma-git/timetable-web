@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Trash2, BookOpen, ChevronDown, Pencil, Check, X, GripVertical, FileText, Ban,
+  Plus, Trash2, BookOpen, ChevronDown, ChevronRight, Pencil, Check, X, GripVertical, FileText, Ban,
 } from "lucide-react";
 import {
   Dialog,
@@ -149,6 +149,7 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPeriods, setEditPeriods] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null); // v94: 単元マスター展開
 
   const startEdit = (u: TeachingUnit) => {
     setEditingId(u.id);
@@ -169,41 +170,109 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
     setTimeout(() => startEdit(newUnit), 50);
   };
 
+  // v94: 単元マスターの個別時間の内容を更新
+  const updateUnitLesson = (unitId: string, period: number, content: string) => {
+    onChange(units.map(u => {
+      if (u.id !== unitId) return u;
+      const lessons = u.lessons ? [...u.lessons] : [];
+      const idx = lessons.findIndex(l => l.period === period);
+      const trimmed = content;  // 空でも保持（編集中の空状態を許容）
+      if (idx >= 0) {
+        if (trimmed) {
+          lessons[idx] = { ...lessons[idx], content: trimmed };
+        } else {
+          lessons.splice(idx, 1);
+        }
+      } else if (trimmed) {
+        lessons.push({ period, content: trimmed });
+        lessons.sort((a, b) => a.period - b.period);
+      }
+      return { ...u, lessons: lessons.length > 0 ? lessons : undefined };
+    }));
+  };
+
   const totalPlanned = units.reduce((s, u) => s + (u.plannedPeriods || 0), 0);
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-border/50">
-        <span className="text-[10px] text-muted-foreground">単元を順番に並べ、計画コマ数を設定すると自動割り振りされます</span>
+        <span className="text-[10px] text-muted-foreground">単元を順番に並べ、計画コマ数を設定すると自動割り振りされます。▶で単元の各時間を編集できます。</span>
         {totalPlanned > 0 && (
           <span className="text-[10px] font-medium text-primary shrink-0 ml-2">計 {totalPlanned}コマ</span>
         )}
       </div>
-      {units.map((u, idx) => (
-        <div key={u.id} className="flex items-center gap-2 group">
-          <GripVertical size={12} className="text-muted-foreground shrink-0" />
-          <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0", getUnitColor(idx))}>
-            {idx + 1}
-          </span>
-          {editingId === u.id ? (
-            <>
-              <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-6 text-xs flex-1" autoFocus
-                onKeyDown={e => { if (e.key === "Enter") commitEdit(u.id); if (e.key === "Escape") setEditingId(null); }} />
-              <Input value={editPeriods} onChange={e => setEditPeriods(e.target.value)} className="h-6 text-xs w-14" type="number" min={1} />
-              <span className="text-xs text-muted-foreground shrink-0">コマ</span>
-              <button onClick={() => commitEdit(u.id)} className="text-green-600 hover:text-green-700"><Check size={12} /></button>
-              <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-foreground"><X size={12} /></button>
-            </>
-          ) : (
-            <>
-              <span className="text-xs flex-1 truncate">{u.name}</span>
-              <span className="text-[10px] font-medium text-primary shrink-0">{u.plannedPeriods}コマ</span>
-              <button onClick={() => startEdit(u)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"><Pencil size={11} /></button>
-              <button onClick={() => onChange(units.filter(x => x.id !== u.id))} className="opacity-0 group-hover:opacity-100 text-destructive/60 hover:text-destructive"><Trash2 size={11} /></button>
-            </>
-          )}
-        </div>
-      ))}
+      {units.map((u, idx) => {
+        const isExpanded = expandedId === u.id;
+        const filledCount = u.lessons?.filter(l => l.content && l.period <= u.plannedPeriods).length ?? 0;
+        return (
+          <div key={u.id} className="border-l-2 border-transparent">
+            <div className="flex items-center gap-2 group">
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : u.id)}
+                className="text-muted-foreground/60 hover:text-foreground shrink-0 w-4 flex items-center justify-center"
+                title={isExpanded ? "閉じる" : "単元の各時間を編集"}
+              >
+                {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+              </button>
+              <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0", getUnitColor(idx))}>
+                {idx + 1}
+              </span>
+              {editingId === u.id ? (
+                <>
+                  <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-6 text-xs flex-1" autoFocus
+                    onKeyDown={e => { if (e.key === "Enter") commitEdit(u.id); if (e.key === "Escape") setEditingId(null); }} />
+                  <Input value={editPeriods} onChange={e => setEditPeriods(e.target.value)} className="h-6 text-xs w-14" type="number" min={1} />
+                  <span className="text-xs text-muted-foreground shrink-0">コマ</span>
+                  <button onClick={() => commitEdit(u.id)} className="text-green-600 hover:text-green-700"><Check size={12} /></button>
+                  <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-foreground"><X size={12} /></button>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs flex-1 truncate cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : u.id)}>{u.name}</span>
+                  <span className="text-[10px] font-medium text-primary shrink-0">{u.plannedPeriods}コマ</span>
+                  {filledCount > 0 && (
+                    <span className="text-[9px] text-muted-foreground shrink-0">({filledCount}件記入済)</span>
+                  )}
+                  <button onClick={() => startEdit(u)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"><Pencil size={11} /></button>
+                  <button onClick={() => onChange(units.filter(x => x.id !== u.id))} className="opacity-0 group-hover:opacity-100 text-destructive/60 hover:text-destructive"><Trash2 size={11} /></button>
+                </>
+              )}
+            </div>
+
+            {/* v94: 単元マスター展開UI - 各時間の予定内容 */}
+            {isExpanded && (
+              <div className="ml-9 mt-1 mb-2 space-y-0.5 border-l-2 border-muted/40 pl-2">
+                <p className="text-[9px] text-muted-foreground/60 mb-0.5">この単元の各時間で何をするか（マスター予定）。ここで編集すると、コマ単位リストに薄字で反映されます。</p>
+                {Array.from({ length: u.plannedPeriods }, (_, i) => {
+                  const p = i + 1;
+                  const lesson = u.lessons?.find(l => l.period === p);
+                  return (
+                    <div key={p} className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground w-6 shrink-0">{p}時</span>
+                      <Input
+                        defaultValue={lesson?.content ?? ""}
+                        placeholder={`${p}時目の内容（例: 導入・練習・まとめ）`}
+                        className="h-6 text-xs flex-1"
+                        onBlur={e => {
+                          const val = e.target.value;
+                          if (val !== (lesson?.content ?? "")) {
+                            updateUnitLesson(u.id, p, val);
+                          }
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
       <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 mt-1" onClick={addUnit}>
         <Plus size={11} /> 単元を追加
       </Button>
@@ -222,6 +291,7 @@ interface LessonRowProps {
   unitPeriod: number;            // 動的計算済み
   effectiveUnitId: string;       // 計画 or 手動override の実効unitId
   isFromPlan: boolean;           // trueなら自動計画から割り当て（手動変更なし）
+  planContent: string;           // v94: 単元マスターからの計画内容（薄字フォールバック用）
   units: TeachingUnit[];
   classSlots: Record<string, Array<{ date: string; period: number; weekday_jp: string }>>;
   classes: string[];
@@ -235,7 +305,7 @@ interface LessonRowProps {
 }
 
 function LessonRow({
-  lessonNumber, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, units,
+  lessonNumber, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, planContent, units,
   classSlots, classes, isSkip, today, classProgress, onSave, onToggleSkip, onInsertBefore, onDelete,
 }: LessonRowProps) {
   const [editing, setEditing] = useState(false);
@@ -284,7 +354,9 @@ function LessonRow({
         <div className="flex flex-col items-center gap-0.5">
           <button
             onClick={onToggleSkip}
-            title={isSkip ? "実施ありに戻す" : "このコマを実施なしにする"}
+            title={isSkip
+              ? "計画に戻す（単元コマカウントを進める対象に戻す）"
+              : "計画コマから除外する：行事等で授業が消えたとき、この行を「実施なし」にすると単元の通し番号(○時)カウントから外れ、後続の行が繰り上がります"}
             className={cn(
               "text-xs font-mono w-6 h-5 rounded flex items-center justify-center transition-colors",
               isSkip
@@ -330,14 +402,14 @@ function LessonRow({
       {/* 内容予定 */}
       <td className="px-2 py-1.5 min-w-[160px]">
         {isSkip ? (
-          <span className="text-xs text-muted-foreground italic">実施なし</span>
+          <span className="text-xs text-muted-foreground italic">実施なし（計画コマカウントから除外）</span>
         ) : editing ? (
           <div className="flex flex-col gap-1">
             <Input
               value={content}
               onChange={e => setContent(e.target.value)}
               className="h-6 text-xs"
-              placeholder="内容予定"
+              placeholder={planContent ? `単元マスター: ${planContent}` : "内容予定"}
               autoFocus
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) commit(); if (e.key === "Escape") cancel(); }}
             />
@@ -356,10 +428,15 @@ function LessonRow({
           <div
             className="flex items-center gap-1 cursor-pointer min-h-[24px]"
             onClick={() => { setContent(entry?.content ?? ""); setNotes(entry?.notes ?? ""); setEditing(true); }}
+            title={planContent && !entry?.content ? `単元マスター: ${planContent}（クリックで上書き）` : undefined}
           >
-            <span className={cn("text-xs", entry?.content ? "text-foreground" : "text-muted-foreground/40 italic")}>
-              {entry?.content || "クリックして入力…"}
-            </span>
+            {entry?.content ? (
+              <span className="text-xs text-foreground">{entry.content}</span>
+            ) : planContent ? (
+              <span className="text-xs text-muted-foreground/60 italic">{planContent}</span>
+            ) : (
+              <span className="text-xs text-muted-foreground/40 italic">クリックして入力…</span>
+            )}
             <Pencil size={10} className="opacity-0 group-hover/row:opacity-60 text-muted-foreground shrink-0" />
           </div>
         )}
@@ -489,7 +566,14 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
         unitPeriod = count;
       }
 
-      return { n, entry, unit, unitColorIdx, effectiveUnitId, unitPeriod, isSkip, isFromPlan };
+      // v94: 単元マスターから計画内容を取得（コマlessons[]が空のときフォールバック）
+      let planContent = "";
+      if (unit && unitPeriod > 0) {
+        const masterLesson = unit.lessons?.find(l => l.period === unitPeriod);
+        planContent = masterLesson?.content ?? "";
+      }
+
+      return { n, entry, unit, unitColorIdx, effectiveUnitId, unitPeriod, isSkip, isFromPlan, planContent };
     });
   }, [maxSlots, plan.lessons, plan.units, unitIndexMap, plannedRows]);
 
@@ -645,7 +729,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
 
       {/* 操作ヒント */}
       <p className="text-[10px] text-muted-foreground/60 -mt-1">
-        No.をクリック → 実施なし切替 ／ 行にホバー → 行の挿入・削除 ／ 単元セルをクリック → 単元割り当て
+        No.をクリック → 計画から除外（行事等で消えたコマを単元カウントから外す） ／ 行にホバー → 行の挿入・削除 ／ 単元セルをクリック → 単元割り当て ／ 単元管理パネルで単元マスター（薄字部分）を編集
       </p>
 
       {/* テーブル */}
@@ -693,7 +777,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                 </td>
               </tr>
             ) : (
-              rows.map(({ n, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, isSkip }) => (
+              rows.map(({ n, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, isSkip, planContent }) => (
                 <LessonRow
                   key={n}
                   lessonNumber={n}
@@ -704,6 +788,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                   unitPeriod={unitPeriod}
                   effectiveUnitId={effectiveUnitId}
                   isFromPlan={isFromPlan}
+                  planContent={planContent}
                   units={plan.units}
                   classSlots={classSlots}
                   classes={classes}

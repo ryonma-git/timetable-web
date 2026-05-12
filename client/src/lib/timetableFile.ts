@@ -138,12 +138,32 @@ export interface SemesterMeta {
 // ─── Teaching Plan (指導計画) ──────────────────────────────────
 
 /** 単元（Unit）マスタ */
+/**
+ * 単元マスター: 単元内の各時間の予定内容（オリジナル）
+ * - period: 1-based 単元内通し番号（1〜plannedPeriods）
+ * - content: 内容予定（例: "導入", "約分の練習", "復習・まとめ"）
+ * v94: コマ単位リストとの両方向同期で使用
+ */
+export interface UnitLesson {
+  period: number;
+  content: string;
+  notes?: string;
+}
+
 export interface TeachingUnit {
   id: string;
   name: string;           // 単元名
   plannedPeriods: number; // 目安コマ数
   color?: string;         // 表示カラー（Tailwind bg class or hex）
   notes?: string;
+  /**
+   * v94: 単元マスター
+   * 単元内の各時間で何をするかの計画（オリジナル）
+   * - コマ単位リストの内容列に薄字で表示される
+   * - 個別コマで上書き編集すると plan.lessons[n].content に保存（override）
+   * - 単元リストで編集するとここに保存（マスター）
+   */
+  lessons?: UnitLesson[];
 }
 
 /** 1コマ分の授業計画エントリ（通し番号はlessons配列のindex+1） */
