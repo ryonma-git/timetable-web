@@ -64,6 +64,145 @@ function extractGradeSubjectCombos(
     .sort((a, b) => a.grade.localeCompare(b.grade) || a.subject.localeCompare(b.subject));
 }
 
+// ─── v104 Phase B: クラス×教科の進捗を計算する純関数 ───────────────
+// PlanTableのロジック（plannedRows + classRowSlotMap + 内容解決）を再利用可能に抽出
+
+export type ClassPlanRowStatus = "past" | "today" | "next" | "future" | "overflow" | "none";
+
+export interface ClassPlanRow {
+  n: number;                  // 1-based 計画行
+  unitName: string;
+  unitColorIdx: number;
+  content: string;            // 実効内容（lesson上書き → 単元マスター → 空）
+  unitPeriod: number;
+  slot?: { date: string; period: number; weekday_jp: string };
+  status: ClassPlanRowStatus;
+  delayed: boolean;
+  advanced: boolean;
+}
+
+export interface ClassPlanProgress {
+  rows: ClassPlanRow[];
+  totalSlots: number;
+  completedCount: number;
+  currentRow?: ClassPlanRow;  // 直近完了（過去の最後）
+  todayRows: ClassPlanRow[];
+  nextRow?: ClassPlanRow;     // 今日 or 次回の最初
+  hasOverflow: boolean;
+}
+
+export function computeClassPlanProgress(
+  plan: GradeSubjectPlan,
+  cls: string,
+  effectiveEntries: TimetableEntry[],
+  asOf: string,
+): ClassPlanProgress {
+  const slots = computeClassLessonSlots(effectiveEntries, cls, plan.subject);
+
+  // 計画レイアウト（単元順 × plannedPeriods）
+  const plannedRows: Array<{ unitId: string; unitPeriod: number }> = [];
+  for (const unit of plan.units) {
+    const periods = Math.max(0, unit.plannedPeriods || 0);
+    for (let i = 0; i < periods; i++) plannedRows.push({ unitId: unit.id, unitPeriod: i + 1 });
+  }
+  const unitIndexMap = new Map<string, number>();
+  plan.units.forEach((u, i) => unitIndexMap.set(u.id, i));
+
+  const maxSlots = Math.max(plan.lessons.length, slots.length, plannedRows.length, 0);
+
+  // 行→スロットindex（delayed=2スロット消費 / advanced=前行と同日）
+  const rowSlot = new Map<number, number>();
+  const overflowSet = new Set<number>();
+  {
+    let slotIdx = 0;
+    let lastSlotIdx = -1;
+    for (let row = 1; row <= maxSlots; row++) {
+      const ov = plan.lessons[row - 1]?.classOverrides?.[cls];
+      const delayed = ov?.delayed ?? false;
+      const advanced = ov?.advanced ?? false;
+      if (advanced && !delayed && lastSlotIdx >= 0) {
+        rowSlot.set(row, lastSlotIdx);
+        continue;
+      }
+      if (delayed) slotIdx += 1;
+      if (slotIdx < slots.length) {
+        rowSlot.set(row, slotIdx);
+        lastSlotIdx = slotIdx;
+      } else if (slots.length > 0) {
+        overflowSet.add(row);
+      }
+      slotIdx += 1;
+    }
+  }
+
+  const unitCounts = new Map<string, number>();
+  const rows: ClassPlanRow[] = [];
+  let completedCount = 0;
+  const todayRows: ClassPlanRow[] = [];
+  let nextRow: ClassPlanRow | undefined;
+  let currentRow: ClassPlanRow | undefined;
+
+  for (let i = 0; i < maxSlots; i++) {
+    const n = i + 1;
+    const entry = plan.lessons[i] ?? null;
+    const plannedSlot = plannedRows[i] ?? null;
+    const overrideUnitId = entry?.unitId ?? "";
+    const effectiveUnitId = overrideUnitId || (plannedSlot?.unitId ?? "");
+    const unit = effectiveUnitId ? (plan.units.find(u => u.id === effectiveUnitId) ?? null) : null;
+    const unitColorIdx = unit ? (unitIndexMap.get(unit.id) ?? 0) : 0;
+
+    let unitPeriod = 0;
+    if (effectiveUnitId) {
+      const c = (unitCounts.get(effectiveUnitId) ?? 0) + 1;
+      unitCounts.set(effectiveUnitId, c);
+      unitPeriod = c;
+    }
+    let content = entry?.content ?? "";
+    if (!content && unit && unitPeriod > 0) {
+      content = unit.lessons?.find(l => l.period === unitPeriod)?.content ?? "";
+    }
+
+    const ov = entry?.classOverrides?.[cls];
+    const delayed = !!ov?.delayed;
+    const advanced = !!ov?.advanced && !delayed;
+    if (ov?.content) content = ov.content;
+
+    const sIdx = rowSlot.get(n);
+    const slot = sIdx !== undefined ? slots[sIdx] : undefined;
+    const isOverflow = overflowSet.has(n);
+
+    let status: ClassPlanRowStatus = "none";
+    if (slot) {
+      if (slot.date < asOf) status = "past";
+      else if (slot.date === asOf) status = "today";
+      else status = "future";
+    } else if (isOverflow) {
+      status = "overflow";
+    }
+
+    const r: ClassPlanRow = {
+      n, unitName: unit?.name ?? "", unitColorIdx, content, unitPeriod,
+      slot, status, delayed, advanced,
+    };
+    rows.push(r);
+
+    if (status === "past") { completedCount++; currentRow = r; }
+    else if (status === "today") { todayRows.push(r); }
+  }
+  // 次回 = 今日の最初 → なければ最初のfuture
+  nextRow = todayRows[0] ?? rows.find(r => r.status === "future");
+
+  return {
+    rows,
+    totalSlots: slots.length,
+    completedCount,
+    currentRow,
+    todayRows,
+    nextRow,
+    hasOverflow: overflowSet.size > 0,
+  };
+}
+
 // ─── 単元カラーパレット ───────────────────────────────────────
 const UNIT_COLORS = [
   "bg-blue-100 text-blue-800 border-blue-200",
@@ -1165,6 +1304,207 @@ function ManualAddDialog({ open, onClose, onCreate, existingIds }: ManualAddDial
 
 // ─── メインView ───────────────────────────────────────────────
 
+// ─── v104 Phase B: 学級担任用 教科一瞥ビュー ───────────────────────
+
+interface HomeroomClassViewProps {
+  combos: Array<{ grade: string; subject: string; classes: string[] }>;
+  effectiveEntries: TimetableEntry[];
+  planMap: Map<string, GradeSubjectPlan>;
+  onJumpToSubject: (planId: string) => void;
+}
+
+function statusCellColor(s: ClassPlanRowStatus, delayed: boolean, advanced: boolean): string {
+  if (delayed) return "bg-orange-400";
+  if (advanced) return "bg-sky-400";
+  switch (s) {
+    case "past": return "bg-emerald-400";
+    case "today": return "bg-amber-400";
+    case "future": return "bg-muted-foreground/20";
+    case "overflow": return "bg-rose-400";
+    default: return "bg-transparent";
+  }
+}
+
+function HomeroomClassView({ combos, effectiveEntries, planMap, onJumpToSubject }: HomeroomClassViewProps) {
+  const allClasses = useMemo(() => {
+    const set = new Set<string>();
+    for (const c of combos) for (const cl of c.classes) set.add(cl);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"));
+  }, [combos]);
+
+  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [asOf, setAsOf] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [viewField, setViewField] = useState<"unit" | "content" | "date">("unit");
+
+  useEffect(() => {
+    if (allClasses.length > 0 && !allClasses.includes(selectedClass)) {
+      setSelectedClass(allClasses[0]);
+    }
+  }, [allClasses, selectedClass]);
+
+  // 選択クラスが持つ教科一覧
+  const subjects = useMemo(() => {
+    if (!selectedClass) return [];
+    const gradeMatch = selectedClass.match(/^(\d+)年/);
+    const grade = gradeMatch ? `${gradeMatch[1]}年` : "";
+    return combos
+      .filter(c => c.classes.includes(selectedClass))
+      .map(c => ({ grade: c.grade || grade, subject: c.subject, planId: `${c.grade}|||${c.subject}` }))
+      .sort((a, b) => a.subject.localeCompare(b.subject, "ja"));
+  }, [combos, selectedClass]);
+
+  const fmtDate = (slot?: { date: string; weekday_jp: string; period: number }) =>
+    slot ? `${slot.date.slice(5).replace("-", "/")} ${slot.weekday_jp}${slot.period}` : "—";
+
+  const cellText = (r: ClassPlanRow | undefined) => {
+    if (!r) return "—";
+    if (viewField === "unit") return r.unitName || "（単元未設定）";
+    if (viewField === "content") return r.content || "（内容未入力）";
+    return fmtDate(r.slot);
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* 操作バー */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <Label className="text-xs text-muted-foreground">クラス</Label>
+          <select
+            value={selectedClass}
+            onChange={e => setSelectedClass(e.target.value)}
+            className="h-8 text-sm border border-border rounded-md px-2 bg-background min-w-[110px]"
+          >
+            {allClasses.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Label className="text-xs text-muted-foreground">基準日</Label>
+          <Input type="date" value={asOf} onChange={e => setAsOf(e.target.value)} className="h-8 w-36 text-sm" />
+          <button onClick={() => setAsOf(new Date().toISOString().slice(0, 10))}
+            className="text-[11px] text-primary hover:underline">今日</button>
+        </div>
+        <div className="flex items-center gap-1 ml-auto">
+          <Label className="text-xs text-muted-foreground mr-1">表示</Label>
+          {([["unit", "単元名"], ["content", "内容"], ["date", "日付"]] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setViewField(k)}
+              className={cn(
+                "text-[11px] px-2 py-1 rounded border transition-colors",
+                viewField === k ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted/40",
+              )}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 凡例 */}
+      <div className="flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" />済</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" />今日</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block ring-1 ring-green-600" />次回</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/20 inline-block" />未</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-orange-400 inline-block" />遅延</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-sky-400 inline-block" />前倒し</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" />日程超過</span>
+      </div>
+
+      {subjects.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-48 gap-2 text-center">
+          <BookOpen size={28} className="text-muted-foreground/30" />
+          <p className="text-sm text-muted-foreground">このクラスの教科データがありません</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-md border border-border">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-muted/50 text-xs text-muted-foreground border-b border-border">
+                <th className="px-3 py-2 font-medium w-24">教科</th>
+                <th className="px-2 py-2 font-medium w-28">進捗</th>
+                <th className="px-2 py-2 font-medium min-w-[140px]">現在地</th>
+                <th className="px-2 py-2 font-medium min-w-[140px]">次の予定</th>
+                <th className="px-2 py-2 font-medium w-24">次回日付</th>
+                <th className="px-2 py-2 font-medium min-w-[200px]">進捗チャート</th>
+              </tr>
+            </thead>
+            <tbody>
+              {subjects.map(({ subject, planId, grade }) => {
+                const plan = planMap.get(planId) ?? { id: planId, grade, subject, units: [], lessons: [] };
+                const prog = computeClassPlanProgress(plan, selectedClass, effectiveEntries, asOf);
+                const pct = prog.totalSlots > 0 ? Math.round(prog.completedCount / prog.totalSlots * 100) : 0;
+                return (
+                  <tr key={planId} className="border-b border-border/40 hover:bg-muted/20">
+                    <td className="px-3 py-2">
+                      <button
+                        onClick={() => onJumpToSubject(planId)}
+                        className="text-xs font-medium text-foreground hover:text-primary hover:underline text-left"
+                        title="この教科の指導計画を開く"
+                      >
+                        {subject}
+                      </button>
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-14 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          {prog.completedCount}/{prog.totalSlots}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-2">
+                      <span className="text-xs text-muted-foreground">
+                        {prog.currentRow ? cellText(prog.currentRow) : (prog.completedCount === 0 ? "未開始" : "—")}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2">
+                      <span className={cn(
+                        "text-xs",
+                        prog.nextRow?.status === "today" ? "text-amber-700 font-semibold dark:text-amber-400" :
+                        prog.nextRow ? "text-green-700 font-semibold dark:text-green-400" : "text-muted-foreground",
+                      )}>
+                        {prog.nextRow?.status === "today" && "▶ "}
+                        {prog.nextRow?.status === "future" && "→ "}
+                        {prog.nextRow ? cellText(prog.nextRow) : "完了"}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 text-[11px] whitespace-nowrap text-muted-foreground">
+                      {prog.nextRow ? fmtDate(prog.nextRow.slot) : "—"}
+                      {prog.hasOverflow && <AlertTriangle size={10} className="inline ml-1 text-rose-500" />}
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="flex items-center gap-px flex-wrap max-w-[360px]">
+                        {prog.rows.map(r => {
+                          const isNext = prog.nextRow?.n === r.n && r.status !== "today";
+                          return (
+                            <span
+                              key={r.n}
+                              className={cn(
+                                "w-2 h-3.5 rounded-[1px] shrink-0",
+                                statusCellColor(r.status, r.delayed, r.advanced),
+                                isNext && "ring-1 ring-green-600",
+                              )}
+                              title={`${r.n}時 ${r.unitName}${r.content ? ` / ${r.content}` : ""}${r.slot ? ` (${fmtDate(r.slot)})` : r.status === "overflow" ? " (日程超過)" : ""}${r.delayed ? " ⚠進まず" : r.advanced ? " ⏩前倒し" : ""}`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <p className="text-[10px] text-muted-foreground/60">
+        教科名をクリックすると、その教科の指導計画（単元×コマ表）へ移動します。
+      </p>
+    </div>
+  );
+}
+
 export function TeachingPlanView() {
   const {
     effectiveEntries,
@@ -1172,6 +1512,7 @@ export function TeachingPlanView() {
     upsertTeachingPlan,
     removeTeachingPlan,
     isLoaded,
+    mode,
   } = useTimetable();
 
   const combos = useMemo(() => extractGradeSubjectCombos(effectiveEntries), [effectiveEntries]);
@@ -1190,6 +1531,10 @@ export function TeachingPlanView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  // v104 Phase B: ビュー切替（学級担任モードはクラス横断を初期表示）
+  const [mainView, setMainView] = useState<"subject" | "homeroom">(
+    mode === "homeroom" ? "homeroom" : "subject"
+  );
 
   useEffect(() => {
     if (combos.length > 0 && !selectedId) {
@@ -1239,7 +1584,44 @@ export function TeachingPlanView() {
   ];
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* v104 Phase B: ビュー切替タブ */}
+      <div className="flex items-center gap-1 px-3 pt-3 border-b border-border shrink-0">
+        <button
+          onClick={() => setMainView("homeroom")}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px",
+            mainView === "homeroom"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <BookOpen size={13} />クラス横断（学級担任）
+        </button>
+        <button
+          onClick={() => setMainView("subject")}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px",
+            mainView === "subject"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <FileText size={13} />教科別（指導計画編集）
+        </button>
+      </div>
+
+      {mainView === "homeroom" ? (
+        <div className="flex-1 overflow-auto p-4">
+          <HomeroomClassView
+            combos={combos}
+            effectiveEntries={effectiveEntries}
+            planMap={planMap}
+            onJumpToSubject={(planId) => { setSelectedId(planId); setMainView("subject"); }}
+          />
+        </div>
+      ) : (
+      <div className="flex flex-1 overflow-hidden">
       {/* ── 左サイドバー ── */}
       <div className="w-48 shrink-0 border-r border-border flex flex-col bg-muted/10">
         <div className="px-3 py-2 border-b border-border flex items-center justify-between">
@@ -1372,6 +1754,8 @@ export function TeachingPlanView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
+      )}
     </div>
   );
 }
