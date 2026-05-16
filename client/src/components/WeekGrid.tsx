@@ -753,7 +753,7 @@ export function WeekGrid() {
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              {showLessonPlan ? "指導計画の表示をOFF" : "セルに指導計画の内容を表示"}
+              {showLessonPlan ? t("weekGrid.lessonPlanOff") : t("weekGrid.lessonPlanOn")}
             </TooltipContent>
           </Tooltip>
         )}
@@ -823,16 +823,16 @@ export function WeekGrid() {
                     )}
                   >
                     <CalendarPlus size={11} />
-                    土日授業
+                    {t("weekGrid.weekendClass")}
                     {(weekOverride.saturday || weekOverride.sunday) && (
                       <span className="text-[10px]">
-                        （{[weekOverride.saturday && "土", weekOverride.sunday && "日"].filter(Boolean).join("・")}）
+                        （{[weekOverride.saturday && t("weekGrid.satShort"), weekOverride.sunday && t("weekGrid.sunShort")].filter(Boolean).join("・")}）
                       </span>
                     )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-48 p-2" align="end">
-                  <p className="text-[10px] text-muted-foreground mb-1.5">この週だけ追加表示する曜日</p>
+                  <p className="text-[10px] text-muted-foreground mb-1.5">{t("weekGrid.weekendPopoverTitle")}</p>
                   <div className="space-y-1">
                     {!semester?.hasSaturday && (
                       <label className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/40 rounded px-1.5 py-1">
@@ -842,7 +842,7 @@ export function WeekGrid() {
                           onChange={() => toggleWeekendDay(weekMondayStr, 'saturday')}
                           className="w-3.5 h-3.5"
                         />
-                        <span>土曜授業</span>
+                        <span>{t("weekGrid.saturdayClass")}</span>
                       </label>
                     )}
                     {!semester?.hasSunday && (
@@ -853,11 +853,11 @@ export function WeekGrid() {
                           onChange={() => toggleWeekendDay(weekMondayStr, 'sunday')}
                           className="w-3.5 h-3.5"
                         />
-                        <span>日曜授業</span>
+                        <span>{t("weekGrid.sundayClass")}</span>
                       </label>
                     )}
                   </div>
-                  <p className="text-[9px] text-muted-foreground/60 mt-1.5">この週のみ土曜日・日曜日を授業日として表示します</p>
+                  <p className="text-[9px] text-muted-foreground/60 mt-1.5">{t("weekGrid.weekendClassTip")}</p>
                 </PopoverContent>
               </Popover>
             )}
@@ -958,7 +958,7 @@ export function WeekGrid() {
               <td className="text-center text-xs font-medium py-1.5 pr-2 border-b border-border/50 w-14 align-middle">
                 <div className="flex flex-col items-center gap-0.5">
                   <CalendarDays size={13} className="text-blue-600/70 dark:text-blue-400/70" />
-                  <span className="text-[10px] text-blue-700/80 dark:text-blue-300/80 leading-none font-semibold">予定</span>
+                  <span className="text-[10px] text-blue-700/80 dark:text-blue-300/80 leading-none font-semibold">{t("weekGrid.eventsRow")}</span>
                 </div>
               </td>
               {weekDates.map(date => (

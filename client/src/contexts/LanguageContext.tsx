@@ -1,5 +1,37 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
+// ─────────────────────────────────────────────────────────────────────
+//  i18n 用語集 / GLOSSARY（英訳の一貫性のため。新規キー追加時はこれに従う）
+// ─────────────────────────────────────────────────────────────────────
+//  時間割        = Timetable
+//  コマ          = Period (1コマ = 1 period / slot)
+//  時限          = Period (1限 = Period 1)
+//  授業          = Lesson / Class
+//  教科          = Subject
+//  学年          = Grade
+//  クラス        = Class
+//  学級担任      = Homeroom teacher / Homeroom mode
+//  教科担任      = Subject teacher
+//  指導計画      = Teaching plan
+//  単元          = Unit
+//  単元マスター  = Unit master
+//  内容予定      = Planned content
+//  進捗          = Progress
+//  実施日        = Date taught / Scheduled date
+//  予定          = Event / Schedule (日次イベント = Daily event)
+//  年間予定表    = Annual schedule
+//  学期          = Term (1学期 = Term 1) / Semester
+//  集計          = Stats / Summary
+//  休講・休校    = Cancelled / School closed
+//  祝日          = Holiday
+//  振替          = Reschedule / Swap
+//  時程表        = Period times
+//  複数選択      = Multi-select
+//  上書き/追記   = Overwrite / Append
+//  進まなかった  = Behind (delayed) ／ 進みすぎた = Ahead (advanced)
+//  非表示/再表示 = Hide / Show
+// ─────────────────────────────────────────────────────────────────────
+
 export type Language = "ja" | "en";
 
 const STORAGE_KEY = "timetable_language";
@@ -140,6 +172,14 @@ const translations = {
     "weekGrid.saturdayClassTip": "この週のみ土曜日を授業日として表示",
     "weekGrid.sundayClass": "日曜授業",
     "weekGrid.sundayClassTip": "この週のみ日曜日を授業日として表示",
+    "weekGrid.lessonPlanOff": "指導計画の表示をOFF",
+    "weekGrid.lessonPlanOn": "セルに指導計画の内容を表示",
+    "weekGrid.weekendClass": "土日授業",
+    "weekGrid.weekendPopoverTitle": "この週だけ追加表示する曜日",
+    "weekGrid.weekendClassTip": "この週のみ土曜日・日曜日を授業日として表示します",
+    "weekGrid.eventsRow": "予定",
+    "weekGrid.satShort": "土",
+    "weekGrid.sunShort": "日",
     "weekGrid.multiSelectMode": "複数選択モード",
     "weekGrid.multiSelectHelp": "セルをタップで選択、Shift+クリックで範囲選択、Cmd/Ctrl+クリックで追加選択",
     "weekGrid.selectedSlotsSuffix": "コマ選択中",
@@ -355,6 +395,14 @@ const translations = {
     "weekGrid.saturdayClassTip": "Show Saturday as a class day for this week only",
     "weekGrid.sundayClass": "Sunday Class",
     "weekGrid.sundayClassTip": "Show Sunday as a class day for this week only",
+    "weekGrid.lessonPlanOff": "Hide teaching plan",
+    "weekGrid.lessonPlanOn": "Show teaching plan in cells",
+    "weekGrid.weekendClass": "Weekend Class",
+    "weekGrid.weekendPopoverTitle": "Extra days to show this week only",
+    "weekGrid.weekendClassTip": "Show Saturday and Sunday as class days for this week only",
+    "weekGrid.eventsRow": "Events",
+    "weekGrid.satShort": "Sat",
+    "weekGrid.sunShort": "Sun",
     "weekGrid.multiSelectMode": "Multi-select Mode",
     "weekGrid.multiSelectHelp": "Tap cells to select, Shift-click for range, Cmd/Ctrl-click to add",
     "weekGrid.selectedSlotsSuffix": "periods selected",
