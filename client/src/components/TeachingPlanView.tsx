@@ -293,6 +293,8 @@ interface ClassCellPopoverProps {
   isNext: boolean;
   isSkip: boolean;
   isDelayed: boolean;
+  isAdvanced: boolean;
+  isOverflow: boolean;
   hasNote: boolean;
   hasAnyOverride: boolean;
   override: ClassLessonOverride | undefined;
@@ -300,16 +302,18 @@ interface ClassCellPopoverProps {
 }
 
 function ClassCellPopover({
-  cls, slot, delayedFromSlot, isPast, isToday, isNext, isSkip, isDelayed, hasNote, hasAnyOverride, override, onSave,
+  cls, slot, delayedFromSlot, isPast, isToday, isNext, isSkip, isDelayed, isAdvanced, isOverflow, hasNote, hasAnyOverride, override, onSave,
 }: ClassCellPopoverProps) {
   const [open, setOpen] = useState(false);
   const [delayed, setDelayed] = useState(!!override?.delayed);
+  const [advanced, setAdvanced] = useState(!!override?.advanced);
   const [note, setNote] = useState(override?.note ?? "");
 
   // popover開閉時に現状値を読み直し
   useEffect(() => {
     if (open) {
       setDelayed(!!override?.delayed);
+      setAdvanced(!!override?.advanced);
       setNote(override?.note ?? "");
     }
   }, [open, override]);
@@ -318,16 +322,17 @@ function ClassCellPopover({
     const trimmedNote = note.trim();
     const next: ClassLessonOverride = {};
     if (delayed) next.delayed = true;
+    else if (advanced) next.advanced = true;  // delayed優先・排他
     if (trimmedNote) next.note = trimmedNote;
     if (override?.content) next.content = override.content; // contentは別UIで設定するので保持のみ
-    // すべて空ならnullを返す（削除）
-    const hasAny = next.delayed || next.note || next.content;
+    const hasAny = next.delayed || next.advanced || next.note || next.content;
     onSave(hasAny ? next : null);
     setOpen(false);
   };
 
   const clearAll = () => {
     setDelayed(false);
+    setAdvanced(false);
     setNote("");
     onSave(null);
     setOpen(false);
@@ -346,26 +351,36 @@ function ClassCellPopover({
             "w-full py-1.5 px-1 rounded text-[10px] transition-colors hover:bg-muted/30 cursor-pointer",
             isSkip && "line-through text-muted-foreground/30",
           )}
-          title={hasAnyOverride
-            ? `${cls}: ${isDelayed && fromLabel ? `${fromLabel}で進まず→${dateLabel}に繰越 ` : isDelayed ? "進まなかった " : ""}${hasNote ? "メモあり " : ""}（クリックで編集）`
-            : `${cls}: クリックでメモ・遅延マーク`}
+          title={
+            isOverflow
+              ? `${cls}: 繰越により読み込み済み時間割の範囲を超えました（時間割を先の週まで進めると実施日が確定します）`
+              : hasAnyOverride
+              ? `${cls}: ${isDelayed && fromLabel ? `${fromLabel}で進まず→${dateLabel}に繰越 ` : isDelayed ? "進まなかった " : ""}${isAdvanced ? "前のコマと同日に実施(前倒し) " : ""}${hasNote ? "メモあり " : ""}（クリックで編集）`
+              : `${cls}: クリックでメモ・進捗マーク`}
         >
           {slot ? (
             <span className={cn(
               "inline-flex items-center gap-0.5",
               isSkip ? "" :
               isDelayed ? "text-orange-700 font-semibold dark:text-orange-300" :
+              isAdvanced ? "text-sky-700 font-semibold dark:text-sky-300" :
               isPast ? "text-muted-foreground/60" :
               isToday ? "text-amber-700 font-semibold dark:text-amber-400" :
               isNext ? "text-green-700 font-semibold dark:text-green-400" :
               "text-foreground",
             )}>
-              {isPast && !isDelayed && <span className="text-emerald-500">✓</span>}
-              {isToday && !isDelayed && <span>▶</span>}
-              {isNext && !isToday && !isDelayed && <span className="text-green-500">→</span>}
+              {isPast && !isDelayed && !isAdvanced && <span className="text-emerald-500">✓</span>}
+              {isToday && !isDelayed && !isAdvanced && <span>▶</span>}
+              {isNext && !isToday && !isDelayed && !isAdvanced && <span className="text-green-500">→</span>}
               {isDelayed && <AlertTriangle size={9} className="text-orange-500 shrink-0" />}
+              {isAdvanced && <span className="text-sky-500 shrink-0">⏩</span>}
               <span>{dateLabel}</span>
               {hasNote && <Pencil size={8} className="text-muted-foreground/50 shrink-0" />}
+            </span>
+          ) : isOverflow ? (
+            <span className="inline-flex items-center gap-0.5 text-rose-600/80 dark:text-rose-400">
+              <AlertTriangle size={9} className="shrink-0" />
+              <span>日程超過</span>
             </span>
           ) : (
             <span className="text-muted-foreground/30">—</span>
@@ -389,12 +404,32 @@ function ClassCellPopover({
             </div>
           )}
 
-          {/* 遅延マークトグル */}
+          {/* v100: 前倒し情報 */}
+          {isAdvanced && !isDelayed && (
+            <div className="flex items-start gap-1.5 text-[10px] bg-sky-50 dark:bg-sky-950/30 rounded px-2 py-1.5 text-sky-700 dark:text-sky-300">
+              <span className="shrink-0">⏩</span>
+              <span>
+                前のコマと同じ日にまとめて実施（1日2コマ）。この行以降が1つずつ前にずれます。
+              </span>
+            </div>
+          )}
+
+          {/* v100: 日程超過警告 */}
+          {isOverflow && (
+            <div className="flex items-start gap-1.5 text-[10px] bg-rose-50 dark:bg-rose-950/30 rounded px-2 py-1.5 text-rose-700 dark:text-rose-300">
+              <AlertTriangle size={11} className="shrink-0 mt-0.5" />
+              <span>
+                繰越の累積により、読み込み済みの時間割の範囲を超えました。週送りで先まで時間割を表示すると実施日が確定します（時間割の予備コマが足りない場合は計画調整が必要です）。
+              </span>
+            </div>
+          )}
+
+          {/* 進捗マーク（delayed / advanced は排他） */}
           <label className="flex items-center gap-2 cursor-pointer text-xs">
             <input
               type="checkbox"
               checked={delayed}
-              onChange={e => setDelayed(e.target.checked)}
+              onChange={e => { setDelayed(e.target.checked); if (e.target.checked) setAdvanced(false); }}
               className="w-3.5 h-3.5"
             />
             <span className="flex items-center gap-1">
@@ -403,7 +438,23 @@ function ClassCellPopover({
             </span>
           </label>
           <p className="text-[9px] text-muted-foreground/70 ml-5 -mt-1">
-            授業は実施したが、計画通り進められなかった場合
+            授業は実施したが、計画通り進められなかった（→後続が後ろにずれる）
+          </p>
+
+          <label className="flex items-center gap-2 cursor-pointer text-xs">
+            <input
+              type="checkbox"
+              checked={advanced}
+              onChange={e => { setAdvanced(e.target.checked); if (e.target.checked) setDelayed(false); }}
+              className="w-3.5 h-3.5"
+            />
+            <span className="flex items-center gap-1">
+              <span className="text-sky-500">⏩</span>
+              進みすぎた（前倒し）
+            </span>
+          </label>
+          <p className="text-[9px] text-muted-foreground/70 ml-5 -mt-1">
+            前のコマと同じ日にまとめて実施した（→後続が前にずれる）
           </p>
 
           {/* メモ */}
@@ -460,8 +511,10 @@ interface LessonRowProps {
   isSkip: boolean;                // v96: 旧データのみ表示用（編集UI廃止）
   today: string;
   classProgress: Record<string, ClassProgress>;
-  /** v99 Phase3: クラス毎の 計画行→実施スロットindex（delayed考慮） */
+  /** v99 Phase3: クラス毎の 計画行→実施スロットindex（delayed/advanced考慮） */
   classRowSlotMap: Record<string, Map<number, number>>;
+  /** v100: クラス毎の 日程超過行（繰越で時間割範囲を超えた行） */
+  classOverflowRows: Record<string, Set<number>>;
   onSave: (entry: LessonPlanEntry) => void;
   /** v97 Phase1: クラス別オーバーライドの保存 */
   onSaveClassOverride: (cls: string, override: ClassLessonOverride | null) => void;
@@ -469,7 +522,7 @@ interface LessonRowProps {
 
 function LessonRow({
   lessonNumber, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, planContent, units,
-  classSlots, classes, isSkip, today, classProgress, classRowSlotMap, onSave, onSaveClassOverride,
+  classSlots, classes, isSkip, today, classProgress, classRowSlotMap, classOverflowRows, onSave, onSaveClassOverride,
 }: LessonRowProps) {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(entry?.content ?? "");
@@ -607,21 +660,28 @@ function LessonRow({
         // v97 Phase1: クラス別オーバーライド
         const override = entry?.classOverrides?.[cls];
         const isDelayed = !!override?.delayed;
+        const isAdvanced = !!override?.advanced && !isDelayed;
         const hasNote = !!(override?.note || override?.content);
-        const hasAnyOverride = isDelayed || hasNote;
+        const hasAnyOverride = isDelayed || isAdvanced || hasNote;
         // v99 Phase3: delayed時の「進まなかった元の日」（繰越前）
         const delayedFromSlot = isDelayed && sIdx !== undefined && sIdx > 0 ? slots[sIdx - 1] : undefined;
+        // v100: 繰越で時間割範囲を超過した行
+        const isOverflow = !isSkip && (classOverflowRows[cls]?.has(lessonNumber) ?? false);
 
         return (
           <td key={cls} className={cn(
             "px-1 py-0 text-center text-[10px] w-20 whitespace-nowrap transition-colors",
-            isPast && !isDelayed && "bg-muted/20",
-            isToday && !isDelayed && "bg-amber-50 dark:bg-amber-950/20",
-            isNext && !isDelayed && "bg-green-50 dark:bg-green-950/20",
+            isPast && !isDelayed && !isAdvanced && "bg-muted/20",
+            isToday && !isDelayed && !isAdvanced && "bg-amber-50 dark:bg-amber-950/20",
+            isNext && !isDelayed && !isAdvanced && "bg-green-50 dark:bg-green-950/20",
             isDelayed && "bg-orange-100/70 dark:bg-orange-900/30",
+            isAdvanced && "bg-sky-100/70 dark:bg-sky-900/30",
+            isOverflow && "bg-rose-50 dark:bg-rose-950/20",
           )}>
             <ClassCellPopover
               cls={cls}
+              isAdvanced={isAdvanced}
+              isOverflow={isOverflow}
               slot={slot}
               delayedFromSlot={delayedFromSlot}
               isPast={isPast}
@@ -779,29 +839,46 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
   // 今日の日付
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  // v99 Phase3: クラス毎「計画行(1-based) → 実施スロットindex」のマッピング
-  // delayed が付いた行は2スロット消費（進まなかった日 + 完了日）し、後続行を後ろにシフト
-  const classRowSlotMap = useMemo(() => {
-    const result: Record<string, Map<number, number>> = {};
+  // v100: クラス毎「計画行(1-based) → 実施スロットindex」のマッピング
+  // - delayed: 進まなかった日を1スロット余分に消費 → 後続が後ろにシフト
+  // - advanced: 前のコマと同じ実施日（1日2コマ） → 後続が前にシフト
+  // overflowRows: 繰越の結果、読み込み済み時間割の範囲を超えてしまった行（日程超過）
+  const { classRowSlotMap, classOverflowRows } = useMemo(() => {
+    const map2: Record<string, Map<number, number>> = {};
+    const overflow2: Record<string, Set<number>> = {};
     for (const cls of classes) {
       const slots = classSlots[cls] ?? [];
       const map = new Map<number, number>();
+      const overflow = new Set<number>();
       let slotIdx = 0;
+      let lastSlotIdx = -1;
       for (let row = 1; row <= maxSlots; row++) {
-        const entry = plan.lessons[row - 1];
-        const delayed = entry?.classOverrides?.[cls]?.delayed ?? false;
+        const ov = plan.lessons[row - 1]?.classOverrides?.[cls];
+        const delayed = ov?.delayed ?? false;
+        const advanced = ov?.advanced ?? false;
+
+        // advanced: 前の行と同じ実施日（スロットを消費しない）
+        if (advanced && !delayed && lastSlotIdx >= 0) {
+          map.set(row, lastSlotIdx);
+          continue;
+        }
         if (delayed) {
           // 「進まなかった日」を1スロット消費 → 完了は次のスロット
           slotIdx += 1;
         }
         if (slotIdx < slots.length) {
           map.set(row, slotIdx);
+          lastSlotIdx = slotIdx;
+        } else if (slots.length > 0) {
+          // 繰越の結果、読み込み済み時間割の範囲を超過
+          overflow.add(row);
         }
         slotIdx += 1;
       }
-      result[cls] = map;
+      map2[cls] = map;
+      overflow2[cls] = overflow;
     }
-    return result;
+    return { classRowSlotMap: map2, classOverflowRows: overflow2 };
   }, [classes, classSlots, plan.lessons, maxSlots]);
 
   // クラス別進捗（delayed考慮の行→スロット対応で再計算）
@@ -984,6 +1061,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                   today={today}
                   classProgress={classProgress}
                   classRowSlotMap={classRowSlotMap}
+                  classOverflowRows={classOverflowRows}
                   onSave={(saved) => updateLesson(n, saved)}
                   onSaveClassOverride={(cls, ov) => updateClassOverride(n, cls, ov)}
                 />
