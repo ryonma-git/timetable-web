@@ -136,8 +136,42 @@ function parseScheduleJSON(json: string): ParsedSchedule | null {
   }
 }
 
+// v106 Phase D: 重複判定用の正規化（全半角・空白・記号を吸収、同一日付前提の部分一致）
+function normalizeTitle(s: string): string {
+  return s
+    .normalize("NFKC")
+    .replace(/[\s　]+/g, "")
+    .replace(/[（）()【】[\]「」『』・,、。．.\-―ー]/g, "")
+    .toLowerCase();
+}
+function isDuplicateTitle(a: string, b: string): boolean {
+  const na = normalizeTitle(a);
+  const nb = normalizeTitle(b);
+  if (na.length < 2 || nb.length < 2) return na === nb;
+  return na.includes(nb) || nb.includes(na);
+}
+
+type ScheduleScope = "events_only" | "with_ops";
+type ScheduleMode = "append" | "overwrite";
+
+interface DupCandidate {
+  date: string;
+  newEvent: DailyEvent;
+  existingTitle: string;
+  accept: boolean; // true=追加する / false=スキップ
+}
+
+interface PendingPlan {
+  dups: DupCandidate[];
+  autoEventOps: OverrideOp[];   // 重複なしで自動追加するadd_day_event
+  removeOps: OverrideOp[];      // 上書き時の既存削除
+  classOps: OverrideOp[];       // コマ削除等（scopeがwith_opsのとき）
+  eventsTotal: number;
+  opsTotal: number;
+}
+
 export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMImportDialogProps) {
-  const { semester, updateSettings, applyOps } = useTimetable();
+  const { semester, updateSettings, applyOps, effectiveEntries } = useTimetable();
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [copiedTemplate, setCopiedTemplate] = useState(false);
   const [activeMode, setActiveMode] = useState<LLMImportMode>(mode);
@@ -145,6 +179,11 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
   const [userRules, setUserRules] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
+  // v106 Phase D
+  const [scheduleScope, setScheduleScope] = useState<ScheduleScope>("events_only");
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("append");
+  const [overwriteAll, setOverwriteAll] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<PendingPlan | null>(null);
 
   // ダイアログが開くたびにmodeに合わせてactiveModeをリセット
   useEffect(() => {
@@ -155,6 +194,7 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
       setImportSuccess(false);
       setCopiedPrompt(false);
       setCopiedTemplate(false);
+      setPendingPlan(null);
     }
   }, [open, mode]);
 
@@ -225,34 +265,107 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
       setImportSuccess(true);
       setImportJson("");
     } else {
-      // schedule mode (v91: events + ops 2層)
+      // schedule mode (v106 Phase D: スコープ/モード/重複チェック)
       const parsed = parseScheduleJSON(importJson);
       if (!parsed) {
         setParseError("年間予定表JSONの形式が正しくありません。events配列またはops配列を含むJSONをコピーしてください。");
         return;
       }
-      // events を add_day_event op に変換
-      const eventOps: OverrideOp[] = parsed.events.map(({ date, event }) => ({
-        id: nanoid(8),
-        op: "add_day_event" as const,
-        date,
-        event,
-      }));
-      // events → ops の順で適用（events先に入れて、後でopsで上書き/カット）
-      const allOps = [...eventOps, ...parsed.ops];
-      if (allOps.length === 0) {
-        setParseError("適用すべきイベント・操作が見つかりませんでした。");
+
+      // スコープ: 予定欄だけ → コマ削除ops(parsed.ops)は無視
+      const classOps: OverrideOp[] = scheduleScope === "with_ops" ? parsed.ops : [];
+
+      // 既存の日次イベント（重複チェック・上書き範囲クリア用）
+      const existing: Array<{ date: string; id: string; title: string }> = [];
+      for (const e of effectiveEntries) {
+        for (const ev of e.dayEvents ?? []) {
+          existing.push({ date: e.date, id: ev.id, title: ev.title });
+        }
+      }
+
+      if (parsed.events.length === 0 && classOps.length === 0) {
+        setParseError("適用すべき予定・操作が見つかりませんでした。");
         return;
       }
-      applyOps(allOps, "年間予定表LLMインポート");
+
+      if (scheduleMode === "overwrite") {
+        // 上書き: 全クリア or 取込日付範囲のみクリア
+        let targets = existing;
+        if (!overwriteAll && parsed.events.length > 0) {
+          const dates = parsed.events.map(e => e.date).sort();
+          const minD = dates[0], maxD = dates[dates.length - 1];
+          targets = existing.filter(x => x.date >= minD && x.date <= maxD);
+        }
+        const removeOps: OverrideOp[] = targets.map(x => ({
+          id: nanoid(8), op: "remove_day_event" as const, date: x.date, event_id: x.id,
+        }));
+        const addOps: OverrideOp[] = parsed.events.map(({ date, event }) => ({
+          id: nanoid(8), op: "add_day_event" as const, date, event,
+        }));
+        applyOps([...removeOps, ...addOps, ...classOps], "年間予定表LLMインポート（上書き）");
+        const msgs: string[] = [];
+        if (parsed.events.length > 0) msgs.push(`${parsed.events.length}件の予定で置換`);
+        if (removeOps.length > 0) msgs.push(`旧${removeOps.length}件削除`);
+        if (classOps.length > 0) msgs.push(`${classOps.length}件の授業変更`);
+        toast.success(msgs.join("・"));
+        setImportSuccess(true);
+        setImportJson("");
+        return;
+      }
+
+      // 追記: 重複チェック（同一日付・正規化部分一致）
+      const dups: DupCandidate[] = [];
+      const autoEventOps: OverrideOp[] = [];
+      for (const { date, event } of parsed.events) {
+        const hit = existing.find(x => x.date === date && isDuplicateTitle(x.title, event.title));
+        if (hit) {
+          dups.push({ date, newEvent: event, existingTitle: hit.title, accept: false });
+        } else {
+          autoEventOps.push({ id: nanoid(8), op: "add_day_event", date, event });
+        }
+      }
+
+      if (dups.length > 0) {
+        // 確認ダイアログで個別選択
+        setPendingPlan({
+          dups, autoEventOps, removeOps: [], classOps,
+          eventsTotal: parsed.events.length, opsTotal: classOps.length,
+        });
+        return;
+      }
+
+      // 重複なし → そのまま適用
+      const allOps = [...autoEventOps, ...classOps];
+      applyOps(allOps, "年間予定表LLMインポート（追記）");
       const msgs: string[] = [];
-      if (parsed.events.length > 0) msgs.push(`${parsed.events.length}件の予定`);
-      if (parsed.ops.length > 0) msgs.push(`${parsed.ops.length}件の授業変更`);
-      toast.success(`${msgs.join("・")}を適用しました。`);
+      if (autoEventOps.length > 0) msgs.push(`${autoEventOps.length}件の予定を追記`);
+      if (classOps.length > 0) msgs.push(`${classOps.length}件の授業変更`);
+      toast.success(msgs.join("・") || "適用しました");
       setImportSuccess(true);
       setImportJson("");
     }
-  }, [activeMode, importJson, semester, updateSettings, applyOps]);
+  }, [activeMode, importJson, semester, updateSettings, applyOps, effectiveEntries, scheduleScope, scheduleMode, overwriteAll]);
+
+  // v106 Phase D: 重複確認ダイアログから最終適用
+  const applyPendingPlan = useCallback(() => {
+    if (!pendingPlan) return;
+    const dupAddOps: OverrideOp[] = pendingPlan.dups
+      .filter(d => d.accept)
+      .map(d => ({ id: nanoid(8), op: "add_day_event" as const, date: d.date, event: d.newEvent }));
+    const all = [...pendingPlan.autoEventOps, ...dupAddOps, ...pendingPlan.classOps];
+    if (all.length === 0) {
+      toast.info("追加する予定がありませんでした");
+      setPendingPlan(null);
+      return;
+    }
+    applyOps(all, "年間予定表LLMインポート（追記・重複確認済み）");
+    const added = pendingPlan.autoEventOps.length + dupAddOps.length;
+    const skipped = pendingPlan.dups.length - dupAddOps.length;
+    toast.success(`${added}件追記${skipped > 0 ? `・${skipped}件スキップ` : ""}${pendingPlan.classOps.length > 0 ? `・${pendingPlan.classOps.length}件の授業変更` : ""}`);
+    setPendingPlan(null);
+    setImportSuccess(true);
+    setImportJson("");
+  }, [pendingPlan, applyOps]);
 
   const modeConfig = {
     timetable: {
@@ -321,6 +434,57 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
         </div>
 
         <p className="text-xs text-muted-foreground -mt-1">{cfg.desc}</p>
+
+        {/* v106 Phase D: 年間予定表の取込スコープ・モード */}
+        {activeMode === "schedule" && (
+          <div className="rounded-lg border border-border p-3 space-y-2.5 bg-muted/20">
+            <div>
+              <p className="text-xs font-medium mb-1">取込スコープ</p>
+              <div className="flex gap-2">
+                {([["events_only", "予定欄だけ", "授業コマは一切変更しない（安全）"], ["with_ops", "コマ削除等も含む", "ルールに基づき授業もカット"]] as const).map(([v, label, desc]) => (
+                  <button key={v} onClick={() => setScheduleScope(v)}
+                    title={desc}
+                    className={cn(
+                      "flex-1 text-left px-2.5 py-1.5 rounded-md border text-xs transition-colors",
+                      scheduleScope === v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/40",
+                    )}>
+                    <div className="font-medium">{label}</div>
+                    <div className="text-[10px] opacity-70 mt-0.5">{desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium mb-1">取込モード</p>
+              <div className="flex gap-2">
+                {([["append", "追記", "既存予定を残し追加（重複確認あり）"], ["overwrite", "上書き", "取込日付範囲の予定を置換"]] as const).map(([v, label, desc]) => (
+                  <button key={v} onClick={() => setScheduleMode(v)}
+                    title={desc}
+                    className={cn(
+                      "flex-1 text-left px-2.5 py-1.5 rounded-md border text-xs transition-colors",
+                      scheduleMode === v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/40",
+                    )}>
+                    <div className="font-medium">{label}</div>
+                    <div className="text-[10px] opacity-70 mt-0.5">{desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {scheduleMode === "overwrite" && (
+              <label className="flex items-center gap-2 text-xs cursor-pointer pt-0.5">
+                <input type="checkbox" checked={overwriteAll}
+                  onChange={e => setOverwriteAll(e.target.checked)} className="w-3.5 h-3.5" />
+                <span>既存予定を<strong>全クリア</strong>してから総入れ替え（日付範囲に限定しない）</span>
+              </label>
+            )}
+            <p className="text-[10px] text-muted-foreground/70">
+              {scheduleScope === "events_only"
+                ? "✓ 授業コマは保護されます。予定欄のみ更新。"
+                : "⚠ ルール該当行事は授業コマも削除されます。"}
+              {scheduleMode === "append" ? " 追記＝既存を消さず追加。" : overwriteAll ? " 上書き＝既存を全削除して総入替。" : " 上書き＝取込日付範囲の既存予定のみ置換（範囲外は保持）。"}
+            </p>
+          </div>
+        )}
 
         {/* 手順 */}
         <div className="space-y-3">
@@ -433,15 +597,72 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
                   適用しました。
                 </div>
               )}
-              <Button
-                size="sm"
-                className="gap-1.5 text-xs"
-                onClick={handleImport}
-                disabled={!importJson.trim()}
-              >
-                <Upload size={12} />
-                適用する
-              </Button>
+
+              {/* v106 Phase D: 重複確認パネル */}
+              {pendingPlan && pendingPlan.dups.length > 0 ? (
+                <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50/60 dark:bg-amber-950/30 p-3 mb-2 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+                    <AlertTriangle size={13} />
+                    重複の可能性がある予定が {pendingPlan.dups.length} 件あります
+                  </div>
+                  <p className="text-[10px] text-amber-700/80 dark:text-amber-400/80">
+                    同じ日付に似た予定が既にあります。チェックを入れたものだけ追加します（重複は既定でスキップ）。
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPendingPlan(p => p && ({ ...p, dups: p.dups.map(d => ({ ...d, accept: true })) }))}
+                      className="text-[10px] px-2 py-0.5 rounded border border-amber-400 text-amber-700 hover:bg-amber-100"
+                    >すべて追加</button>
+                    <button
+                      onClick={() => setPendingPlan(p => p && ({ ...p, dups: p.dups.map(d => ({ ...d, accept: false })) }))}
+                      className="text-[10px] px-2 py-0.5 rounded border border-amber-400 text-amber-700 hover:bg-amber-100"
+                    >すべてスキップ</button>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto space-y-1 border-t border-amber-200 dark:border-amber-800 pt-1.5">
+                    {pendingPlan.dups.map((d, i) => (
+                      <label key={i} className="flex items-start gap-2 text-[11px] cursor-pointer hover:bg-amber-100/50 rounded px-1 py-0.5">
+                        <input
+                          type="checkbox"
+                          checked={d.accept}
+                          onChange={e => setPendingPlan(p => {
+                            if (!p) return p;
+                            const dups = [...p.dups];
+                            dups[i] = { ...dups[i], accept: e.target.checked };
+                            return { ...p, dups };
+                          })}
+                          className="w-3.5 h-3.5 mt-0.5 shrink-0"
+                        />
+                        <span>
+                          <span className="text-muted-foreground">{d.date.slice(5).replace("-", "/")}</span>{" "}
+                          <strong>{d.newEvent.title}</strong>
+                          <span className="text-amber-700/70 dark:text-amber-400/70"> ↔ 既存「{d.existingTitle}」</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" className="gap-1.5 text-xs" onClick={applyPendingPlan}>
+                      <Upload size={12} />確定して追記
+                    </Button>
+                    <Button size="sm" variant="ghost" className="text-xs" onClick={() => setPendingPlan(null)}>
+                      キャンセル
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    重複なしの {pendingPlan.autoEventOps.length} 件は自動追加されます。
+                  </p>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={handleImport}
+                  disabled={!importJson.trim()}
+                >
+                  <Upload size={12} />
+                  適用する
+                </Button>
+              )}
             </div>
           </div>
         </div>
