@@ -685,7 +685,6 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
       const n = i + 1;
       const entry = lessonsByNum.get(n) ?? null;
       const plannedSlot = plannedRows[i] ?? null;
-      const isSkip = entry?.isSkip ?? false;
 
       // 実績unitIdが空 → 計画のunitIdにフォールバック
       const overrideUnitId = entry?.unitId ?? "";
@@ -695,9 +694,9 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
       const unit = effectiveUnitId ? (plan.units.find(u => u.id === effectiveUnitId) ?? null) : null;
       const unitColorIdx = unit ? (unitIndexMap.get(unit.id) ?? 0) : 0;
 
-      // isSkipでない行だけunitPeriodをカウント
+      // v97: isSkipは廃止。常にunitPeriodをカウント
       let unitPeriod = 0;
-      if (effectiveUnitId && !isSkip) {
+      if (effectiveUnitId) {
         const count = (unitCounts.get(effectiveUnitId) ?? 0) + 1;
         unitCounts.set(effectiveUnitId, count);
         unitPeriod = count;
@@ -710,7 +709,13 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
         planContent = masterLesson?.content ?? "";
       }
 
-      return { n, entry, unit, unitColorIdx, effectiveUnitId, unitPeriod, isSkip, isFromPlan, planContent };
+      // v98: isSkip機能は廃止。授業がなくなれば時間割管理画面でコマ削除すれば
+      //      右側の実施日は自動的に空欄になるため、ここでの「実施なし」指定は不要。
+      //      旧ロジック（復活する場合はコメント解除）:
+      //      const isSkip = entry?.isSkip ?? false;
+      const isSkip = false;
+
+      return { n, entry, unit, unitColorIdx, effectiveUnitId, unitPeriod, isFromPlan, planContent, isSkip };
     });
   }, [maxSlots, plan.lessons, plan.units, unitIndexMap, plannedRows]);
 
@@ -783,7 +788,9 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
   [classes, classProgress]);
 
   const filledCount = plan.lessons.filter(l => l.content && !l.isSkip).length;
-  const skipCount = plan.lessons.filter(l => l.isSkip).length;
+  // v98: isSkip廃止に伴い skipCount 表示も停止（旧ロジックはコメントで保持）
+  // const skipCount = plan.lessons.filter(l => l.isSkip).length;
+  const skipCount = 0;
 
   return (
     <div className="space-y-3">
@@ -1083,7 +1090,9 @@ export function TeachingPlanView() {
               const hasPlan = planMap.has(item.id);
               const plan = planMap.get(item.id);
               const filledCount = plan?.lessons.filter(l => l.content && !l.isSkip).length ?? 0;
-              const skipCount = plan?.lessons.filter(l => l.isSkip).length ?? 0;
+              // v98: isSkip廃止（旧ロジックはコメントで保持）
+              // const skipCount = plan?.lessons.filter(l => l.isSkip).length ?? 0;
+              const skipCount = 0;
               const totalCount = slotCountMap.get(item.id) ?? 0;
               const isSelected = selectedId === item.id;
 
