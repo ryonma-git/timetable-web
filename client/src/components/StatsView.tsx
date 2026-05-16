@@ -31,13 +31,29 @@ function formatPeriodUnit(language: Language, unit: string) {
 
 // ─── Stats View ───────────────────────────────────────────────
 
+const ALL_SUBJECTS = "__all__";
+
 export function StatsView() {
-  const { classStats, subjectStats, asOfDate, setAsOfDate, isLoaded, currentFile, mode } = useTimetable();
+  const { classStats, subjectStats, statsEntries, asOfDate, setAsOfDate, isLoaded, currentFile, mode } = useTimetable();
   const { t } = useLanguage();
   // 学級担任モードは教科集計をデフォルトに表示、教科担任モードはクラス集計をデフォルトに表示
   const defaultStatsTab = mode === 'homeroom' ? 'subject' : 'class';
   const [viewMode, setViewMode] = useState<"semester" | "annual">("semester");
   const [statsTab, setStatsTab] = useState<"class" | "subject">(defaultStatsTab);
+  // v103: クラス別集計の教科フィルタ（"その他"等の混入を排除）
+  const [subjectFilter, setSubjectFilter] = useState<string>(ALL_SUBJECTS);
+
+  // 利用可能な教科一覧（subjectStatsから、空教科は除外）
+  const subjectOptions = useMemo(
+    () => subjectStats.map(s => s.subject).filter(Boolean).sort((a, b) => a.localeCompare(b, "ja")),
+    [subjectStats]
+  );
+
+  // 教科フィルタ適用後のクラス別集計
+  const filteredClassStats = useMemo(() => {
+    if (subjectFilter === ALL_SUBJECTS) return classStats;
+    return calcClassStats(statsEntries, asOfDate, subjectFilter);
+  }, [subjectFilter, classStats, statsEntries, asOfDate]);
 
   if (!isLoaded) {
     return <EmptyState message={t("stats.emptyStats")} />;
@@ -106,8 +122,29 @@ export function StatsView() {
               </button>
             )}
           </div>
+          {/* v103: クラス別集計の教科フィルタ */}
+          {statsTab === "class" && subjectOptions.length > 0 && (
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">教科で絞り込み</Label>
+              <select
+                value={subjectFilter}
+                onChange={e => setSubjectFilter(e.target.value)}
+                className="h-8 text-sm border border-border rounded-md px-2 bg-background min-w-[140px]"
+              >
+                <option value={ALL_SUBJECTS}>すべての教科（合計）</option>
+                {subjectOptions.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              {subjectFilter !== ALL_SUBJECTS && (
+                <span className="text-[11px] text-violet-600 bg-violet-50 dark:bg-violet-950/30 rounded px-2 py-0.5">
+                  「{subjectFilter}」のみで各クラスの進捗を集計中
+                </span>
+              )}
+            </div>
+          )}
           {statsTab === "class" && (
-            <SemesterStatsView classStats={classStats} asOfDate={asOfDate} setAsOfDate={setAsOfDate} />
+            <SemesterStatsView classStats={filteredClassStats} asOfDate={asOfDate} setAsOfDate={setAsOfDate} />
           )}
           {statsTab === "subject" && (
             <SubjectStatsView subjectStats={subjectStats} asOfDate={asOfDate} setAsOfDate={setAsOfDate} />

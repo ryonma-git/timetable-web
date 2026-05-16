@@ -528,7 +528,9 @@ export function buildUpdateDayEventOp(date: string, eventId: string, event: Dail
 // ─── Stats Calculation ──────────────────────────────────────────
 
 export function calcClassStats(
-  entries: TimetableEntry[], asOf: string
+  entries: TimetableEntry[], asOf: string,
+  /** v103: 教科フィルタ。指定時はその教科のコマのみ集計（"その他"等の混入を排除） */
+  subjectFilter?: string,
 ): ClassStats[] {
   const totalMap = new Map<string, number>();
   const completedMap = new Map<string, number>();
@@ -536,6 +538,7 @@ export function calcClassStats(
   for (const entry of entries) {
     for (const slot of entry.periods) {
       if (!slot.class) continue;
+      if (subjectFilter !== undefined && (slot.subject ?? "") !== subjectFilter) continue;
       totalMap.set(slot.class, (totalMap.get(slot.class) ?? 0) + 1);
       if (entry.date <= asOf) {
         completedMap.set(slot.class, (completedMap.get(slot.class) ?? 0) + 1);

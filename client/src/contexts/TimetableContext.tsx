@@ -107,6 +107,8 @@ interface TimetableContextValue {
   setAsOfDate: (date: string) => void;
   classStats: ClassStats[];
   subjectStats: SubjectStats[];
+  /** v103: 祝日マスク済み集計用エントリ（教科フィルタ集計の再計算に使用） */
+  statsEntries: TimetableEntry[];
   // Per-week Saturday/Sunday overrides (for temporary weekend classes)
   weekendOverrides: Record<string, { saturday?: boolean; sunday?: boolean }>;
   toggleWeekendDay: (weekMonday: string, day: 'saturday' | 'sunday') => void;
@@ -786,7 +788,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       currentWeekMonday, navigateWeek, goToToday, goToDate,
       selectedCell, setSelectedCell,
       multiSelectMode, setMultiSelectMode, selectedCells, toggleSelectedCell, selectCellRange, clearSelectedCells,
-      asOfDate, setAsOfDate, classStats, subjectStats,
+      asOfDate, setAsOfDate, classStats, subjectStats, statsEntries,
       weekendOverrides, toggleWeekendDay,
       undoStack, redoStack,
       canUndo: undoStack.length > 0,
