@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Trash2, BookOpen, ChevronDown, ChevronRight, Pencil, Check, X, GripVertical, FileText, Ban, AlertTriangle,
+  Plus, Trash2, BookOpen, ChevronDown, ChevronRight, Pencil, Check, X, GripVertical, FileText, Ban, AlertTriangle, Eye, EyeOff,
 } from "lucide-react";
 import {
   Dialog,
@@ -1310,6 +1310,7 @@ interface HomeroomClassViewProps {
   combos: Array<{ grade: string; subject: string; classes: string[] }>;
   effectiveEntries: TimetableEntry[];
   planMap: Map<string, GradeSubjectPlan>;
+  hiddenSubjectSet: Set<string>;
   onJumpToSubject: (planId: string) => void;
 }
 
@@ -1325,7 +1326,7 @@ function statusCellColor(s: ClassPlanRowStatus, delayed: boolean, advanced: bool
   }
 }
 
-function HomeroomClassView({ combos, effectiveEntries, planMap, onJumpToSubject }: HomeroomClassViewProps) {
+function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet, onJumpToSubject }: HomeroomClassViewProps) {
   const allClasses = useMemo(() => {
     const set = new Set<string>();
     for (const c of combos) for (const cl of c.classes) set.add(cl);
@@ -1349,9 +1350,10 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, onJumpToSubject 
     const grade = gradeMatch ? `${gradeMatch[1]}年` : "";
     return combos
       .filter(c => c.classes.includes(selectedClass))
+      .filter(c => !hiddenSubjectSet.has(c.subject)) // v105 Phase C: 非表示教科を除外
       .map(c => ({ grade: c.grade || grade, subject: c.subject, planId: `${c.grade}|||${c.subject}` }))
       .sort((a, b) => a.subject.localeCompare(b.subject, "ja"));
-  }, [combos, selectedClass]);
+  }, [combos, selectedClass, hiddenSubjectSet]);
 
   const fmtDate = (slot?: { date: string; weekday_jp: string; period: number }) =>
     slot ? `${slot.date.slice(5).replace("-", "/")} ${slot.weekday_jp}${slot.period}` : "—";
@@ -1511,9 +1513,16 @@ export function TeachingPlanView() {
     teachingPlans,
     upsertTeachingPlan,
     removeTeachingPlan,
+    teachingPlanHiddenSubjects,
+    toggleTeachingPlanHiddenSubject,
     isLoaded,
     mode,
   } = useTimetable();
+
+  const hiddenSubjectSet = useMemo(
+    () => new Set(teachingPlanHiddenSubjects),
+    [teachingPlanHiddenSubjects]
+  );
 
   const combos = useMemo(() => extractGradeSubjectCombos(effectiveEntries), [effectiveEntries]);
 
@@ -1578,10 +1587,15 @@ export function TeachingPlanView() {
     );
   }
 
-  const allSidebarItems = [
+  const allSidebarItemsRaw = [
     ...combos.map(c => ({ id: `${c.grade}|||${c.subject}`, grade: c.grade, subject: c.subject, fromTimetable: true })),
     ...manualOnlyPlans.map(p => ({ id: p.id, grade: p.grade, subject: p.subject, fromTimetable: false })),
   ];
+  // v105 Phase C: 教科名単位で非表示フィルタ
+  const allSidebarItems = allSidebarItemsRaw.filter(item => !hiddenSubjectSet.has(item.subject));
+  const hiddenSubjectsInUse = Array.from(
+    new Set(allSidebarItemsRaw.filter(item => hiddenSubjectSet.has(item.subject)).map(i => i.subject))
+  ).sort((a, b) => a.localeCompare(b, "ja"));
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -1617,6 +1631,7 @@ export function TeachingPlanView() {
             combos={combos}
             effectiveEntries={effectiveEntries}
             planMap={planMap}
+            hiddenSubjectSet={hiddenSubjectSet}
             onJumpToSubject={(planId) => { setSelectedId(planId); setMainView("subject"); }}
           />
         </div>
@@ -1647,37 +1662,70 @@ export function TeachingPlanView() {
               const isSelected = selectedId === item.id;
 
               return (
-                <button
+                <div
                   key={item.id}
-                  onClick={() => setSelectedId(item.id)}
                   className={cn(
-                    "w-full text-left px-3 py-2.5 border-b border-border/30 transition-colors",
+                    "group/side relative border-b border-border/30 transition-colors",
                     isSelected
                       ? "bg-primary/10 border-l-2 border-l-primary"
                       : "hover:bg-muted/50"
                   )}
                 >
-                  <div className="flex items-center justify-between gap-1">
-                    <span className={cn("text-xs font-medium truncate", isSelected ? "text-foreground" : "text-muted-foreground")}>
-                      {item.grade} {item.subject}
-                    </span>
-                    {hasPlan && filledCount > 0 && (
-                      <span className="text-[9px] bg-emerald-100 text-emerald-700 rounded px-1 shrink-0">
-                        {filledCount}/{totalCount}
+                  <button
+                    onClick={() => setSelectedId(item.id)}
+                    className="w-full text-left px-3 py-2.5 pr-7"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={cn("text-xs font-medium truncate", isSelected ? "text-foreground" : "text-muted-foreground")}>
+                        {item.grade} {item.subject}
                       </span>
-                    )}
-                  </div>
-                  <div className="text-[9px] text-muted-foreground mt-0.5 flex gap-1.5">
-                    {item.fromTimetable && <span>{totalCount}コマ</span>}
-                    {skipCount > 0 && <span className="text-orange-500">{skipCount}回スキップ</span>}
-                    {!hasPlan && item.fromTimetable && <span className="opacity-50">未入力</span>}
-                    {!item.fromTimetable && <span className="opacity-50">手動追加</span>}
-                  </div>
-                </button>
+                      {hasPlan && filledCount > 0 && (
+                        <span className="text-[9px] bg-emerald-100 text-emerald-700 rounded px-1 shrink-0">
+                          {filledCount}/{totalCount}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[9px] text-muted-foreground mt-0.5 flex gap-1.5">
+                      {item.fromTimetable && <span>{totalCount}コマ</span>}
+                      {skipCount > 0 && <span className="text-orange-500">{skipCount}回スキップ</span>}
+                      {!hasPlan && item.fromTimetable && <span className="opacity-50">未入力</span>}
+                      {!item.fromTimetable && <span className="opacity-50">手動追加</span>}
+                    </div>
+                  </button>
+                  {/* v105 Phase C: 教科を非表示にするトグル */}
+                  <button
+                    onClick={() => toggleTeachingPlanHiddenSubject(item.subject)}
+                    title={`「${item.subject}」を指導計画一覧から非表示にする`}
+                    className="absolute top-2 right-1.5 p-1 rounded opacity-0 group-hover/side:opacity-100 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-opacity"
+                  >
+                    <EyeOff size={12} />
+                  </button>
+                </div>
               );
             })
           )}
         </div>
+
+        {/* v105 Phase C: 非表示の教科（いつでも再表示可能） */}
+        {hiddenSubjectsInUse.length > 0 && (
+          <div className="border-t border-border px-2 py-2">
+            <div className="text-[10px] text-muted-foreground/70 mb-1 flex items-center gap-1">
+              <EyeOff size={10} />非表示の教科（{hiddenSubjectsInUse.length}）
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {hiddenSubjectsInUse.map(subj => (
+                <button
+                  key={subj}
+                  onClick={() => toggleTeachingPlanHiddenSubject(subj)}
+                  title={`「${subj}」を再表示する`}
+                  className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 flex items-center gap-0.5"
+                >
+                  <Eye size={10} />{subj}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="p-2 border-t border-border">
           <Button

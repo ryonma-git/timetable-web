@@ -251,6 +251,12 @@ export interface TimetableFile {
   subjects?: SubjectDef[];
   /** 指導計画（学年×教科単位、後方互換：省略時はnull扱い） */
   teachingPlans?: GradeSubjectPlan[];
+  /**
+   * v105: 指導計画で非表示にする教科名リスト（"その他"等の進捗管理不要教科）
+   * - 非表示=一覧から隠すのみ。データ・実施日は保持され、いつでも再表示可能
+   * - 後方互換：省略時は空配列扱い
+   */
+  teachingPlanHiddenSubjects?: string[];
 }
 
 export interface LoadResult {

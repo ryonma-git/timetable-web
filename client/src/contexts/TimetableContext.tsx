@@ -159,6 +159,9 @@ interface TimetableContextValue {
   teachingPlans: GradeSubjectPlan[];
   upsertTeachingPlan: (plan: GradeSubjectPlan) => void;
   removeTeachingPlan: (id: string) => void;
+  /** v105 Phase C: 指導計画で非表示の教科名リスト */
+  teachingPlanHiddenSubjects: string[];
+  toggleTeachingPlanHiddenSubject: (subject: string) => void;
   /** 指導計画のlessons配列を更新（単元・コマ内容の編集） */
   updateTeachingPlanLessons: (planId: string, lessons: LessonPlanEntry[]) => void;
   /** 指導計画のunits配列を更新 */
@@ -757,6 +760,21 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setIsDirty(true);
   }, [currentFile]);
 
+  // v105 Phase C: 指導計画の教科非表示トグル（教科名単位、ファイル保存）
+  const teachingPlanHiddenSubjects: string[] = currentFile?.teachingPlanHiddenSubjects ?? [];
+
+  const toggleTeachingPlanHiddenSubject = useCallback((subject: string) => {
+    if (!currentFile) return;
+    const cur = currentFile.teachingPlanHiddenSubjects ?? [];
+    const next = cur.includes(subject) ? cur.filter(s => s !== subject) : [...cur, subject];
+    setCurrentFile({
+      ...currentFile,
+      teachingPlanHiddenSubjects: next,
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    });
+    setIsDirty(true);
+  }, [currentFile]);
+
   const updateTeachingPlanLessons = useCallback((planId: string, lessons: LessonPlanEntry[]) => {
     if (!currentFile) return;
     setCurrentFile({
@@ -813,6 +831,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       teachingPlans,
       upsertTeachingPlan,
       removeTeachingPlan,
+      teachingPlanHiddenSubjects,
+      toggleTeachingPlanHiddenSubject,
       updateTeachingPlanLessons,
       updateTeachingPlanUnits,
     }}>
