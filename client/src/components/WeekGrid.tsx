@@ -173,12 +173,29 @@ export function WeekGrid() {
         const classSlots = flatSlots
           .filter(s => s.cls === cls && s.subject === plan.subject)
           .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.period - b.period);
+        // v107: 単元内通し番号(unitPeriod)をクラスごとに動的カウントし、
+        //       単元マスター(unit.lessons[period].content)へのフォールバックを実装
+        const unitCounts = new Map<string, number>();
         classSlots.forEach((slot, idx) => {
           const lesson = plan.lessons[idx];
           // 実績unitId → 計画unitId の順でフォールバック
           const effectiveUnitId = lesson?.unitId || plannedUnitIds[idx] || "";
           const unit = effectiveUnitId ? plan.units.find(u => u.id === effectiveUnitId) : undefined;
-          const content = lesson?.content ?? "";
+
+          let unitPeriod = 0;
+          if (effectiveUnitId) {
+            const c = (unitCounts.get(effectiveUnitId) ?? 0) + 1;
+            unitCounts.set(effectiveUnitId, c);
+            unitPeriod = c;
+          }
+
+          // 内容解決: クラス別override → 個別lesson → 単元マスター
+          let content = lesson?.classOverrides?.[cls]?.content
+            || lesson?.content
+            || "";
+          if (!content && unit && unitPeriod > 0) {
+            content = unit.lessons?.find(l => l.period === unitPeriod)?.content ?? "";
+          }
           const unitName = unit?.name ?? "";
           // 表示すべき情報がなければスキップ
           if (!content && !unitName) return;
@@ -793,47 +810,56 @@ export function WeekGrid() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            {!semester?.hasSaturday && (
-              <Tooltip>
-                <TooltipTrigger asChild>
+            {/* v107 Phase I: 土曜/日曜を「土日授業」1ボタンに統合（Popover内チェックボックス） */}
+            {(!semester?.hasSaturday || !semester?.hasSunday) && (
+              <Popover>
+                <PopoverTrigger asChild>
                   <Button
-                    variant={weekOverride.saturday ? "default" : "outline"}
+                    variant={(weekOverride.saturday || weekOverride.sunday) ? "default" : "outline"}
                     size="sm"
                     className={cn(
                       "h-7 gap-1 text-xs",
-                      weekOverride.saturday && "bg-orange-500 hover:bg-orange-600 border-orange-500 text-white"
+                      (weekOverride.saturday || weekOverride.sunday) && "bg-orange-500 hover:bg-orange-600 border-orange-500 text-white"
                     )}
-                    onClick={() => toggleWeekendDay(weekMondayStr, 'saturday')}
                   >
                     <CalendarPlus size={11} />
-                    {t("weekGrid.saturdayClass")}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">
-                  {t("weekGrid.saturdayClassTip")}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {!semester?.hasSunday && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={weekOverride.sunday ? "default" : "outline"}
-                    size="sm"
-                    className={cn(
-                      "h-7 gap-1 text-xs",
-                      weekOverride.sunday && "bg-purple-500 hover:bg-purple-600 border-purple-500 text-white"
+                    土日授業
+                    {(weekOverride.saturday || weekOverride.sunday) && (
+                      <span className="text-[10px]">
+                        （{[weekOverride.saturday && "土", weekOverride.sunday && "日"].filter(Boolean).join("・")}）
+                      </span>
                     )}
-                    onClick={() => toggleWeekendDay(weekMondayStr, 'sunday')}
-                  >
-                    <CalendarPlus size={11} />
-                    {t("weekGrid.sundayClass")}
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs">
-                  {t("weekGrid.sundayClassTip")}
-                </TooltipContent>
-              </Tooltip>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-2" align="end">
+                  <p className="text-[10px] text-muted-foreground mb-1.5">この週だけ追加表示する曜日</p>
+                  <div className="space-y-1">
+                    {!semester?.hasSaturday && (
+                      <label className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/40 rounded px-1.5 py-1">
+                        <input
+                          type="checkbox"
+                          checked={!!weekOverride.saturday}
+                          onChange={() => toggleWeekendDay(weekMondayStr, 'saturday')}
+                          className="w-3.5 h-3.5"
+                        />
+                        <span>土曜授業</span>
+                      </label>
+                    )}
+                    {!semester?.hasSunday && (
+                      <label className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/40 rounded px-1.5 py-1">
+                        <input
+                          type="checkbox"
+                          checked={!!weekOverride.sunday}
+                          onChange={() => toggleWeekendDay(weekMondayStr, 'sunday')}
+                          className="w-3.5 h-3.5"
+                        />
+                        <span>日曜授業</span>
+                      </label>
+                    )}
+                  </div>
+                  <p className="text-[9px] text-muted-foreground/60 mt-1.5">{t("weekGrid.saturdayClassTip")}</p>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
         )}

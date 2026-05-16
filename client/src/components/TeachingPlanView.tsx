@@ -1,7 +1,7 @@
 // TeachingPlanView.tsx
 // 指導計画画面：時間割から学年×教科を自動抽出し、一覧+テーブルで管理
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, type ReactNode } from "react";
 import { nanoid } from "nanoid";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { GradeSubjectPlan, TeachingUnit, LessonPlanEntry, ClassLessonOverride } from "@/lib/timetableFile";
@@ -1311,6 +1311,7 @@ interface HomeroomClassViewProps {
   effectiveEntries: TimetableEntry[];
   planMap: Map<string, GradeSubjectPlan>;
   hiddenSubjectSet: Set<string>;
+  hiddenComboSet: Set<string>;
   onJumpToSubject: (planId: string) => void;
 }
 
@@ -1326,7 +1327,7 @@ function statusCellColor(s: ClassPlanRowStatus, delayed: boolean, advanced: bool
   }
 }
 
-function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet, onJumpToSubject }: HomeroomClassViewProps) {
+function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet, hiddenComboSet, onJumpToSubject }: HomeroomClassViewProps) {
   const allClasses = useMemo(() => {
     const set = new Set<string>();
     for (const c of combos) for (const cl of c.classes) set.add(cl);
@@ -1335,7 +1336,17 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
 
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [asOf, setAsOf] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [viewField, setViewField] = useState<"unit" | "content" | "date">("unit");
+  // v107 Phase F: 単元名/内容/日付を複数選択（選択したものを全て表示）
+  const [fields, setFields] = useState<{ unit: boolean; content: boolean; date: boolean }>({
+    unit: true, content: true, date: true,
+  });
+  const toggleField = (k: "unit" | "content" | "date") =>
+    setFields(prev => {
+      const next = { ...prev, [k]: !prev[k] };
+      // 最低1つは残す
+      if (!next.unit && !next.content && !next.date) return prev;
+      return next;
+    });
 
   useEffect(() => {
     if (allClasses.length > 0 && !allClasses.includes(selectedClass)) {
@@ -1350,19 +1361,22 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
     const grade = gradeMatch ? `${gradeMatch[1]}年` : "";
     return combos
       .filter(c => c.classes.includes(selectedClass))
-      .filter(c => !hiddenSubjectSet.has(c.subject)) // v105 Phase C: 非表示教科を除外
+      .filter(c => !hiddenSubjectSet.has(c.subject) && !hiddenComboSet.has(`${c.grade}|||${c.subject}`)) // v105/v107: 非表示除外
       .map(c => ({ grade: c.grade || grade, subject: c.subject, planId: `${c.grade}|||${c.subject}` }))
       .sort((a, b) => a.subject.localeCompare(b.subject, "ja"));
-  }, [combos, selectedClass, hiddenSubjectSet]);
+  }, [combos, selectedClass, hiddenSubjectSet, hiddenComboSet]);
 
   const fmtDate = (slot?: { date: string; weekday_jp: string; period: number }) =>
     slot ? `${slot.date.slice(5).replace("-", "/")} ${slot.weekday_jp}${slot.period}` : "—";
 
-  const cellText = (r: ClassPlanRow | undefined) => {
-    if (!r) return "—";
-    if (viewField === "unit") return r.unitName || "（単元未設定）";
-    if (viewField === "content") return r.content || "（内容未入力）";
-    return fmtDate(r.slot);
+  // v107 Phase F: 選択中フィールドを縦に併記
+  const cellContent = (r: ClassPlanRow | undefined) => {
+    if (!r) return <span className="text-muted-foreground">—</span>;
+    const parts: ReactNode[] = [];
+    if (fields.unit) parts.push(<span key="u" className="block truncate">{r.unitName || "（単元未設定）"}</span>);
+    if (fields.content) parts.push(<span key="c" className="block truncate text-muted-foreground">{r.content || "（内容未入力）"}</span>);
+    if (fields.date) parts.push(<span key="d" className="block text-[10px] text-muted-foreground/80">{fmtDate(r.slot)}</span>);
+    return <span className="leading-tight">{parts}</span>;
   };
 
   return (
@@ -1386,13 +1400,14 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
             className="text-[11px] text-primary hover:underline">今日</button>
         </div>
         <div className="flex items-center gap-1 ml-auto">
-          <Label className="text-xs text-muted-foreground mr-1">表示</Label>
+          <Label className="text-xs text-muted-foreground mr-1">表示（複数可）</Label>
           {([["unit", "単元名"], ["content", "内容"], ["date", "日付"]] as const).map(([k, label]) => (
-            <button key={k} onClick={() => setViewField(k)}
+            <button key={k} onClick={() => toggleField(k)}
               className={cn(
-                "text-[11px] px-2 py-1 rounded border transition-colors",
-                viewField === k ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted/40",
+                "text-[11px] px-2 py-1 rounded border transition-colors flex items-center gap-1",
+                fields[k] ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted/40",
               )}>
+              <span className={cn("w-2.5 h-2.5 rounded-sm border inline-block", fields[k] ? "bg-primary border-primary" : "border-muted-foreground/40")} />
               {label}
             </button>
           ))}
@@ -1455,20 +1470,25 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
                       </div>
                     </td>
                     <td className="px-2 py-2">
-                      <span className="text-xs text-muted-foreground">
-                        {prog.currentRow ? cellText(prog.currentRow) : (prog.completedCount === 0 ? "未開始" : "—")}
-                      </span>
+                      <div className="text-xs">
+                        {prog.currentRow ? cellContent(prog.currentRow) : (
+                          <span className="text-muted-foreground">{prog.completedCount === 0 ? "未開始" : "—"}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-2 py-2">
-                      <span className={cn(
+                      <div className={cn(
                         "text-xs",
                         prog.nextRow?.status === "today" ? "text-amber-700 font-semibold dark:text-amber-400" :
                         prog.nextRow ? "text-green-700 font-semibold dark:text-green-400" : "text-muted-foreground",
                       )}>
-                        {prog.nextRow?.status === "today" && "▶ "}
-                        {prog.nextRow?.status === "future" && "→ "}
-                        {prog.nextRow ? cellText(prog.nextRow) : "完了"}
-                      </span>
+                        {prog.nextRow ? (
+                          <>
+                            <span className="text-[10px]">{prog.nextRow.status === "today" ? "▶ 今日" : "→ 次回"}</span>
+                            {cellContent(prog.nextRow)}
+                          </>
+                        ) : "完了"}
+                      </div>
                     </td>
                     <td className="px-2 py-2 text-[11px] whitespace-nowrap text-muted-foreground">
                       {prog.nextRow ? fmtDate(prog.nextRow.slot) : "—"}
@@ -1515,6 +1535,8 @@ export function TeachingPlanView() {
     removeTeachingPlan,
     teachingPlanHiddenSubjects,
     toggleTeachingPlanHiddenSubject,
+    teachingPlanHiddenCombos,
+    toggleTeachingPlanHiddenCombo,
     isLoaded,
     mode,
   } = useTimetable();
@@ -1522,6 +1544,10 @@ export function TeachingPlanView() {
   const hiddenSubjectSet = useMemo(
     () => new Set(teachingPlanHiddenSubjects),
     [teachingPlanHiddenSubjects]
+  );
+  const hiddenComboSet = useMemo(
+    () => new Set(teachingPlanHiddenCombos),
+    [teachingPlanHiddenCombos]
   );
 
   const combos = useMemo(() => extractGradeSubjectCombos(effectiveEntries), [effectiveEntries]);
@@ -1591,11 +1617,18 @@ export function TeachingPlanView() {
     ...combos.map(c => ({ id: `${c.grade}|||${c.subject}`, grade: c.grade, subject: c.subject, fromTimetable: true })),
     ...manualOnlyPlans.map(p => ({ id: p.id, grade: p.grade, subject: p.subject, fromTimetable: false })),
   ];
-  // v105 Phase C: 教科名単位で非表示フィルタ
-  const allSidebarItems = allSidebarItemsRaw.filter(item => !hiddenSubjectSet.has(item.subject));
+  // v105/v107: 教科名(全学年) または combo(学年×教科) 単位で非表示
+  const isItemHidden = (item: { id: string; subject: string }) =>
+    hiddenSubjectSet.has(item.subject) || hiddenComboSet.has(item.id);
+  const allSidebarItems = allSidebarItemsRaw.filter(item => !isItemHidden(item));
+  // 全学年一括非表示の教科
   const hiddenSubjectsInUse = Array.from(
     new Set(allSidebarItemsRaw.filter(item => hiddenSubjectSet.has(item.subject)).map(i => i.subject))
   ).sort((a, b) => a.localeCompare(b, "ja"));
+  // combo単位で非表示（全学年非表示には含まれないもの）
+  const hiddenCombosInUse = allSidebarItemsRaw
+    .filter(item => hiddenComboSet.has(item.id) && !hiddenSubjectSet.has(item.subject))
+    .sort((a, b) => a.id.localeCompare(b.id, "ja"));
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -1632,6 +1665,7 @@ export function TeachingPlanView() {
             effectiveEntries={effectiveEntries}
             planMap={planMap}
             hiddenSubjectSet={hiddenSubjectSet}
+            hiddenComboSet={hiddenComboSet}
             onJumpToSubject={(planId) => { setSelectedId(planId); setMainView("subject"); }}
           />
         </div>
@@ -1653,8 +1687,9 @@ export function TeachingPlanView() {
           ) : (
             allSidebarItems.map(item => {
               const hasPlan = planMap.has(item.id);
-              const plan = planMap.get(item.id);
-              const filledCount = plan?.lessons.filter(l => l.content && !l.isSkip).length ?? 0;
+              // v107 Phase H: filledCountバッジは一旦コメントアウト（進捗と紛らわしいため）
+              // const plan = planMap.get(item.id);
+              // const filledCount = plan?.lessons.filter(l => l.content && !l.isSkip).length ?? 0;
               // v98: isSkip廃止（旧ロジックはコメントで保持）
               // const skipCount = plan?.lessons.filter(l => l.isSkip).length ?? 0;
               const skipCount = 0;
@@ -1679,11 +1714,14 @@ export function TeachingPlanView() {
                       <span className={cn("text-xs font-medium truncate", isSelected ? "text-foreground" : "text-muted-foreground")}>
                         {item.grade} {item.subject}
                       </span>
+                      {/* v107 Phase H: 「内容入力済/全コマ」バッジは進捗と紛らわしく、
+                          クラス毎に進捗が異なり採用が難しいため一旦コメントアウト。
+                          進捗は「クラス横断ビュー」を参照。将来再検討時はコメント解除。
                       {hasPlan && filledCount > 0 && (
                         <span className="text-[9px] bg-emerald-100 text-emerald-700 rounded px-1 shrink-0">
                           {filledCount}/{totalCount}
                         </span>
-                      )}
+                      )} */}
                     </div>
                     <div className="text-[9px] text-muted-foreground mt-0.5 flex gap-1.5">
                       {item.fromTimetable && <span>{totalCount}コマ</span>}
@@ -1692,10 +1730,10 @@ export function TeachingPlanView() {
                       {!item.fromTimetable && <span className="opacity-50">手動追加</span>}
                     </div>
                   </button>
-                  {/* v105 Phase C: 教科を非表示にするトグル */}
+                  {/* v107 Phase G: その学年×教科だけ非表示 */}
                   <button
-                    onClick={() => toggleTeachingPlanHiddenSubject(item.subject)}
-                    title={`「${item.subject}」を指導計画一覧から非表示にする`}
+                    onClick={() => toggleTeachingPlanHiddenCombo(item.id)}
+                    title={`「${item.grade} ${item.subject}」を指導計画一覧から非表示にする`}
                     className="absolute top-2 right-1.5 p-1 rounded opacity-0 group-hover/side:opacity-100 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-opacity"
                   >
                     <EyeOff size={12} />
@@ -1706,24 +1744,55 @@ export function TeachingPlanView() {
           )}
         </div>
 
-        {/* v105 Phase C: 非表示の教科（いつでも再表示可能） */}
-        {hiddenSubjectsInUse.length > 0 && (
-          <div className="border-t border-border px-2 py-2">
-            <div className="text-[10px] text-muted-foreground/70 mb-1 flex items-center gap-1">
-              <EyeOff size={10} />非表示の教科（{hiddenSubjectsInUse.length}）
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {hiddenSubjectsInUse.map(subj => (
-                <button
-                  key={subj}
-                  onClick={() => toggleTeachingPlanHiddenSubject(subj)}
-                  title={`「${subj}」を再表示する`}
-                  className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 flex items-center gap-0.5"
-                >
-                  <Eye size={10} />{subj}
-                </button>
-              ))}
-            </div>
+        {/* v105/v107: 非表示一覧（combo / 全学年、いつでも再表示） */}
+        {(hiddenCombosInUse.length > 0 || hiddenSubjectsInUse.length > 0) && (
+          <div className="border-t border-border px-2 py-2 space-y-1.5">
+            {hiddenCombosInUse.length > 0 && (
+              <div>
+                <div className="text-[10px] text-muted-foreground/70 mb-1 flex items-center gap-1">
+                  <EyeOff size={10} />非表示（{hiddenCombosInUse.length}）
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {hiddenCombosInUse.map(item => (
+                    <span key={item.id} className="inline-flex items-center rounded border border-dashed border-border overflow-hidden">
+                      <button
+                        onClick={() => toggleTeachingPlanHiddenCombo(item.id)}
+                        title={`「${item.grade} ${item.subject}」を再表示`}
+                        className="text-[10px] px-1.5 py-0.5 text-muted-foreground hover:text-foreground hover:bg-muted/40 flex items-center gap-0.5"
+                      >
+                        <Eye size={10} />{item.grade} {item.subject}
+                      </button>
+                      <button
+                        onClick={() => toggleTeachingPlanHiddenSubject(item.subject)}
+                        title={`「${item.subject}」を全学年で非表示にする`}
+                        className="text-[9px] px-1 py-0.5 border-l border-dashed border-border text-muted-foreground/60 hover:text-foreground hover:bg-muted/40"
+                      >
+                        全学年
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {hiddenSubjectsInUse.length > 0 && (
+              <div>
+                <div className="text-[10px] text-muted-foreground/70 mb-1 flex items-center gap-1">
+                  <EyeOff size={10} />全学年非表示（{hiddenSubjectsInUse.length}）
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {hiddenSubjectsInUse.map(subj => (
+                    <button
+                      key={subj}
+                      onClick={() => toggleTeachingPlanHiddenSubject(subj)}
+                      title={`「${subj}」を全学年で再表示`}
+                      className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 flex items-center gap-0.5"
+                    >
+                      <Eye size={10} />{subj}（全学年）
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

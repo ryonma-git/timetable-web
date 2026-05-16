@@ -220,12 +220,27 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
     setTimeout(() => setCopiedTemplate(false), 2000);
   };
 
+  // v107 Phase J: プロンプトにJSONテンプレートを内包して1本化（コピペ往復を解消）
+  const buildFullPrompt = (): string => {
+    if (activeMode === "timetable") {
+      return generateTimetablePrompt(semester)
+        + "\n\n--- 以下のJSONテンプレートに記入して返してください ---\n"
+        + JSON.stringify(generateTimetableTemplate(semester), null, 2);
+    }
+    if (activeMode === "period_times") {
+      return generatePeriodTimesPrompt()
+        + "\n\n--- 以下のJSONテンプレートに記入して返してください ---\n"
+        + JSON.stringify(generatePeriodTimesTemplate(semester), null, 2);
+    }
+    // schedule: events_only のときはコマ削除ルールを渡さない
+    const rules = scheduleScope === "with_ops" ? userRules : "";
+    return generateSchedulePrompt(semester, rules)
+      + "\n\n--- 以下のJSONテンプレートに記入して返してください ---\n"
+      + JSON.stringify(generateScheduleTemplate(semester), null, 2);
+  };
+
   const handleCopyPrompt = async () => {
-    let prompt: string;
-    if (activeMode === "timetable") prompt = generateTimetablePrompt(semester);
-    else if (activeMode === "period_times") prompt = generatePeriodTimesPrompt();
-    else prompt = generateSchedulePrompt(semester, userRules);
-    await copyToClipboard(prompt);
+    await copyToClipboard(buildFullPrompt());
     setCopiedPrompt(true);
     setTimeout(() => setCopiedPrompt(false), 2000);
   };
@@ -488,36 +503,15 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
 
         {/* 手順 */}
         <div className="space-y-3">
-          {/* Step 1: テンプレート取得 */}
-          <div className="flex gap-3">
-            <div className="flex flex-col items-center">
-              <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">1</div>
-              <div className="w-px flex-1 bg-border mt-1" />
-            </div>
-            <div className="pb-3 flex-1">
-              <p className="text-sm font-medium mb-0.5">JSONテンプレートを取得</p>
-              <p className="text-xs text-muted-foreground mb-2">空のJSONテンプレートをダウンロードまたはコピーします。</p>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={handleDownloadTemplate}>
-                  <Download size={12} />ダウンロード
-                </Button>
-                <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={handleCopyTemplate}>
-                  {copiedTemplate ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
-                  {copiedTemplate ? "コピー済み" : "コピー"}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 2: ルール入力（年間予定表モードのみ） */}
-          {activeMode === "schedule" && (
+          {/* Step 1: 個別ルール（年間予定表 かつ コマ削除含む のときのみ・J1） */}
+          {activeMode === "schedule" && scheduleScope === "with_ops" && (
             <div className="flex gap-3">
               <div className="flex flex-col items-center">
-                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">1</div>
                 <div className="w-px flex-1 bg-border mt-1" />
               </div>
               <div className="pb-3 flex-1">
-                <p className="text-sm font-medium mb-0.5">個別ルールを入力（任意）</p>
+                <p className="text-sm font-medium mb-0.5">授業カットの個別ルールを入力（任意）</p>
                 <p className="text-xs text-muted-foreground mb-2">
                   行事ごとの休講ルールをLLMに伝えます。例：「運動会は全コマ休講」「校外学習は4限まで授業なし、5・6限は授業あり」
                 </p>
@@ -531,45 +525,60 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
             </div>
           )}
 
-          {/* Step 2/3: プロンプトコピー */}
+          {/* Step: プロンプトをコピー（JSONテンプレ内包・1本化 J2） */}
           <div className="flex gap-3">
             <div className="flex flex-col items-center">
               <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
-                {activeMode === "schedule" ? "3" : "2"}
+                {activeMode === "schedule" && scheduleScope === "with_ops" ? "2" : "1"}
               </div>
               <div className="w-px flex-1 bg-border mt-1" />
             </div>
             <div className="pb-3 flex-1">
               <p className="text-sm font-medium mb-0.5">LLM向けプロンプトをコピー</p>
-              <p className="text-xs text-muted-foreground mb-2">ChatGPT・Claude等に渡すプロンプトをコピーします。</p>
-              <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={handleCopyPrompt}>
-                {copiedPrompt ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
-                {copiedPrompt ? "コピー済み" : "プロンプトをコピー"}
+              <p className="text-xs text-muted-foreground mb-2">
+                JSONテンプレートも含まれています。これ1つをLLMに貼り付ければOKです。
+              </p>
+              <Button size="sm" className="gap-1.5 text-xs" onClick={handleCopyPrompt}>
+                {copiedPrompt ? <Check size={12} className="text-white" /> : <Copy size={12} />}
+                {copiedPrompt ? "コピーしました" : "プロンプトをコピー（テンプレ込み）"}
               </Button>
+              {/* 上級者向け: JSONテンプレートのみ */}
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground/60">上級者向け:</span>
+                <button onClick={handleCopyTemplate}
+                  className="text-[10px] text-muted-foreground/70 hover:text-foreground hover:underline flex items-center gap-0.5">
+                  {copiedTemplate ? <Check size={9} className="text-green-500" /> : <Copy size={9} />}
+                  JSONテンプレートのみコピー
+                </button>
+                <button onClick={handleDownloadTemplate}
+                  className="text-[10px] text-muted-foreground/70 hover:text-foreground hover:underline flex items-center gap-0.5">
+                  <Download size={9} />ダウンロード
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Step 3/4: LLMに渡す */}
+          {/* Step: LLMに渡す */}
           <div className="flex gap-3">
             <div className="flex flex-col items-center">
               <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
-                {activeMode === "schedule" ? "4" : "3"}
+                {activeMode === "schedule" && scheduleScope === "with_ops" ? "3" : "2"}
               </div>
               <div className="w-px flex-1 bg-border mt-1" />
             </div>
             <div className="pb-3 flex-1">
-              <p className="text-sm font-medium mb-0.5">LLMに画像とテンプレートを渡す</p>
+              <p className="text-sm font-medium mb-0.5">LLMに画像と一緒に貼り付け</p>
               <p className="text-xs text-muted-foreground">
-                ChatGPT・Claude等を開き、「プロンプト」「JSONテンプレート」「画像」を一緒に貼り付けて送信します。
+                ChatGPT・Claude等を開き、コピーした「プロンプト（テンプレ込み）」と「画像」を貼り付けて送信します。
               </p>
             </div>
           </div>
 
-          {/* Step 4/5: JSONを貼り付けてインポート */}
+          {/* Step: JSONを貼り付けてインポート */}
           <div className="flex gap-3">
             <div className="flex flex-col items-center">
               <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
-                {activeMode === "schedule" ? "5" : "4"}
+                {activeMode === "schedule" && scheduleScope === "with_ops" ? "4" : "3"}
               </div>
             </div>
             <div className="flex-1">

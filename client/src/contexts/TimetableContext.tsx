@@ -159,9 +159,12 @@ interface TimetableContextValue {
   teachingPlans: GradeSubjectPlan[];
   upsertTeachingPlan: (plan: GradeSubjectPlan) => void;
   removeTeachingPlan: (id: string) => void;
-  /** v105 Phase C: 指導計画で非表示の教科名リスト */
+  /** v105 Phase C: 指導計画で非表示の教科名リスト（全学年一括） */
   teachingPlanHiddenSubjects: string[];
   toggleTeachingPlanHiddenSubject: (subject: string) => void;
+  /** v107 Phase G: 学年×教科(planId)単位の非表示リスト */
+  teachingPlanHiddenCombos: string[];
+  toggleTeachingPlanHiddenCombo: (planId: string) => void;
   /** 指導計画のlessons配列を更新（単元・コマ内容の編集） */
   updateTeachingPlanLessons: (planId: string, lessons: LessonPlanEntry[]) => void;
   /** 指導計画のunits配列を更新 */
@@ -775,6 +778,21 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setIsDirty(true);
   }, [currentFile]);
 
+  // v107 Phase G: 学年×教科(planId)単位の非表示トグル
+  const teachingPlanHiddenCombos: string[] = currentFile?.teachingPlanHiddenCombos ?? [];
+
+  const toggleTeachingPlanHiddenCombo = useCallback((planId: string) => {
+    if (!currentFile) return;
+    const cur = currentFile.teachingPlanHiddenCombos ?? [];
+    const next = cur.includes(planId) ? cur.filter(s => s !== planId) : [...cur, planId];
+    setCurrentFile({
+      ...currentFile,
+      teachingPlanHiddenCombos: next,
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    });
+    setIsDirty(true);
+  }, [currentFile]);
+
   const updateTeachingPlanLessons = useCallback((planId: string, lessons: LessonPlanEntry[]) => {
     if (!currentFile) return;
     setCurrentFile({
@@ -833,6 +851,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       removeTeachingPlan,
       teachingPlanHiddenSubjects,
       toggleTeachingPlanHiddenSubject,
+      teachingPlanHiddenCombos,
+      toggleTeachingPlanHiddenCombo,
       updateTeachingPlanLessons,
       updateTeachingPlanUnits,
     }}>
