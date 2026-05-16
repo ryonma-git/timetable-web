@@ -1056,13 +1056,15 @@ export function WeekGrid() {
                               weekDates, [1,2,3,4,5,6]
                             );
                             setMultiSelectMode(true);
-                          } else if ((e.metaKey || e.ctrlKey) && selectedCells.size > 0) {
-                            // PC Cmd/Ctrl+クリック: 既に複数選択中なら追加トグル
+                          } else if (e.metaKey || e.ctrlKey) {
+                            // PC Cmd/Ctrl+クリック: モード未開始でも飛び飛び複数選択（Excel方式）
+                            // 既存の単独選択があれば、それも選択集合に取り込む
+                            if (selectedCells.size === 0 && selectedCell &&
+                                !(selectedCell.date === date && selectedCell.period === period)) {
+                              toggleSelectedCell(selectedCell.date, selectedCell.period);
+                            }
                             toggleSelectedCell(date, period);
-                            lastClickedCellRef.current = { date, period };
-                          } else if ((e.metaKey || e.ctrlKey) && selectedCells.size === 0) {
-                            // PC Cmd/Ctrl+クリック: 1コマ目は単独選択のまま（Excel方式）
-                            setSelectedCell(isSelected ? null : { date, period });
+                            setMultiSelectMode(true);
                             lastClickedCellRef.current = { date, period };
                           } else {
                             // 通常クリック: 複数選択を解除して単独選択

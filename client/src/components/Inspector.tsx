@@ -437,7 +437,7 @@ export function Inspector() {
           border-t lg:border-t-0 lg:border-l border-border
           flex flex-col bg-card
           animate-in slide-in-from-bottom lg:slide-in-from-right duration-200
-          max-h-[80vh] lg:max-h-none
+          max-h-[85vh] lg:max-h-full lg:h-full lg:overflow-hidden
         ">
           {/* Mobile drag handle */}
           <div className="flex justify-center pt-2 pb-1 lg:hidden">
