@@ -286,6 +286,8 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
 interface ClassCellPopoverProps {
   cls: string;
   slot: { date: string; period: number; weekday_jp: string } | undefined;
+  /** v99 Phase3: delayed時の繰越元スロット（進まなかった日） */
+  delayedFromSlot?: { date: string; period: number; weekday_jp: string };
   isPast: boolean;
   isToday: boolean;
   isNext: boolean;
@@ -298,7 +300,7 @@ interface ClassCellPopoverProps {
 }
 
 function ClassCellPopover({
-  cls, slot, isPast, isToday, isNext, isSkip, isDelayed, hasNote, hasAnyOverride, override, onSave,
+  cls, slot, delayedFromSlot, isPast, isToday, isNext, isSkip, isDelayed, hasNote, hasAnyOverride, override, onSave,
 }: ClassCellPopoverProps) {
   const [open, setOpen] = useState(false);
   const [delayed, setDelayed] = useState(!!override?.delayed);
@@ -332,6 +334,9 @@ function ClassCellPopover({
   };
 
   const dateLabel = slot ? `${slot.date.slice(5).replace("-", "/")} ${slot.weekday_jp}${slot.period}` : null;
+  const fromLabel = delayedFromSlot
+    ? `${delayedFromSlot.date.slice(5).replace("-", "/")} ${delayedFromSlot.weekday_jp}${delayedFromSlot.period}`
+    : null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -342,7 +347,7 @@ function ClassCellPopover({
             isSkip && "line-through text-muted-foreground/30",
           )}
           title={hasAnyOverride
-            ? `${cls}: ${isDelayed ? "進まなかった " : ""}${hasNote ? "メモあり " : ""}（クリックで編集）`
+            ? `${cls}: ${isDelayed && fromLabel ? `${fromLabel}で進まず→${dateLabel}に繰越 ` : isDelayed ? "進まなかった " : ""}${hasNote ? "メモあり " : ""}（クリックで編集）`
             : `${cls}: クリックでメモ・遅延マーク`}
         >
           {slot ? (
@@ -367,12 +372,22 @@ function ClassCellPopover({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-3" align="center">
+      <PopoverContent className="w-72 p-3" align="center" collisionPadding={12}>
         <div className="space-y-2">
           <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
             <span className="text-xs font-semibold">{cls}</span>
             {dateLabel && <span className="text-[10px] text-muted-foreground">{dateLabel}</span>}
           </div>
+
+          {/* v99 Phase3: 繰越情報 */}
+          {isDelayed && fromLabel && (
+            <div className="flex items-start gap-1.5 text-[10px] bg-orange-50 dark:bg-orange-950/30 rounded px-2 py-1.5 text-orange-700 dark:text-orange-300">
+              <AlertTriangle size={11} className="shrink-0 mt-0.5" />
+              <span>
+                <strong>{fromLabel}</strong> に進まなかったため、この行は <strong>{dateLabel}</strong> に繰り越されています。後続のコマも1つずつ後ろにずれます。
+              </span>
+            </div>
+          )}
 
           {/* 遅延マークトグル */}
           <label className="flex items-center gap-2 cursor-pointer text-xs">
@@ -406,21 +421,21 @@ function ClassCellPopover({
             />
           </div>
 
-          <div className="flex justify-between gap-2 pt-1">
-            {hasAnyOverride ? (
-              <Button variant="ghost" size="sm" onClick={clearAll}
-                className="h-6 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10">
-                <X size={10} className="mr-0.5" />すべて解除
-              </Button>
-            ) : <span />}
-            <div className="flex gap-1 ml-auto">
-              <Button variant="ghost" size="sm" onClick={() => setOpen(false)} className="h-6 text-[11px]">
+          <div className="flex flex-col gap-1.5 pt-1">
+            <div className="flex gap-1 justify-end">
+              <Button variant="ghost" size="sm" onClick={() => setOpen(false)} className="h-7 text-[11px] px-2">
                 キャンセル
               </Button>
-              <Button size="sm" onClick={commit} className="h-6 text-[11px]">
-                <Check size={10} className="mr-0.5" />保存
+              <Button size="sm" onClick={commit} className="h-7 text-[11px] px-3">
+                <Check size={11} className="mr-0.5" />保存
               </Button>
             </div>
+            {hasAnyOverride && (
+              <Button variant="ghost" size="sm" onClick={clearAll}
+                className="h-6 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10 self-start">
+                <X size={10} className="mr-0.5" />すべて解除
+              </Button>
+            )}
           </div>
         </div>
       </PopoverContent>
@@ -445,6 +460,8 @@ interface LessonRowProps {
   isSkip: boolean;                // v96: 旧データのみ表示用（編集UI廃止）
   today: string;
   classProgress: Record<string, ClassProgress>;
+  /** v99 Phase3: クラス毎の 計画行→実施スロットindex（delayed考慮） */
+  classRowSlotMap: Record<string, Map<number, number>>;
   onSave: (entry: LessonPlanEntry) => void;
   /** v97 Phase1: クラス別オーバーライドの保存 */
   onSaveClassOverride: (cls: string, override: ClassLessonOverride | null) => void;
@@ -452,7 +469,7 @@ interface LessonRowProps {
 
 function LessonRow({
   lessonNumber, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, planContent, units,
-  classSlots, classes, isSkip, today, classProgress, onSave, onSaveClassOverride,
+  classSlots, classes, isSkip, today, classProgress, classRowSlotMap, onSave, onSaveClassOverride,
 }: LessonRowProps) {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(entry?.content ?? "");
@@ -579,17 +596,21 @@ function LessonRow({
       {/* クラス別実施日（今日/次回/済み + v97: クラス別遅延マーク） */}
       {classes.map(cls => {
         const slots = classSlots[cls] ?? [];
-        const slot = slots[lessonNumber - 1];
+        // v99 Phase3: delayed考慮の行→スロット対応で実施日を取得
+        const sIdx = classRowSlotMap[cls]?.get(lessonNumber);
+        const slot = sIdx !== undefined ? slots[sIdx] : undefined;
         const prog = classProgress[cls];
         const rowIdx = lessonNumber - 1; // 0-based
-        const isPast = !isSkip && slot && slot.date < today;
-        const isToday = !isSkip && slot && prog?.todayRowIndices.includes(rowIdx);
-        const isNext = !isSkip && !isToday && slot && prog?.nextRowIdx === rowIdx;
+        const isPast = !!(!isSkip && slot && slot.date < today);
+        const isToday = !!(!isSkip && slot && prog?.todayRowIndices.includes(rowIdx));
+        const isNext = !!(!isSkip && !isToday && slot && prog?.nextRowIdx === rowIdx);
         // v97 Phase1: クラス別オーバーライド
         const override = entry?.classOverrides?.[cls];
         const isDelayed = !!override?.delayed;
         const hasNote = !!(override?.note || override?.content);
         const hasAnyOverride = isDelayed || hasNote;
+        // v99 Phase3: delayed時の「進まなかった元の日」（繰越前）
+        const delayedFromSlot = isDelayed && sIdx !== undefined && sIdx > 0 ? slots[sIdx - 1] : undefined;
 
         return (
           <td key={cls} className={cn(
@@ -602,6 +623,7 @@ function LessonRow({
             <ClassCellPopover
               cls={cls}
               slot={slot}
+              delayedFromSlot={delayedFromSlot}
               isPast={isPast}
               isToday={isToday}
               isNext={isNext}
@@ -757,30 +779,59 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
   // 今日の日付
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  // クラス別進捗（完了数・次回行インデックス・今日の行インデックス）
+  // v99 Phase3: クラス毎「計画行(1-based) → 実施スロットindex」のマッピング
+  // delayed が付いた行は2スロット消費（進まなかった日 + 完了日）し、後続行を後ろにシフト
+  const classRowSlotMap = useMemo(() => {
+    const result: Record<string, Map<number, number>> = {};
+    for (const cls of classes) {
+      const slots = classSlots[cls] ?? [];
+      const map = new Map<number, number>();
+      let slotIdx = 0;
+      for (let row = 1; row <= maxSlots; row++) {
+        const entry = plan.lessons[row - 1];
+        const delayed = entry?.classOverrides?.[cls]?.delayed ?? false;
+        if (delayed) {
+          // 「進まなかった日」を1スロット消費 → 完了は次のスロット
+          slotIdx += 1;
+        }
+        if (slotIdx < slots.length) {
+          map.set(row, slotIdx);
+        }
+        slotIdx += 1;
+      }
+      result[cls] = map;
+    }
+    return result;
+  }, [classes, classSlots, plan.lessons, maxSlots]);
+
+  // クラス別進捗（delayed考慮の行→スロット対応で再計算）
   const classProgress = useMemo((): Record<string, ClassProgress> => {
     const result: Record<string, ClassProgress> = {};
     for (const cls of classes) {
       const slots = classSlots[cls] ?? [];
+      const rowMap = classRowSlotMap[cls] ?? new Map<number, number>();
       let completedCount = 0;
       const todayRowIndices: number[] = [];
       let nextRowIdx: number | null = null;
-      for (let i = 0; i < slots.length; i++) {
-        const d = slots[i].date;
+      for (let row = 1; row <= maxSlots; row++) {
+        const sIdx = rowMap.get(row);
+        if (sIdx === undefined) continue;
+        const d = slots[sIdx]?.date;
+        if (!d) continue;
+        const rowIdx = row - 1; // 0-based（既存表示ロジックと整合）
         if (d < today) {
           completedCount++;
         } else if (d === today) {
-          todayRowIndices.push(i);
+          todayRowIndices.push(rowIdx);
         } else {
-          if (nextRowIdx === null) nextRowIdx = i;
+          if (nextRowIdx === null) nextRowIdx = rowIdx;
         }
       }
-      // 今日の授業がある場合、nextRowIdx = 今日の最初の行
       const effectiveNext = todayRowIndices.length > 0 ? todayRowIndices[0] : nextRowIdx;
       result[cls] = { completedCount, totalSlots: slots.length, nextRowIdx: effectiveNext, todayRowIndices };
     }
     return result;
-  }, [classSlots, classes, today]);
+  }, [classSlots, classes, today, classRowSlotMap, maxSlots]);
 
   // クラス間の最大完了数（進捗ギャップ計算用）
   const maxCompleted = useMemo(() =>
@@ -932,6 +983,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                   isSkip={isSkip}
                   today={today}
                   classProgress={classProgress}
+                  classRowSlotMap={classRowSlotMap}
                   onSave={(saved) => updateLesson(n, saved)}
                   onSaveClassOverride={(cls, ov) => updateClassOverride(n, cls, ov)}
                 />
