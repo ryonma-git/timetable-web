@@ -1643,7 +1643,7 @@ export function TeachingPlanView() {
               : "border-transparent text-muted-foreground hover:text-foreground",
           )}
         >
-          <BookOpen size={13} />クラス横断（学級担任）
+          <BookOpen size={13} />クラス別（学級担任）
         </button>
         <button
           onClick={() => setMainView("subject")}
@@ -1716,7 +1716,7 @@ export function TeachingPlanView() {
                       </span>
                       {/* v107 Phase H: 「内容入力済/全コマ」バッジは進捗と紛らわしく、
                           クラス毎に進捗が異なり採用が難しいため一旦コメントアウト。
-                          進捗は「クラス横断ビュー」を参照。将来再検討時はコメント解除。
+                          進捗は「クラス別ビュー」を参照。将来再検討時はコメント解除。
                       {hasPlan && filledCount > 0 && (
                         <span className="text-[9px] bg-emerald-100 text-emerald-700 rounded px-1 shrink-0">
                           {filledCount}/{totalCount}

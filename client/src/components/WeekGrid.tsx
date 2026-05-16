@@ -857,7 +857,7 @@ export function WeekGrid() {
                       </label>
                     )}
                   </div>
-                  <p className="text-[9px] text-muted-foreground/60 mt-1.5">{t("weekGrid.saturdayClassTip")}</p>
+                  <p className="text-[9px] text-muted-foreground/60 mt-1.5">この週のみ土曜日・日曜日を授業日として表示します</p>
                 </PopoverContent>
               </Popover>
             )}

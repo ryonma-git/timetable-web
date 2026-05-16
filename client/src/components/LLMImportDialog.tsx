@@ -417,10 +417,10 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot size={18} className="text-primary" />
-            LLM連携で画像から読み取る
+            AI（LLM）で画像から読み取る
           </DialogTitle>
           <DialogDescription className="text-xs">
-            ChatGPT・Claude等のLLMを使って、時間割・時程表・年間予定表の画像から自動でデータを入力できます。
+            生成AI（LLM＝ChatGPT、Claude、Geminiなど）を使って、時間割・時程表・年間予定表の画像から自動でデータを入力できます。
           </DialogDescription>
         </DialogHeader>
 
@@ -456,7 +456,7 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
             <div>
               <p className="text-xs font-medium mb-1">取込スコープ</p>
               <div className="flex gap-2">
-                {([["events_only", "予定欄だけ", "授業コマは一切変更しない（安全）"], ["with_ops", "コマ削除等も含む", "ルールに基づき授業もカット"]] as const).map(([v, label, desc]) => (
+                {([["with_ops", "コマ削除等も含む", "ルールに基づき授業もカット"], ["events_only", "予定欄だけ", "授業コマは一切変更しない（安全）"]] as const).map(([v, label, desc]) => (
                   <button key={v} onClick={() => setScheduleScope(v)}
                     title={desc}
                     className={cn(
@@ -567,9 +567,9 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
               <div className="w-px flex-1 bg-border mt-1" />
             </div>
             <div className="pb-3 flex-1">
-              <p className="text-sm font-medium mb-0.5">LLMに画像と一緒に貼り付け</p>
+              <p className="text-sm font-medium mb-0.5">AIに画像と一緒に貼り付け</p>
               <p className="text-xs text-muted-foreground">
-                ChatGPT・Claude等を開き、コピーした「プロンプト（テンプレ込み）」と「画像」を貼り付けて送信します。
+                ChatGPT・Claude・Geminiなどを開き、コピーした「プロンプト（テンプレ込み）」と「画像」を貼り付けて送信します。
               </p>
             </div>
           </div>
