@@ -108,8 +108,8 @@ export function ConfirmChangeDialog({ open, preview, onConfirm, onCancel }: Prop
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onCancel()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {hasWarnings ? (
               <AlertTriangle size={18} className="text-amber-500" />
@@ -121,7 +121,7 @@ export function ConfirmChangeDialog({ open, preview, onConfirm, onCancel }: Prop
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 flex-1 overflow-y-auto min-h-0">
           {/* Warnings */}
           {hasWarnings && (
             <div className="bg-amber-50 border border-amber-200 rounded-md p-3 space-y-1">
@@ -166,7 +166,7 @@ export function ConfirmChangeDialog({ open, preview, onConfirm, onCancel }: Prop
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 pt-3 shrink-0 border-t border-border mt-1">
           <Button variant="outline" size="sm" onClick={onCancel}>
             {t("confirmChange.cancel")}
           </Button>
