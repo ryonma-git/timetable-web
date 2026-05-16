@@ -296,18 +296,20 @@ interface ClassCellPopoverProps {
   isAdvanced: boolean;
   isOverflow: boolean;
   hasNote: boolean;
+  hasContentOv: boolean;
   hasAnyOverride: boolean;
   override: ClassLessonOverride | undefined;
   onSave: (next: ClassLessonOverride | null) => void;
 }
 
 function ClassCellPopover({
-  cls, slot, delayedFromSlot, isPast, isToday, isNext, isSkip, isDelayed, isAdvanced, isOverflow, hasNote, hasAnyOverride, override, onSave,
+  cls, slot, delayedFromSlot, isPast, isToday, isNext, isSkip, isDelayed, isAdvanced, isOverflow, hasNote, hasContentOv, hasAnyOverride, override, onSave,
 }: ClassCellPopoverProps) {
   const [open, setOpen] = useState(false);
   const [delayed, setDelayed] = useState(!!override?.delayed);
   const [advanced, setAdvanced] = useState(!!override?.advanced);
   const [note, setNote] = useState(override?.note ?? "");
+  const [contentOv, setContentOv] = useState(override?.content ?? ""); // v102 Phase2
 
   // popover開閉時に現状値を読み直し
   useEffect(() => {
@@ -315,16 +317,18 @@ function ClassCellPopover({
       setDelayed(!!override?.delayed);
       setAdvanced(!!override?.advanced);
       setNote(override?.note ?? "");
+      setContentOv(override?.content ?? "");
     }
   }, [open, override]);
 
   const commit = () => {
     const trimmedNote = note.trim();
+    const trimmedContent = contentOv.trim();
     const next: ClassLessonOverride = {};
     if (delayed) next.delayed = true;
     else if (advanced) next.advanced = true;  // delayed優先・排他
     if (trimmedNote) next.note = trimmedNote;
-    if (override?.content) next.content = override.content; // contentは別UIで設定するので保持のみ
+    if (trimmedContent) next.content = trimmedContent; // v102 Phase2: クラス別の実施内容
     const hasAny = next.delayed || next.advanced || next.note || next.content;
     onSave(hasAny ? next : null);
     setOpen(false);
@@ -334,6 +338,7 @@ function ClassCellPopover({
     setDelayed(false);
     setAdvanced(false);
     setNote("");
+    setContentOv("");
     onSave(null);
     setOpen(false);
   };
@@ -355,28 +360,41 @@ function ClassCellPopover({
             isOverflow
               ? `${cls}: 繰越により読み込み済み時間割の範囲を超えました（時間割を先の週まで進めると実施日が確定します）`
               : hasAnyOverride
-              ? `${cls}: ${isDelayed && fromLabel ? `${fromLabel}で進まず→${dateLabel}に繰越 ` : isDelayed ? "進まなかった " : ""}${isAdvanced ? "前のコマと同日に実施(前倒し) " : ""}${hasNote ? "メモあり " : ""}（クリックで編集）`
+              ? `${cls}: ${isDelayed && fromLabel ? `${fromLabel}で進まず→${dateLabel}に繰越 ` : isDelayed ? "進まなかった " : ""}${isAdvanced ? "前のコマと同日に実施(前倒し) " : ""}${hasContentOv ? `実施内容: ${override?.content} ` : ""}${hasNote ? "メモあり " : ""}（クリックで編集）`
               : `${cls}: クリックでメモ・進捗マーク`}
         >
           {slot ? (
+            isDelayed && fromLabel ? (
+              /* v101: 進まなかった日(元) と 繰越先 を役割分けて縦併記 */
+              <span className="flex flex-col items-center leading-none gap-px py-0.5">
+                <span className="text-[8px] text-muted-foreground/50 line-through">{fromLabel}</span>
+                <span className="text-[7px] text-orange-400 leading-none">↓進まず</span>
+                <span className="inline-flex items-center gap-0.5 text-orange-700 font-semibold dark:text-orange-300">
+                  <AlertTriangle size={8} className="text-orange-500 shrink-0" />
+                  <span>{dateLabel}</span>
+                  {hasContentOv && <span className="text-sky-500 text-[8px] shrink-0" title="内容上書きあり">◆</span>}
+                  {hasNote && <Pencil size={7} className="text-muted-foreground/50 shrink-0" />}
+                </span>
+              </span>
+            ) : (
             <span className={cn(
               "inline-flex items-center gap-0.5",
               isSkip ? "" :
-              isDelayed ? "text-orange-700 font-semibold dark:text-orange-300" :
               isAdvanced ? "text-sky-700 font-semibold dark:text-sky-300" :
               isPast ? "text-muted-foreground/60" :
               isToday ? "text-amber-700 font-semibold dark:text-amber-400" :
               isNext ? "text-green-700 font-semibold dark:text-green-400" :
               "text-foreground",
             )}>
-              {isPast && !isDelayed && !isAdvanced && <span className="text-emerald-500">✓</span>}
-              {isToday && !isDelayed && !isAdvanced && <span>▶</span>}
-              {isNext && !isToday && !isDelayed && !isAdvanced && <span className="text-green-500">→</span>}
-              {isDelayed && <AlertTriangle size={9} className="text-orange-500 shrink-0" />}
+              {isPast && !isAdvanced && <span className="text-emerald-500">✓</span>}
+              {isToday && !isAdvanced && <span>▶</span>}
+              {isNext && !isToday && !isAdvanced && <span className="text-green-500">→</span>}
               {isAdvanced && <span className="text-sky-500 shrink-0">⏩</span>}
               <span>{dateLabel}</span>
+              {hasContentOv && <span className="text-sky-500 text-[9px] shrink-0" title="内容上書きあり">◆</span>}
               {hasNote && <Pencil size={8} className="text-muted-foreground/50 shrink-0" />}
             </span>
+            )
           ) : isOverflow ? (
             <span className="inline-flex items-center gap-0.5 text-rose-600/80 dark:text-rose-400">
               <AlertTriangle size={9} className="shrink-0" />
@@ -456,6 +474,24 @@ function ClassCellPopover({
           <p className="text-[9px] text-muted-foreground/70 ml-5 -mt-1">
             前のコマと同じ日にまとめて実施した（→後続が前にずれる）
           </p>
+
+          {/* v102 Phase2: このクラスだけの実施内容（計画と違う内容をやった場合） */}
+          <div className="pt-1">
+            <Label className="text-[10px] text-muted-foreground">このクラスだけの実施内容（任意）</Label>
+            <Input
+              value={contentOv}
+              onChange={e => setContentOv(e.target.value)}
+              placeholder="例: 復習に充てた / p.42まで"
+              className="h-7 text-xs mt-0.5"
+              onKeyDown={e => {
+                if (e.key === "Enter") commit();
+                if (e.key === "Escape") setOpen(false);
+              }}
+            />
+            <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+              空欄なら計画の「内容予定」が適用されます
+            </p>
+          </div>
 
           {/* メモ */}
           <div className="pt-1">
@@ -661,8 +697,9 @@ function LessonRow({
         const override = entry?.classOverrides?.[cls];
         const isDelayed = !!override?.delayed;
         const isAdvanced = !!override?.advanced && !isDelayed;
-        const hasNote = !!(override?.note || override?.content);
-        const hasAnyOverride = isDelayed || isAdvanced || hasNote;
+        const hasContentOv = !!override?.content;
+        const hasNote = !!override?.note;
+        const hasAnyOverride = isDelayed || isAdvanced || hasNote || hasContentOv;
         // v99 Phase3: delayed時の「進まなかった元の日」（繰越前）
         const delayedFromSlot = isDelayed && sIdx !== undefined && sIdx > 0 ? slots[sIdx - 1] : undefined;
         // v100: 繰越で時間割範囲を超過した行
@@ -690,6 +727,7 @@ function LessonRow({
               isSkip={isSkip}
               isDelayed={isDelayed}
               hasNote={hasNote}
+              hasContentOv={hasContentOv}
               hasAnyOverride={hasAnyOverride}
               override={override}
               onSave={(next) => onSaveClassOverride(cls, next)}
