@@ -17,6 +17,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, X, Pencil, Calendar, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage, type TranslationKey } from "@/contexts/LanguageContext";
+
+type TFn = (k: TranslationKey) => string;
+const tfmt = (t: TFn, key: TranslationKey, vars: Record<string, string | number>) => {
+  let s: string = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+};
 
 // ─── 既定カテゴリ（既知のラベル・色・ヒントを持つ） ─────────────────────
 const BUILTIN_CATEGORIES = ["ceremony", "event", "work", "student", "holiday", "other"] as const;
@@ -32,23 +40,13 @@ const CATEGORY_STYLES: Record<BuiltinCategory, string> = {
   other:    "bg-muted text-muted-foreground border-border",
 };
 
-const CATEGORY_LABELS: Record<BuiltinCategory, string> = {
-  ceremony: "式典",
-  event:    "行事",
-  work:     "業務",
-  student:  "学級",
-  holiday:  "休日",
-  other:    "その他",
-};
-
-const CATEGORY_HINTS: Record<BuiltinCategory, string> = {
-  ceremony: "始業式・入学式・卒業式",
-  event:    "運動会・遠足・参観日・全校集会",
-  work:     "職員会議・研修・PTA",
-  student:  "懇談・家庭訪問・避難訓練・健康診断",
-  holiday:  "休校日・祝日",
-  other:    "上記以外",
-};
+// カテゴリのラベル/ヒントは i18n 辞書から取得（dayEvents.cat.* / dayEvents.hint.*）
+function catLabel(t: TFn, c: BuiltinCategory): string {
+  return t(`dayEvents.cat.${c}` as TranslationKey);
+}
+function catHint(t: TFn, c: BuiltinCategory): string {
+  return t(`dayEvents.hint.${c}` as TranslationKey);
+}
 
 // ─── カスタムカテゴリ用パレット（既定6色と被らないトーン） ────────────────
 const CUSTOM_PALETTE = [
@@ -74,9 +72,9 @@ function getCategoryStyle(category?: string): string {
   return CUSTOM_PALETTE[hashString(category) % CUSTOM_PALETTE.length];
 }
 
-function getCategoryLabel(category?: string): string {
-  if (!category) return CATEGORY_LABELS.other;
-  if (BUILTIN_KEYS.has(category)) return CATEGORY_LABELS[category as BuiltinCategory];
+function getCategoryLabel(t: TFn, category?: string): string {
+  if (!category) return catLabel(t, "other");
+  if (BUILTIN_KEYS.has(category)) return catLabel(t, category as BuiltinCategory);
   return category; // カスタムタグはそのまま表示
 }
 
@@ -89,6 +87,7 @@ interface EventEditorProps {
 
 function EventEditor({ date, event, onClose }: EventEditorProps) {
   const { applyOps, effectiveEntries } = useTimetable();
+  const { t } = useLanguage();
   const [title, setTitle] = useState(event?.title ?? "");
   const [category, setCategory] = useState<string>(event?.category ?? "other");
   const [notes, setNotes] = useState(event?.notes ?? "");
@@ -162,7 +161,7 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
       <Input
         value={title}
         onChange={e => setTitle(e.target.value)}
-        placeholder="予定の内容（例: 職員会議）"
+        placeholder={t("dayEvents.contentPlaceholder")}
         className="h-7 text-xs"
         autoFocus
         onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") onClose(); }}
@@ -174,7 +173,7 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
           <button
             key={c}
             onClick={() => setCategory(c)}
-            title={CATEGORY_HINTS[c]}
+            title={catHint(t, c)}
             className={cn(
               "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
               category === c
@@ -182,7 +181,7 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
                 : "text-muted-foreground border-border hover:bg-muted/50",
             )}
           >
-            {CATEGORY_LABELS[c]}
+            {catLabel(t, c)}
           </button>
         ))}
       </div>
@@ -190,7 +189,7 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
       {/* 既出カスタム + 新規追加 */}
       {(knownCustomCategories.length > 0 || customMode || isCustomSelected) && (
         <div className="flex flex-wrap gap-1 items-center pt-1 border-t border-border/30">
-          <span className="text-[9px] text-muted-foreground/60 mr-0.5">カスタム:</span>
+          <span className="text-[9px] text-muted-foreground/60 mr-0.5">{t("dayEvents.custom")}</span>
           {knownCustomCategories.map(c => (
             <button
               key={c}
@@ -222,7 +221,7 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
               <Input
                 value={customInput}
                 onChange={e => setCustomInput(e.target.value)}
-                placeholder="新しいタグ"
+                placeholder={t("dayEvents.newTagPlaceholder")}
                 className="h-5 text-[10px] w-20 px-1"
                 autoFocus
                 onKeyDown={e => {
@@ -233,14 +232,14 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
               <button
                 onClick={commitCustomCategory}
                 className="text-[10px] text-emerald-600 hover:text-emerald-700"
-                title="追加"
+                title={t("dayEvents.add")}
               >
                 <Check size={11} />
               </button>
               <button
                 onClick={() => { setCustomMode(false); setCustomInput(""); }}
                 className="text-[10px] text-muted-foreground hover:text-foreground"
-                title="キャンセル"
+                title={t("dayEvents.cancel")}
               >
                 <X size={11} />
               </button>
@@ -249,9 +248,9 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
             <button
               onClick={() => setCustomMode(true)}
               className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-border text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/30"
-              title="独自のカテゴリを追加"
+              title={t("dayEvents.addCustomCategory")}
             >
-              <Plus size={9} className="inline-block mr-0.5" />新規
+              <Plus size={9} className="inline-block mr-0.5" />{t("dayEvents.new")}
             </button>
           )}
         </div>
@@ -260,8 +259,8 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
       {/* 説明 */}
       <p className="text-[9px] text-muted-foreground/60 -mt-0.5">
         {BUILTIN_KEYS.has(category)
-          ? CATEGORY_HINTS[category as BuiltinCategory]
-          : `カスタムタグ「${category}」`}
+          ? catHint(t, category as BuiltinCategory)
+          : tfmt(t, "dayEvents.customTagLabel", { c: category })}
       </p>
 
       {/* カスタムタグ追加ボタンを既出無しケース用にも */}
@@ -270,26 +269,26 @@ function EventEditor({ date, event, onClose }: EventEditorProps) {
           onClick={() => setCustomMode(true)}
           className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground underline-offset-2 hover:underline"
         >
-          + カスタムタグを追加
+          {t("dayEvents.addCustomTagLink")}
         </button>
       )}
 
       <Input
         value={notes}
         onChange={e => setNotes(e.target.value)}
-        placeholder="メモ（任意）"
+        placeholder={t("dayEvents.notePlaceholder")}
         className="h-6 text-[11px]"
       />
       <div className="flex justify-between gap-2 pt-1">
         {!isNew && (
           <Button variant="ghost" size="sm" className="h-6 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10" onClick={remove}>
-            <X size={11} className="mr-0.5" />削除
+            <X size={11} className="mr-0.5" />{t("dayEvents.delete")}
           </Button>
         )}
         <div className="flex gap-1 ml-auto">
-          <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={onClose}>キャンセル</Button>
+          <Button variant="ghost" size="sm" className="h-6 text-[11px]" onClick={onClose}>{t("dayEvents.cancel")}</Button>
           <Button size="sm" className="h-6 text-[11px]" onClick={save} disabled={!title.trim()}>
-            <Check size={11} className="mr-0.5" />{isNew ? "追加" : "保存"}
+            <Check size={11} className="mr-0.5" />{isNew ? t("dayEvents.add") : t("dayEvents.save")}
           </Button>
         </div>
       </div>
@@ -305,6 +304,7 @@ interface DayEventsCellProps {
 
 export function DayEventsCell({ date, events }: DayEventsCellProps) {
   const [editing, setEditing] = useState<{ event: DailyEvent | null } | null>(null);
+  const { t } = useLanguage();
 
   return (
     <div className="flex flex-wrap gap-0.5 items-start min-h-[20px] py-1">
@@ -320,14 +320,14 @@ export function DayEventsCell({ date, events }: DayEventsCellProps) {
                 "text-[10px] px-1.5 py-0.5 rounded border font-medium leading-tight truncate max-w-[120px] hover:opacity-80 transition-opacity",
                 getCategoryStyle(ev.category),
               )}
-              title={`${ev.title}${ev.category ? ` [${getCategoryLabel(ev.category)}]` : ""}${ev.notes ? ` — ${ev.notes}` : ""}`}
+              title={`${ev.title}${ev.category ? ` [${getCategoryLabel(t, ev.category)}]` : ""}${ev.notes ? ` — ${ev.notes}` : ""}`}
             >
               {ev.title}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-2" align="start">
             <p className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
-              <Pencil size={9} />予定を編集 — {date}
+              <Pencil size={9} />{tfmt(t, "dayEvents.editTitle", { date })}
             </p>
             <EventEditor date={date} event={ev} onClose={() => setEditing(null)} />
           </PopoverContent>
@@ -343,15 +343,15 @@ export function DayEventsCell({ date, events }: DayEventsCellProps) {
               "text-[10px] px-1 py-0.5 rounded border border-dashed text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors",
               events.length === 0 && "flex items-center gap-0.5",
             )}
-            title="予定を追加"
+            title={t("dayEvents.addEventTitle")}
           >
             <Plus size={10} />
-            {events.length === 0 && <span className="text-[9px]">予定</span>}
+            {events.length === 0 && <span className="text-[9px]">{t("dayEvents.eventsShort")}</span>}
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-72 p-2" align="start">
           <p className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
-            <Calendar size={9} />予定を追加 — {date}
+            <Calendar size={9} />{tfmt(t, "dayEvents.addEventHeader", { date })}
           </p>
           <EventEditor date={date} event={null} onClose={() => setEditing(null)} />
         </PopoverContent>
@@ -368,6 +368,8 @@ interface DayEventsBarProps {
 
 export function DayEventsBar({ weekDates, className }: DayEventsBarProps) {
   const { effectiveEntries } = useTimetable();
+  const { t } = useLanguage();
+  const weekdayNames = t("dayEvents.weekdays").split(",");
 
   const eventsByDate = useMemo(() => {
     const map = new Map<string, DailyEvent[]>();
@@ -387,7 +389,7 @@ export function DayEventsBar({ weekDates, className }: DayEventsBarProps) {
 
   const parseDateStr = (dateStr: string) => {
     const d = new Date(dateStr + "T00:00:00");
-    const weekday = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
+    const weekday = weekdayNames[d.getDay()] ?? "";
     return { month: d.getMonth() + 1, day: d.getDate(), weekday };
   };
 
@@ -395,9 +397,9 @@ export function DayEventsBar({ weekDates, className }: DayEventsBarProps) {
     <div className={cn("border border-border rounded-md bg-muted/10", className)}>
       <div className="flex items-center px-2 py-1 border-b border-border/40 bg-muted/20">
         <Calendar size={11} className="text-muted-foreground mr-1.5" />
-        <span className="text-[10px] font-medium text-muted-foreground">この週の予定</span>
+        <span className="text-[10px] font-medium text-muted-foreground">{t("dayEvents.weekEvents")}</span>
         {totalCount > 0 && (
-          <span className="text-[9px] text-muted-foreground/70 ml-1.5">（{totalCount}件）</span>
+          <span className="text-[9px] text-muted-foreground/70 ml-1.5">{tfmt(t, "dayEvents.countSuffix", { n: totalCount })}</span>
         )}
       </div>
       <div className="grid" style={{ gridTemplateColumns: `repeat(${weekDates.length}, minmax(0, 1fr))` }}>
