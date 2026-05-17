@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { OverrideOp, DailyEvent } from "@/lib/timetable";
 import { nanoid } from "nanoid";
+import { useLanguage, type TranslationKey } from "@/contexts/LanguageContext";
 
 export type LLMImportMode = "timetable" | "period_times" | "schedule";
 
@@ -172,6 +173,12 @@ interface PendingPlan {
 
 export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMImportDialogProps) {
   const { semester, updateSettings, applyOps, effectiveEntries } = useTimetable();
+  const { t } = useLanguage();
+  const lf = (key: TranslationKey, vars: Record<string, string | number> = {}) => {
+    let s: string = t(key);
+    for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+    return s;
+  };
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [copiedTemplate, setCopiedTemplate] = useState(false);
   const [activeMode, setActiveMode] = useState<LLMImportMode>(mode);
@@ -224,18 +231,18 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
   const buildFullPrompt = (): string => {
     if (activeMode === "timetable") {
       return generateTimetablePrompt(semester)
-        + "\n\n--- 以下のJSONテンプレートに記入して返してください ---\n"
+        + t("llm.templateAppend")
         + JSON.stringify(generateTimetableTemplate(semester), null, 2);
     }
     if (activeMode === "period_times") {
       return generatePeriodTimesPrompt()
-        + "\n\n--- 以下のJSONテンプレートに記入して返してください ---\n"
+        + t("llm.templateAppend")
         + JSON.stringify(generatePeriodTimesTemplate(semester), null, 2);
     }
     // schedule: events_only のときはコマ削除ルールを渡さない
     const rules = scheduleScope === "with_ops" ? userRules : "";
     return generateSchedulePrompt(semester, rules)
-      + "\n\n--- 以下のJSONテンプレートに記入して返してください ---\n"
+      + t("llm.templateAppend")
       + JSON.stringify(generateScheduleTemplate(semester), null, 2);
   };
 
@@ -250,7 +257,7 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
     setImportSuccess(false);
 
     if (!importJson.trim()) {
-      setParseError("JSONを貼り付けてください。");
+      setParseError(t("llm.errPasteJson"));
       return;
     }
 
@@ -259,15 +266,15 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
       // ここでは簡易パース確認のみ
       try {
         JSON.parse(importJson);
-        toast.info("時間割JSONを確認しました。「インポート」ボタン（ツールバー）からパッチインポートで読み込んでください。");
+        toast.info(t("llm.infoTimetableChecked"));
         setImportSuccess(true);
       } catch {
-        setParseError("JSONの形式が正しくありません。LLMの出力をそのままコピーしてください。");
+        setParseError(t("llm.errJsonFormat"));
       }
     } else if (activeMode === "period_times") {
       const result = parsePeriodTimesJSON(importJson);
       if (!result) {
-        setParseError("時程表JSONの形式が正しくありません。LLMの出力をそのままコピーしてください。");
+        setParseError(t("llm.errPeriodTimesFormat"));
         return;
       }
       const newSemester = {
@@ -276,14 +283,14 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
         ...(result.periodTimesByDay ? { periodTimesByDay: result.periodTimesByDay } : {}),
       };
       updateSettings(newSemester);
-      toast.success("時程表を更新しました。");
+      toast.success(t("llm.okPeriodTimesUpdated"));
       setImportSuccess(true);
       setImportJson("");
     } else {
       // schedule mode (v106 Phase D: スコープ/モード/重複チェック)
       const parsed = parseScheduleJSON(importJson);
       if (!parsed) {
-        setParseError("年間予定表JSONの形式が正しくありません。events配列またはops配列を含むJSONをコピーしてください。");
+        setParseError(t("llm.errScheduleFormat"));
         return;
       }
 
@@ -299,7 +306,7 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
       }
 
       if (parsed.events.length === 0 && classOps.length === 0) {
-        setParseError("適用すべき予定・操作が見つかりませんでした。");
+        setParseError(t("llm.errNothingToApply"));
         return;
       }
 
@@ -319,10 +326,10 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
         }));
         applyOps([...removeOps, ...addOps, ...classOps], "年間予定表LLMインポート（上書き）");
         const msgs: string[] = [];
-        if (parsed.events.length > 0) msgs.push(`${parsed.events.length}件の予定で置換`);
-        if (removeOps.length > 0) msgs.push(`旧${removeOps.length}件削除`);
-        if (classOps.length > 0) msgs.push(`${classOps.length}件の授業変更`);
-        toast.success(msgs.join("・"));
+        if (parsed.events.length > 0) msgs.push(lf("llm.replacedWithEvents", { n: parsed.events.length }));
+        if (removeOps.length > 0) msgs.push(lf("llm.removedOld", { n: removeOps.length }));
+        if (classOps.length > 0) msgs.push(lf("llm.classChanges", { n: classOps.length }));
+        toast.success(msgs.join(" · "));
         setImportSuccess(true);
         setImportJson("");
         return;
@@ -353,13 +360,14 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
       const allOps = [...autoEventOps, ...classOps];
       applyOps(allOps, "年間予定表LLMインポート（追記）");
       const msgs: string[] = [];
-      if (autoEventOps.length > 0) msgs.push(`${autoEventOps.length}件の予定を追記`);
-      if (classOps.length > 0) msgs.push(`${classOps.length}件の授業変更`);
-      toast.success(msgs.join("・") || "適用しました");
+      if (autoEventOps.length > 0) msgs.push(lf("llm.eventsAppended", { n: autoEventOps.length }));
+      if (classOps.length > 0) msgs.push(lf("llm.classChanges", { n: classOps.length }));
+      toast.success(msgs.join(" · ") || t("llm.applied"));
       setImportSuccess(true);
       setImportJson("");
     }
-  }, [activeMode, importJson, semester, updateSettings, applyOps, effectiveEntries, scheduleScope, scheduleMode, overwriteAll]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMode, importJson, semester, updateSettings, applyOps, effectiveEntries, scheduleScope, scheduleMode, overwriteAll, t]);
 
   // v106 Phase D: 重複確認ダイアログから最終適用
   const applyPendingPlan = useCallback(() => {
@@ -369,43 +377,48 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
       .map(d => ({ id: nanoid(8), op: "add_day_event" as const, date: d.date, event: d.newEvent }));
     const all = [...pendingPlan.autoEventOps, ...dupAddOps, ...pendingPlan.classOps];
     if (all.length === 0) {
-      toast.info("追加する予定がありませんでした");
+      toast.info(t("llm.infoNothingToAdd"));
       setPendingPlan(null);
       return;
     }
     applyOps(all, "年間予定表LLMインポート（追記・重複確認済み）");
     const added = pendingPlan.autoEventOps.length + dupAddOps.length;
     const skipped = pendingPlan.dups.length - dupAddOps.length;
-    toast.success(`${added}件追記${skipped > 0 ? `・${skipped}件スキップ` : ""}${pendingPlan.classOps.length > 0 ? `・${pendingPlan.classOps.length}件の授業変更` : ""}`);
+    toast.success(
+      lf("llm.appendSummary", { added })
+      + (skipped > 0 ? lf("llm.skippedSuffix", { n: skipped }) : "")
+      + (pendingPlan.classOps.length > 0 ? lf("llm.classChangesSuffix", { n: pendingPlan.classOps.length }) : "")
+    );
     setPendingPlan(null);
     setImportSuccess(true);
     setImportJson("");
-  }, [pendingPlan, applyOps]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPlan, applyOps, t]);
 
   const modeConfig = {
     timetable: {
       icon: <FileJson size={13} />,
-      label: "時間割",
-      desc: "週間時間割の画像からクラス配置を読み取ります。",
+      label: t("llm.modeTimetable"),
+      desc: t("llm.descTimetable"),
       templateName: "timetable_template.json",
-      importPlaceholder: "LLMが出力したJSONをここに貼り付けてください...",
-      importNote: "※ 時間割JSONはパッチインポート（ツールバー「インポート」）で適用してください。",
+      importPlaceholder: t("llm.phTimetable"),
+      importNote: t("llm.noteTimetable"),
     },
     period_times: {
       icon: <Clock size={13} />,
-      label: "時程表",
-      desc: "時程表の画像から各コマの開始・終了時刻を読み取ります。",
+      label: t("llm.modePeriodTimes"),
+      desc: t("llm.descPeriodTimes"),
       templateName: "period_times_template.json",
-      importPlaceholder: "LLMが出力した時程表JSONをここに貼り付けてください...",
-      importNote: "「適用」ボタンを押すと時程表が更新されます。",
+      importPlaceholder: t("llm.phPeriodTimes"),
+      importNote: t("llm.notePeriodTimes"),
     },
     schedule: {
       icon: <Calendar size={13} />,
-      label: "年間予定表",
-      desc: "年間予定表の画像から行事・休講情報を読み取り、時間割に適用します。",
+      label: t("llm.modeSchedule"),
+      desc: t("llm.descSchedule"),
       templateName: "schedule_template.json",
-      importPlaceholder: "LLMが出力した年間予定表JSONをここに貼り付けてください...",
-      importNote: "「適用」ボタンを押すと行事・休講情報が時間割に反映されます。",
+      importPlaceholder: t("llm.phSchedule"),
+      importNote: t("llm.noteSchedule"),
     },
   };
 
@@ -417,10 +430,10 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot size={18} className="text-primary" />
-            AI（LLM）で画像から読み取る
+            {t("llm.dialogTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            生成AI（LLM＝ChatGPT、Claude、Geminiなど）を使って、時間割・時程表・年間予定表の画像から自動でデータを入力できます。
+            {t("llm.dialogDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -454,9 +467,9 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
         {activeMode === "schedule" && (
           <div className="rounded-lg border border-border p-3 space-y-2.5 bg-muted/20">
             <div>
-              <p className="text-xs font-medium mb-1">取込スコープ</p>
+              <p className="text-xs font-medium mb-1">{t("llm.scopeLabel")}</p>
               <div className="flex gap-2">
-                {([["with_ops", "コマ削除等も含む", "ルールに基づき授業もカット"], ["events_only", "予定欄だけ", "授業コマは一切変更しない（安全）"]] as const).map(([v, label, desc]) => (
+                {([["with_ops", t("llm.scopeWithOps"), t("llm.scopeWithOpsDesc")], ["events_only", t("llm.scopeEventsOnly"), t("llm.scopeEventsOnlyDesc")]] as [ScheduleScope, string, string][]).map(([v, label, desc]) => (
                   <button key={v} onClick={() => setScheduleScope(v)}
                     title={desc}
                     className={cn(
@@ -470,9 +483,9 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
               </div>
             </div>
             <div>
-              <p className="text-xs font-medium mb-1">取込モード</p>
+              <p className="text-xs font-medium mb-1">{t("llm.modeLabel")}</p>
               <div className="flex gap-2">
-                {([["append", "追記", "既存予定を残し追加（重複確認あり）"], ["overwrite", "上書き", "取込日付範囲の予定を置換"]] as const).map(([v, label, desc]) => (
+                {([["append", t("llm.modeAppend"), t("llm.modeAppendDesc")], ["overwrite", t("llm.modeOverwrite"), t("llm.modeOverwriteDesc")]] as [ScheduleMode, string, string][]).map(([v, label, desc]) => (
                   <button key={v} onClick={() => setScheduleMode(v)}
                     title={desc}
                     className={cn(
@@ -489,14 +502,14 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
               <label className="flex items-center gap-2 text-xs cursor-pointer pt-0.5">
                 <input type="checkbox" checked={overwriteAll}
                   onChange={e => setOverwriteAll(e.target.checked)} className="w-3.5 h-3.5" />
-                <span>既存予定を<strong>全クリア</strong>してから総入れ替え（日付範囲に限定しない）</span>
+                <span>{t("llm.clearAllPrefix")}<strong>{t("llm.clearAllWord")}</strong>{t("llm.clearAllSuffix")}</span>
               </label>
             )}
             <p className="text-[10px] text-muted-foreground/70">
               {scheduleScope === "events_only"
-                ? "✓ 授業コマは保護されます。予定欄のみ更新。"
-                : "⚠ ルール該当行事は授業コマも削除されます。"}
-              {scheduleMode === "append" ? " 追記＝既存を消さず追加。" : overwriteAll ? " 上書き＝既存を全削除して総入替。" : " 上書き＝取込日付範囲の既存予定のみ置換（範囲外は保持）。"}
+                ? t("llm.scopeNoteProtected")
+                : t("llm.scopeNoteCut")}
+              {scheduleMode === "append" ? t("llm.modeNoteAppend") : overwriteAll ? t("llm.modeNoteOverwriteAll") : t("llm.modeNoteOverwriteRange")}
             </p>
           </div>
         )}
@@ -511,14 +524,14 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
                 <div className="w-px flex-1 bg-border mt-1" />
               </div>
               <div className="pb-3 flex-1">
-                <p className="text-sm font-medium mb-0.5">授業カットの個別ルールを入力（任意）</p>
+                <p className="text-sm font-medium mb-0.5">{t("llm.stepRuleTitle")}</p>
                 <p className="text-xs text-muted-foreground mb-2">
-                  行事ごとの休講ルールをLLMに伝えます。例：「運動会は全コマ休講」「校外学習は4限まで授業なし、5・6限は授業あり」
+                  {t("llm.stepRuleDesc")}
                 </p>
                 <Textarea
                   value={userRules}
                   onChange={(e) => setUserRules(e.target.value)}
-                  placeholder="例: 運動会は全コマ休講。校外学習は4限まで授業なし、5・6限は授業あり。..."
+                  placeholder={t("llm.stepRulePh")}
                   className="text-xs min-h-[60px] resize-none"
                 />
               </div>
@@ -534,25 +547,25 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
               <div className="w-px flex-1 bg-border mt-1" />
             </div>
             <div className="pb-3 flex-1">
-              <p className="text-sm font-medium mb-0.5">LLM向けプロンプトをコピー</p>
+              <p className="text-sm font-medium mb-0.5">{t("llm.stepPromptTitle")}</p>
               <p className="text-xs text-muted-foreground mb-2">
-                JSONテンプレートも含まれています。これ1つをLLMに貼り付ければOKです。
+                {t("llm.stepPromptDesc")}
               </p>
               <Button size="sm" className="gap-1.5 text-xs" onClick={handleCopyPrompt}>
                 {copiedPrompt ? <Check size={12} className="text-white" /> : <Copy size={12} />}
-                {copiedPrompt ? "コピーしました" : "プロンプトをコピー（テンプレ込み）"}
+                {copiedPrompt ? t("llm.copied") : t("llm.copyPromptWithTemplate")}
               </Button>
               {/* 上級者向け: JSONテンプレートのみ */}
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground/60">上級者向け:</span>
+                <span className="text-[10px] text-muted-foreground/60">{t("llm.advanced")}</span>
                 <button onClick={handleCopyTemplate}
                   className="text-[10px] text-muted-foreground/70 hover:text-foreground hover:underline flex items-center gap-0.5">
                   {copiedTemplate ? <Check size={9} className="text-green-500" /> : <Copy size={9} />}
-                  JSONテンプレートのみコピー
+                  {t("llm.copyTemplateOnly")}
                 </button>
                 <button onClick={handleDownloadTemplate}
                   className="text-[10px] text-muted-foreground/70 hover:text-foreground hover:underline flex items-center gap-0.5">
-                  <Download size={9} />ダウンロード
+                  <Download size={9} />{t("llm.download")}
                 </button>
               </div>
             </div>
@@ -567,9 +580,9 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
               <div className="w-px flex-1 bg-border mt-1" />
             </div>
             <div className="pb-3 flex-1">
-              <p className="text-sm font-medium mb-0.5">AIに画像と一緒に貼り付け</p>
+              <p className="text-sm font-medium mb-0.5">{t("llm.stepPasteTitle")}</p>
               <p className="text-xs text-muted-foreground">
-                ChatGPT・Claude・Geminiなどを開き、コピーした「プロンプト（テンプレ込み）」と「画像」を貼り付けて送信します。
+                {t("llm.stepPasteDesc")}
               </p>
             </div>
           </div>
@@ -582,7 +595,7 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
               </div>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium mb-0.5">LLMが返したJSONを貼り付けて適用</p>
+              <p className="text-sm font-medium mb-0.5">{t("llm.stepImportTitle")}</p>
               <p className="text-xs text-muted-foreground mb-2">{cfg.importNote}</p>
               <Textarea
                 value={importJson}
@@ -603,7 +616,7 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
               {importSuccess && (
                 <div className="flex items-start gap-1.5 text-xs text-green-600 dark:text-green-400 mb-2">
                   <CheckCircle2 size={12} className="mt-0.5 shrink-0" />
-                  適用しました。
+                  {t("llm.appliedDone")}
                 </div>
               )}
 
@@ -612,20 +625,20 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
                 <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50/60 dark:bg-amber-950/30 p-3 mb-2 space-y-2">
                   <div className="flex items-center gap-1.5 text-xs font-medium text-amber-800 dark:text-amber-300">
                     <AlertTriangle size={13} />
-                    重複の可能性がある予定が {pendingPlan.dups.length} 件あります
+                    {lf("llm.dupTitle", { n: pendingPlan.dups.length })}
                   </div>
                   <p className="text-[10px] text-amber-700/80 dark:text-amber-400/80">
-                    同じ日付に似た予定が既にあります。チェックを入れたものだけ追加します（重複は既定でスキップ）。
+                    {t("llm.dupDesc")}
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setPendingPlan(p => p && ({ ...p, dups: p.dups.map(d => ({ ...d, accept: true })) }))}
                       className="text-[10px] px-2 py-0.5 rounded border border-amber-400 text-amber-700 hover:bg-amber-100"
-                    >すべて追加</button>
+                    >{t("llm.dupAddAll")}</button>
                     <button
                       onClick={() => setPendingPlan(p => p && ({ ...p, dups: p.dups.map(d => ({ ...d, accept: false })) }))}
                       className="text-[10px] px-2 py-0.5 rounded border border-amber-400 text-amber-700 hover:bg-amber-100"
-                    >すべてスキップ</button>
+                    >{t("llm.dupSkipAll")}</button>
                   </div>
                   <div className="max-h-40 overflow-y-auto space-y-1 border-t border-amber-200 dark:border-amber-800 pt-1.5">
                     {pendingPlan.dups.map((d, i) => (
@@ -644,21 +657,21 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
                         <span>
                           <span className="text-muted-foreground">{d.date.slice(5).replace("-", "/")}</span>{" "}
                           <strong>{d.newEvent.title}</strong>
-                          <span className="text-amber-700/70 dark:text-amber-400/70"> ↔ 既存「{d.existingTitle}」</span>
+                          <span className="text-amber-700/70 dark:text-amber-400/70">{lf("llm.dupExisting", { title: d.existingTitle })}</span>
                         </span>
                       </label>
                     ))}
                   </div>
                   <div className="flex gap-2 pt-1">
                     <Button size="sm" className="gap-1.5 text-xs" onClick={applyPendingPlan}>
-                      <Upload size={12} />確定して追記
+                      <Upload size={12} />{t("llm.dupConfirmAppend")}
                     </Button>
                     <Button size="sm" variant="ghost" className="text-xs" onClick={() => setPendingPlan(null)}>
-                      キャンセル
+                      {t("llm.cancel")}
                     </Button>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    重複なしの {pendingPlan.autoEventOps.length} 件は自動追加されます。
+                    {lf("llm.dupAutoAdd", { n: pendingPlan.autoEventOps.length })}
                   </p>
                 </div>
               ) : (
@@ -669,7 +682,7 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
                   disabled={!importJson.trim()}
                 >
                   <Upload size={12} />
-                  適用する
+                  {t("llm.apply")}
                 </Button>
               )}
             </div>
@@ -681,16 +694,15 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
           <p className="text-xs text-amber-800 dark:text-amber-300 flex items-start gap-1.5">
             <ChevronRight size={12} className="mt-0.5 shrink-0" />
             <span>
-              <strong>ヒント:</strong> GPT-4o・Claude 3.5 Sonnet等の画像対応モデルを使うと精度が上がります。
-              読み取り結果は必ず確認してから保存してください。
-              {activeMode === "schedule" && " 年間予定表は複雑なため、適用後に変更履歴で内容を確認することをお勧めします。"}
+              <strong>{t("llm.hintLabel")}</strong>{t("llm.hintBody")}
+              {activeMode === "schedule" && t("llm.hintSchedule")}
             </span>
           </p>
         </div>
 
         <div className="flex justify-end pt-1">
           <Button variant="ghost" size="sm" className="text-xs" onClick={() => onOpenChange(false)}>
-            閉じる
+            {t("llm.close")}
           </Button>
         </div>
       </DialogContent>
