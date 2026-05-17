@@ -125,20 +125,20 @@ export function StatsView() {
           {/* v103: クラス別集計の教科フィルタ */}
           {statsTab === "class" && subjectOptions.length > 0 && (
             <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <Label className="text-xs text-muted-foreground whitespace-nowrap">教科で絞り込み</Label>
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">{t("stats.filterBySubject")}</Label>
               <select
                 value={subjectFilter}
                 onChange={e => setSubjectFilter(e.target.value)}
                 className="h-8 text-sm border border-border rounded-md px-2 bg-background min-w-[140px]"
               >
-                <option value={ALL_SUBJECTS}>すべての教科（合計）</option>
+                <option value={ALL_SUBJECTS}>{t("stats.allSubjects")}</option>
                 {subjectOptions.map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
               {subjectFilter !== ALL_SUBJECTS && (
                 <span className="text-[11px] text-violet-600 bg-violet-50 dark:bg-violet-950/30 rounded px-2 py-0.5">
-                  「{subjectFilter}」のみで各クラスの進捗を集計中
+                  {t("stats.onlySubjectBadge").split("{s}").join(subjectFilter)}
                 </span>
               )}
             </div>
