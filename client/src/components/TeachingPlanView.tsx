@@ -21,6 +21,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useLanguage, type TranslationKey } from "@/contexts/LanguageContext";
+
+type TFn = (k: TranslationKey) => string;
+// {token} を変数で置換（t()は補間非対応）
+function tpf(t: TFn, key: TranslationKey, vars: Record<string, string | number>): string {
+  let s: string = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
 
 // ─── 計算ロジック ─────────────────────────────────────────────
 
@@ -232,9 +241,10 @@ interface UnitCellProps {
 
 function UnitCell({ unit, units, unitColorIdx, onSelect, disabled, isFromPlan }: UnitCellProps) {
   const [open, setOpen] = useState(false);
+  const { t } = useLanguage();
 
   if (disabled) {
-    return <span className="text-[10px] text-muted-foreground/30 italic">実施なし</span>;
+    return <span className="text-[10px] text-muted-foreground/30 italic">{t("tp.notHeld")}</span>;
   }
 
   if (open) {
@@ -246,7 +256,7 @@ function UnitCell({ unit, units, unitColorIdx, onSelect, disabled, isFromPlan }:
         onChange={e => { onSelect(e.target.value); setOpen(false); }}
         onBlur={() => setOpen(false)}
       >
-        <option value="">— なし（計画に戻す）</option>
+        <option value="">{t("tp.noneBackToPlan")}</option>
         {units.map(u => (
           <option key={u.id} value={u.id}>{u.name}</option>
         ))}
@@ -258,7 +268,7 @@ function UnitCell({ unit, units, unitColorIdx, onSelect, disabled, isFromPlan }:
     <button
       className="text-left w-full group/unit"
       onClick={() => setOpen(true)}
-      title={isFromPlan ? "自動計画（クリックで手動変更）" : "クリックして単元を変更"}
+      title={isFromPlan ? t("tp.unitCellAuto") : t("tp.unitCellClick")}
     >
       {unit ? (
         <span className={cn(
@@ -267,11 +277,11 @@ function UnitCell({ unit, units, unitColorIdx, onSelect, disabled, isFromPlan }:
           isFromPlan && "border-dashed opacity-70",
         )}>
           {unit.name}
-          {isFromPlan && <span className="ml-0.5 text-[8px] opacity-50">計</span>}
+          {isFromPlan && <span className="ml-0.5 text-[8px] opacity-50">{t("tp.planMark")}</span>}
         </span>
       ) : (
         <span className="text-[10px] text-muted-foreground/40 italic group-hover/unit:text-muted-foreground">
-          単元を設定…
+          {t("tp.setUnit")}
         </span>
       )}
     </button>
@@ -286,6 +296,7 @@ interface UnitEditorProps {
 }
 
 function UnitEditor({ units, onChange }: UnitEditorProps) {
+  const { t } = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPeriods, setEditPeriods] = useState("");
@@ -305,7 +316,7 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
   };
 
   const addUnit = () => {
-    const newUnit: TeachingUnit = { id: nanoid(8), name: "新しい単元", plannedPeriods: 4 };
+    const newUnit: TeachingUnit = { id: nanoid(8), name: t("tp.newUnit"), plannedPeriods: 4 };
     onChange([...units, newUnit]);
     setTimeout(() => startEdit(newUnit), 50);
   };
@@ -336,9 +347,9 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-border/50">
-        <span className="text-[10px] text-muted-foreground">単元を順番に並べ、計画コマ数を設定すると自動割り振りされます。▶で単元の各時間を編集できます。</span>
+        <span className="text-[10px] text-muted-foreground">{t("tp.unitEditorHint")}</span>
         {totalPlanned > 0 && (
-          <span className="text-[10px] font-medium text-primary shrink-0 ml-2">計 {totalPlanned}コマ</span>
+          <span className="text-[10px] font-medium text-primary shrink-0 ml-2">{tpf(t, "tp.totalKoma", { n: totalPlanned })}</span>
         )}
       </div>
       {units.map((u, idx) => {
@@ -350,7 +361,7 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
               <button
                 onClick={() => setExpandedId(isExpanded ? null : u.id)}
                 className="text-muted-foreground/60 hover:text-foreground shrink-0 w-4 flex items-center justify-center"
-                title={isExpanded ? "閉じる" : "単元の各時間を編集"}
+                title={isExpanded ? t("tp.closeEdit") : t("tp.editUnitPeriods")}
               >
                 {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
               </button>
@@ -362,16 +373,16 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
                   <Input value={editName} onChange={e => setEditName(e.target.value)} className="h-6 text-xs flex-1" autoFocus
                     onKeyDown={e => { if (e.key === "Enter") commitEdit(u.id); if (e.key === "Escape") setEditingId(null); }} />
                   <Input value={editPeriods} onChange={e => setEditPeriods(e.target.value)} className="h-6 text-xs w-14" type="number" min={1} />
-                  <span className="text-xs text-muted-foreground shrink-0">コマ</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{t("tp.komaCountSuffix")}</span>
                   <button onClick={() => commitEdit(u.id)} className="text-green-600 hover:text-green-700"><Check size={12} /></button>
                   <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:text-foreground"><X size={12} /></button>
                 </>
               ) : (
                 <>
                   <span className="text-xs flex-1 truncate cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : u.id)}>{u.name}</span>
-                  <span className="text-[10px] font-medium text-primary shrink-0">{u.plannedPeriods}コマ</span>
+                  <span className="text-[10px] font-medium text-primary shrink-0">{u.plannedPeriods}{t("tp.komaCountSuffix")}</span>
                   {filledCount > 0 && (
-                    <span className="text-[9px] text-muted-foreground shrink-0">({filledCount}件記入済)</span>
+                    <span className="text-[9px] text-muted-foreground shrink-0">{tpf(t, "tp.filledCount", { n: filledCount })}</span>
                   )}
                   <button onClick={() => startEdit(u)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"><Pencil size={11} /></button>
                   <button onClick={() => onChange(units.filter(x => x.id !== u.id))} className="opacity-0 group-hover:opacity-100 text-destructive/60 hover:text-destructive"><Trash2 size={11} /></button>
@@ -382,16 +393,16 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
             {/* v94: 単元マスター展開UI - 各時間の予定内容 */}
             {isExpanded && (
               <div className="ml-9 mt-1 mb-2 space-y-0.5 border-l-2 border-muted/40 pl-2">
-                <p className="text-[9px] text-muted-foreground/60 mb-0.5">この単元の各時間で何をするか（マスター予定）。ここで編集すると、コマ単位リストに薄字で反映されます。</p>
+                <p className="text-[9px] text-muted-foreground/60 mb-0.5">{t("tp.unitMasterHint")}</p>
                 {Array.from({ length: u.plannedPeriods }, (_, i) => {
                   const p = i + 1;
                   const lesson = u.lessons?.find(l => l.period === p);
                   return (
                     <div key={p} className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-muted-foreground w-6 shrink-0">{p}時</span>
+                      <span className="text-[10px] text-muted-foreground w-6 shrink-0">{tpf(t, "tp.periodNo", { p })}</span>
                       <Input
                         defaultValue={lesson?.content ?? ""}
-                        placeholder={`${p}時目の内容（例: 導入・練習・まとめ）`}
+                        placeholder={tpf(t, "tp.periodContentPlaceholder", { p })}
                         className="h-6 text-xs flex-1"
                         onBlur={e => {
                           const val = e.target.value;
@@ -414,7 +425,7 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
         );
       })}
       <Button variant="ghost" size="sm" className="h-6 text-xs gap-1 mt-1" onClick={addUnit}>
-        <Plus size={11} /> 単元を追加
+        <Plus size={11} /> {t("tp.addUnit")}
       </Button>
     </div>
   );
@@ -444,6 +455,7 @@ interface ClassCellPopoverProps {
 function ClassCellPopover({
   cls, slot, delayedFromSlot, isPast, isToday, isNext, isSkip, isDelayed, isAdvanced, isOverflow, hasNote, hasContentOv, hasAnyOverride, override, onSave,
 }: ClassCellPopoverProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [delayed, setDelayed] = useState(!!override?.delayed);
   const [advanced, setAdvanced] = useState(!!override?.advanced);
@@ -497,21 +509,21 @@ function ClassCellPopover({
           )}
           title={
             isOverflow
-              ? `${cls}: 繰越により読み込み済み時間割の範囲を超えました（時間割を先の週まで進めると実施日が確定します）`
+              ? tpf(t, "tp.overflowTip", { cls })
               : hasAnyOverride
-              ? `${cls}: ${isDelayed && fromLabel ? `${fromLabel}で進まず→${dateLabel}に繰越 ` : isDelayed ? "進まなかった " : ""}${isAdvanced ? "前のコマと同日に実施(前倒し) " : ""}${hasContentOv ? `実施内容: ${override?.content} ` : ""}${hasNote ? "メモあり " : ""}（クリックで編集）`
-              : `${cls}: クリックでメモ・進捗マーク`}
+              ? `${cls}: ${isDelayed && fromLabel ? tpf(t, "tp.behindToOverflow", { from: fromLabel, d: dateLabel ?? "" }) : isDelayed ? t("tp.behindLabel") : ""}${isAdvanced ? t("tp.advancedLabel") : ""}${hasContentOv ? `${tpf(t, "tp.unitMasterPrefix", { c: override?.content ?? "" })} ` : ""}${hasNote ? t("tp.noteExists") : ""}`
+              : tpf(t, "tp.cellClickHint", { cls })}
         >
           {slot ? (
             isDelayed && fromLabel ? (
               /* v101: 進まなかった日(元) と 繰越先 を役割分けて縦併記 */
               <span className="flex flex-col items-center leading-none gap-px py-0.5">
                 <span className="text-[8px] text-muted-foreground/50 line-through">{fromLabel}</span>
-                <span className="text-[7px] text-orange-400 leading-none">↓進まず</span>
+                <span className="text-[7px] text-orange-400 leading-none">{t("tp.behindArrow")}</span>
                 <span className="inline-flex items-center gap-0.5 text-orange-700 font-semibold dark:text-orange-300">
                   <AlertTriangle size={8} className="text-orange-500 shrink-0" />
                   <span>{dateLabel}</span>
-                  {hasContentOv && <span className="text-sky-500 text-[8px] shrink-0" title="内容上書きあり">◆</span>}
+                  {hasContentOv && <span className="text-sky-500 text-[8px] shrink-0" title={t("tp.contentOverrideMark")}>◆</span>}
                   {hasNote && <Pencil size={7} className="text-muted-foreground/50 shrink-0" />}
                 </span>
               </span>
@@ -530,14 +542,14 @@ function ClassCellPopover({
               {isNext && !isToday && !isAdvanced && <span className="text-green-500">→</span>}
               {isAdvanced && <span className="text-sky-500 shrink-0">⏩</span>}
               <span>{dateLabel}</span>
-              {hasContentOv && <span className="text-sky-500 text-[9px] shrink-0" title="内容上書きあり">◆</span>}
+              {hasContentOv && <span className="text-sky-500 text-[9px] shrink-0" title={t("tp.contentOverrideMark")}>◆</span>}
               {hasNote && <Pencil size={8} className="text-muted-foreground/50 shrink-0" />}
             </span>
             )
           ) : isOverflow ? (
             <span className="inline-flex items-center gap-0.5 text-rose-600/80 dark:text-rose-400">
               <AlertTriangle size={9} className="shrink-0" />
-              <span>日程超過</span>
+              <span>{t("tp.overflow")}</span>
             </span>
           ) : (
             <span className="text-muted-foreground/30">—</span>
@@ -556,7 +568,7 @@ function ClassCellPopover({
             <div className="flex items-start gap-1.5 text-[10px] bg-orange-50 dark:bg-orange-950/30 rounded px-2 py-1.5 text-orange-700 dark:text-orange-300">
               <AlertTriangle size={11} className="shrink-0 mt-0.5" />
               <span>
-                <strong>{fromLabel}</strong> に進まなかったため、この行は <strong>{dateLabel}</strong> に繰り越されています。後続のコマも1つずつ後ろにずれます。
+                {tpf(t, "tp.carriedOverInfo", { from: fromLabel ?? "", to: dateLabel ?? "" })}
               </span>
             </div>
           )}
@@ -566,7 +578,7 @@ function ClassCellPopover({
             <div className="flex items-start gap-1.5 text-[10px] bg-sky-50 dark:bg-sky-950/30 rounded px-2 py-1.5 text-sky-700 dark:text-sky-300">
               <span className="shrink-0">⏩</span>
               <span>
-                前のコマと同じ日にまとめて実施（1日2コマ）。この行以降が1つずつ前にずれます。
+                {t("tp.advancedInfo")}
               </span>
             </div>
           )}
@@ -576,7 +588,7 @@ function ClassCellPopover({
             <div className="flex items-start gap-1.5 text-[10px] bg-rose-50 dark:bg-rose-950/30 rounded px-2 py-1.5 text-rose-700 dark:text-rose-300">
               <AlertTriangle size={11} className="shrink-0 mt-0.5" />
               <span>
-                繰越の累積により、読み込み済みの時間割の範囲を超えました。週送りで先まで時間割を表示すると実施日が確定します（時間割の予備コマが足りない場合は計画調整が必要です）。
+                {t("tp.overflowInfo")}
               </span>
             </div>
           )}
@@ -591,11 +603,11 @@ function ClassCellPopover({
             />
             <span className="flex items-center gap-1">
               <AlertTriangle size={11} className="text-orange-500" />
-              進まなかった
+              {t("tp.behindCheckbox")}
             </span>
           </label>
           <p className="text-[9px] text-muted-foreground/70 ml-5 -mt-1">
-            授業は実施したが、計画通り進められなかった（→後続が後ろにずれる）
+            {t("tp.behindCheckboxHint")}
           </p>
 
           <label className="flex items-center gap-2 cursor-pointer text-xs">
@@ -607,20 +619,20 @@ function ClassCellPopover({
             />
             <span className="flex items-center gap-1">
               <span className="text-sky-500">⏩</span>
-              進みすぎた（前倒し）
+              {t("tp.advancedCheckbox")}
             </span>
           </label>
           <p className="text-[9px] text-muted-foreground/70 ml-5 -mt-1">
-            前のコマと同じ日にまとめて実施した（→後続が前にずれる）
+            {t("tp.advancedCheckboxHint")}
           </p>
 
           {/* v102 Phase2: このクラスだけの実施内容（計画と違う内容をやった場合） */}
           <div className="pt-1">
-            <Label className="text-[10px] text-muted-foreground">このクラスだけの実施内容（任意）</Label>
+            <Label className="text-[10px] text-muted-foreground">{t("tp.classOnlyContent")}</Label>
             <Input
               value={contentOv}
               onChange={e => setContentOv(e.target.value)}
-              placeholder="例: 復習に充てた / p.42まで"
+              placeholder={t("tp.classOnlyContentPh")}
               className="h-7 text-xs mt-0.5"
               onKeyDown={e => {
                 if (e.key === "Enter") commit();
@@ -628,17 +640,17 @@ function ClassCellPopover({
               }}
             />
             <p className="text-[9px] text-muted-foreground/60 mt-0.5">
-              空欄なら計画の「内容予定」が適用されます
+              {t("tp.classContentEmptyHint")}
             </p>
           </div>
 
           {/* メモ */}
           <div className="pt-1">
-            <Label className="text-[10px] text-muted-foreground">クラス固有メモ</Label>
+            <Label className="text-[10px] text-muted-foreground">{t("tp.classNote")}</Label>
             <Input
               value={note}
               onChange={e => setNote(e.target.value)}
-              placeholder="例: 耳鼻科検診で半分のみ"
+              placeholder={t("tp.classNotePh")}
               className="h-7 text-xs mt-0.5"
               onKeyDown={e => {
                 if (e.key === "Enter") commit();
@@ -650,16 +662,16 @@ function ClassCellPopover({
           <div className="flex flex-col gap-1.5 pt-1">
             <div className="flex gap-1 justify-end">
               <Button variant="ghost" size="sm" onClick={() => setOpen(false)} className="h-7 text-[11px] px-2">
-                キャンセル
+                {t("tp.cancel")}
               </Button>
               <Button size="sm" onClick={commit} className="h-7 text-[11px] px-3">
-                <Check size={11} className="mr-0.5" />保存
+                <Check size={11} className="mr-0.5" />{t("tp.save")}
               </Button>
             </div>
             {hasAnyOverride && (
               <Button variant="ghost" size="sm" onClick={clearAll}
                 className="h-6 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10 self-start">
-                <X size={10} className="mr-0.5" />すべて解除
+                <X size={10} className="mr-0.5" />{t("tp.clearAll")}
               </Button>
             )}
           </div>
@@ -699,6 +711,7 @@ function LessonRow({
   lessonNumber, entry, unit, unitColorIdx, unitPeriod, effectiveUnitId, isFromPlan, planContent, units,
   classSlots, classes, isSkip, today, classProgress, classRowSlotMap, classOverflowRows, onSave, onSaveClassOverride,
 }: LessonRowProps) {
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(entry?.content ?? "");
   const [notes, setNotes] = useState(entry?.notes ?? "");
@@ -781,14 +794,14 @@ function LessonRow({
       {/* 内容予定 */}
       <td className="px-2 py-1.5 min-w-[160px]">
         {isSkip ? (
-          <span className="text-xs text-muted-foreground italic">実施なし（計画コマカウントから除外）</span>
+          <span className="text-xs text-muted-foreground italic">{t("tp.skipDesc")}</span>
         ) : editing ? (
           <div className="flex flex-col gap-1">
             <Input
               value={content}
               onChange={e => setContent(e.target.value)}
               className="h-6 text-xs"
-              placeholder={planContent ? `単元マスター: ${planContent}` : "内容予定"}
+              placeholder={planContent ? tpf(t, "tp.unitMasterPrefix", { c: planContent }) : t("tp.contentPlaceholder")}
               autoFocus
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) commit(); if (e.key === "Escape") cancel(); }}
             />
@@ -796,25 +809,25 @@ function LessonRow({
               value={notes}
               onChange={e => setNotes(e.target.value)}
               className="h-5 text-[10px]"
-              placeholder="備考（任意）"
+              placeholder={t("tp.notesPlaceholder")}
             />
             <div className="flex gap-1">
-              <button onClick={commit} className="text-green-600 hover:text-green-700 text-[10px] flex items-center gap-0.5"><Check size={10} />保存</button>
-              <button onClick={cancel} className="text-muted-foreground hover:text-foreground text-[10px] flex items-center gap-0.5"><X size={10} />取消</button>
+              <button onClick={commit} className="text-green-600 hover:text-green-700 text-[10px] flex items-center gap-0.5"><Check size={10} />{t("tp.save")}</button>
+              <button onClick={cancel} className="text-muted-foreground hover:text-foreground text-[10px] flex items-center gap-0.5"><X size={10} />{t("tp.cancelEdit")}</button>
             </div>
           </div>
         ) : (
           <div
             className="flex items-center gap-1 cursor-pointer min-h-[24px]"
             onClick={() => { setContent(entry?.content ?? ""); setNotes(entry?.notes ?? ""); setEditing(true); }}
-            title={planContent && !entry?.content ? `単元マスター: ${planContent}（クリックで上書き）` : undefined}
+            title={planContent && !entry?.content ? tpf(t, "tp.unitMasterClickOverride", { c: planContent }) : undefined}
           >
             {entry?.content ? (
               <span className="text-xs text-foreground">{entry.content}</span>
             ) : planContent ? (
               <span className="text-xs text-muted-foreground/60 italic">{planContent}</span>
             ) : (
-              <span className="text-xs text-muted-foreground/40 italic">クリックして入力…</span>
+              <span className="text-xs text-muted-foreground/40 italic">{t("tp.clickToInput")}</span>
             )}
             <Pencil size={10} className="opacity-0 group-hover/row:opacity-60 text-muted-foreground shrink-0" />
           </div>
@@ -898,6 +911,7 @@ interface PlanTableProps {
 }
 
 function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateUnits }: PlanTableProps) {
+  const { t } = useLanguage();
   const [showUnits, setShowUnits] = useState(false);
 
   const classSlots = useMemo(() => {
@@ -1102,13 +1116,13 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
       {/* ヘッダー */}
       <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
         <span className="font-semibold text-foreground text-sm">{plan.grade} {plan.subject}</span>
-        <span>全{maxSlots}コマ</span>
+        <span>{tpf(t, "tp.allKoma", { n: maxSlots })}</span>
         {plannedRows.length > 0 && (
-          <span className="text-blue-600/80">計画{plannedRows.length}コマ自動割り振り</span>
+          <span className="text-blue-600/80">{tpf(t, "tp.planAutoAssign", { n: plannedRows.length })}</span>
         )}
-        {filledCount > 0 && <span className="text-emerald-600">{filledCount}コマ入力済み</span>}
-        {skipCount > 0 && <span className="text-orange-500">{skipCount}コマ実施なし</span>}
-        <span>対象クラス: {classes.join("・")}</span>
+        {filledCount > 0 && <span className="text-emerald-600">{tpf(t, "tp.komaFilled", { n: filledCount })}</span>}
+        {skipCount > 0 && <span className="text-orange-500">{tpf(t, "tp.komaNotHeld", { n: skipCount })}</span>}
+        <span>{tpf(t, "tp.targetClasses", { c: classes.join("・") })}</span>
       </div>
 
       {/* 単元管理 */}
@@ -1119,12 +1133,12 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
         >
           <span className="flex items-center gap-1.5">
             <GripVertical size={11} className="text-muted-foreground" />
-            単元管理
+            {t("tp.unitMgmt")}
             {plan.units.length > 0 && (
-              <span className="text-[10px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">{plan.units.length}件</span>
+              <span className="text-[10px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">{tpf(t, "tp.itemsCount", { n: plan.units.length })}</span>
             )}
             {plan.units.length === 0 && (
-              <span className="text-[10px] text-muted-foreground/60">（単元を追加すると各コマに割り当てられます）</span>
+              <span className="text-[10px] text-muted-foreground/60">{t("tp.unitMgmtEmptyHint")}</span>
             )}
           </span>
           <ChevronDown size={12} className={cn("transition-transform text-muted-foreground", showUnits && "rotate-180")} />
@@ -1164,7 +1178,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
           })}
           {maxCompleted > 0 && (
             <span className="text-muted-foreground/50 ml-1">
-              ▶ = 今日　→ = 次回　✓ = 済み
+              {t("tp.markLegend")}
             </span>
           )}
         </div>
@@ -1172,7 +1186,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
 
       {/* 操作ヒント */}
       <p className="text-[10px] text-muted-foreground/60 -mt-1">
-        単元セルをクリック → 単元を変更 ／ 内容予定をクリック → 編集（薄字は単元マスター） ／ 計画行数の変更は単元管理パネルでコマ数を調整 ／ <span className="text-orange-600/80 font-medium">クラスの実施日セルをクリック → そのクラスだけ「進まなかった」マーク・メモ追加</span>
+        {t("tp.opHint")}<span className="text-orange-600/80 font-medium">{t("tp.opHintClass")}</span>
       </p>
 
       {/* テーブル */}
@@ -1181,9 +1195,9 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
           <thead>
             <tr className="bg-muted/50 text-xs text-muted-foreground border-b border-border">
               <th className="px-1 py-2 text-center w-12 font-medium">No.</th>
-              <th className="px-2 py-2 w-32 font-medium">単元</th>
-              <th className="px-2 py-2 text-center w-10 font-medium">単元内</th>
-              <th className="px-2 py-2 min-w-[160px] font-medium">内容予定</th>
+              <th className="px-2 py-2 w-32 font-medium">{t("tp.colUnit")}</th>
+              <th className="px-2 py-2 text-center w-10 font-medium">{t("tp.colUnitInner")}</th>
+              <th className="px-2 py-2 min-w-[160px] font-medium">{t("tp.colContent")}</th>
               {classes.map(cls => {
                 const prog = classProgress[cls];
                 const gap = prog ? maxCompleted - prog.completedCount : 0;
@@ -1200,11 +1214,11 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
                             ? "bg-muted text-muted-foreground"
                             : "text-muted-foreground/50",
                         )}>
-                          {prog.completedCount}/{prog.totalSlots}完了
+                          {tpf(t, "tp.completedFraction", { a: prog.completedCount, b: prog.totalSlots })}
                         </span>
                       )}
                       {gap > 0 && (
-                        <span className="text-[9px] text-orange-500 font-normal">-{gap}遅れ</span>
+                        <span className="text-[9px] text-orange-500 font-normal">{tpf(t, "tp.behindBy", { n: gap })}</span>
                       )}
                     </div>
                   </th>
@@ -1216,7 +1230,7 @@ function PlanTable({ plan, classes, effectiveEntries, onUpdateLessons, onUpdateU
             {maxSlots === 0 ? (
               <tr>
                 <td colSpan={4 + classes.length} className="px-4 py-8 text-center text-xs text-muted-foreground">
-                  時間割にデータがありません。週間時間割でコマを追加すると自動で表示されます。
+                  {t("tp.noTimetableData")}
                 </td>
               </tr>
             ) : (
@@ -1262,6 +1276,7 @@ interface ManualAddDialogProps {
 }
 
 function ManualAddDialog({ open, onClose, onCreate, existingIds }: ManualAddDialogProps) {
+  const { t } = useLanguage();
   const [grade, setGrade] = useState("");
   const [subject, setSubject] = useState("");
   const planId = `${grade.trim()}|||${subject.trim()}`;
@@ -1278,24 +1293,24 @@ function ManualAddDialog({ open, onClose, onCreate, existingIds }: ManualAddDial
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-xs">
         <DialogHeader>
-          <DialogTitle className="text-sm font-semibold">手動で学年×教科を追加</DialogTitle>
+          <DialogTitle className="text-sm font-semibold">{t("tp.manualAddTitle")}</DialogTitle>
         </DialogHeader>
-        <p className="text-xs text-muted-foreground -mt-1">時間割に存在しない組み合わせを手動で追加します</p>
+        <p className="text-xs text-muted-foreground -mt-1">{t("tp.manualAddDesc")}</p>
         <div className="space-y-3 py-1">
           <div className="space-y-1">
-            <Label className="text-xs">学年（例: 5年）</Label>
-            <Input value={grade} onChange={e => setGrade(e.target.value)} className="h-8 text-xs" placeholder="5年" />
+            <Label className="text-xs">{t("tp.gradeLabel")}</Label>
+            <Input value={grade} onChange={e => setGrade(e.target.value)} className="h-8 text-xs" placeholder={t("tp.gradePh")} />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">教科（例: 理科）</Label>
-            <Input value={subject} onChange={e => setSubject(e.target.value)} className="h-8 text-xs" placeholder="理科"
+            <Label className="text-xs">{t("tp.subjectLabel")}</Label>
+            <Input value={subject} onChange={e => setSubject(e.target.value)} className="h-8 text-xs" placeholder={t("tp.subjectPh")}
               onKeyDown={e => e.key === "Enter" && handleCreate()} />
           </div>
-          {alreadyExists && <p className="text-xs text-destructive">この組み合わせはすでに存在します</p>}
+          {alreadyExists && <p className="text-xs text-destructive">{t("tp.alreadyExists")}</p>}
         </div>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={onClose} className="h-7 text-xs">キャンセル</Button>
-          <Button size="sm" onClick={handleCreate} disabled={!grade.trim() || !subject.trim() || alreadyExists} className="h-7 text-xs">追加</Button>
+          <Button variant="outline" size="sm" onClick={onClose} className="h-7 text-xs">{t("tp.cancel")}</Button>
+          <Button size="sm" onClick={handleCreate} disabled={!grade.trim() || !subject.trim() || alreadyExists} className="h-7 text-xs">{t("tp.add")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1328,6 +1343,7 @@ function statusCellColor(s: ClassPlanRowStatus, delayed: boolean, advanced: bool
 }
 
 function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet, hiddenComboSet, onJumpToSubject }: HomeroomClassViewProps) {
+  const { t } = useLanguage();
   const allClasses = useMemo(() => {
     const set = new Set<string>();
     for (const c of combos) for (const cl of c.classes) set.add(cl);
@@ -1373,8 +1389,8 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
   const cellContent = (r: ClassPlanRow | undefined) => {
     if (!r) return <span className="text-muted-foreground">—</span>;
     const parts: ReactNode[] = [];
-    if (fields.unit) parts.push(<span key="u" className="block truncate">{r.unitName || "（単元未設定）"}</span>);
-    if (fields.content) parts.push(<span key="c" className="block truncate text-muted-foreground">{r.content || "（内容未入力）"}</span>);
+    if (fields.unit) parts.push(<span key="u" className="block truncate">{r.unitName || t("tp.unitNotSet")}</span>);
+    if (fields.content) parts.push(<span key="c" className="block truncate text-muted-foreground">{r.content || t("tp.contentNotEntered")}</span>);
     if (fields.date) parts.push(<span key="d" className="block text-[10px] text-muted-foreground/80">{fmtDate(r.slot)}</span>);
     return <span className="leading-tight">{parts}</span>;
   };
@@ -1384,7 +1400,7 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
       {/* 操作バー */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1.5">
-          <Label className="text-xs text-muted-foreground">クラス</Label>
+          <Label className="text-xs text-muted-foreground">{t("tp.classLabel")}</Label>
           <select
             value={selectedClass}
             onChange={e => setSelectedClass(e.target.value)}
@@ -1394,14 +1410,18 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
           </select>
         </div>
         <div className="flex items-center gap-1.5">
-          <Label className="text-xs text-muted-foreground">基準日</Label>
+          <Label className="text-xs text-muted-foreground">{t("tp.asOfLabel")}</Label>
           <Input type="date" value={asOf} onChange={e => setAsOf(e.target.value)} className="h-8 w-36 text-sm" />
           <button onClick={() => setAsOf(new Date().toISOString().slice(0, 10))}
-            className="text-[11px] text-primary hover:underline">今日</button>
+            className="text-[11px] text-primary hover:underline">{t("tp.todayBtn")}</button>
         </div>
         <div className="flex items-center gap-1 ml-auto">
-          <Label className="text-xs text-muted-foreground mr-1">表示（複数可）</Label>
-          {([["unit", "単元名"], ["content", "内容"], ["date", "日付"]] as const).map(([k, label]) => (
+          <Label className="text-xs text-muted-foreground mr-1">{t("tp.viewLabel")}</Label>
+          {([
+            ["unit", t("tp.fieldUnit")],
+            ["content", t("tp.fieldContent")],
+            ["date", t("tp.fieldDate")],
+          ] as [keyof typeof fields, string][]).map(([k, label]) => (
             <button key={k} onClick={() => toggleField(k)}
               className={cn(
                 "text-[11px] px-2 py-1 rounded border transition-colors flex items-center gap-1",
@@ -1416,31 +1436,31 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
 
       {/* 凡例 */}
       <div className="flex items-center gap-3 flex-wrap text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" />済</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" />今日</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block ring-1 ring-green-600" />次回</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/20 inline-block" />未</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-orange-400 inline-block" />遅延</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-sky-400 inline-block" />前倒し</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" />日程超過</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" />{t("tp.legendDone")}</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" />{t("tp.legendToday")}</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-green-500 inline-block ring-1 ring-green-600" />{t("tp.legendNext")}</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/20 inline-block" />{t("tp.legendNotYet")}</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-orange-400 inline-block" />{t("tp.legendBehind")}</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-sky-400 inline-block" />{t("tp.legendAhead")}</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-rose-400 inline-block" />{t("tp.legendOverflow")}</span>
       </div>
 
       {subjects.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 gap-2 text-center">
           <BookOpen size={28} className="text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">このクラスの教科データがありません</p>
+          <p className="text-sm text-muted-foreground">{t("tp.noClassSubjectData")}</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-md border border-border">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-muted/50 text-xs text-muted-foreground border-b border-border">
-                <th className="px-3 py-2 font-medium w-24">教科</th>
-                <th className="px-2 py-2 font-medium w-28">進捗</th>
-                <th className="px-2 py-2 font-medium min-w-[140px]">現在地</th>
-                <th className="px-2 py-2 font-medium min-w-[140px]">次の予定</th>
-                <th className="px-2 py-2 font-medium w-24">次回日付</th>
-                <th className="px-2 py-2 font-medium min-w-[200px]">進捗チャート</th>
+                <th className="px-3 py-2 font-medium w-24">{t("tp.colSubject")}</th>
+                <th className="px-2 py-2 font-medium w-28">{t("tp.colProgress")}</th>
+                <th className="px-2 py-2 font-medium min-w-[140px]">{t("tp.colCurrent")}</th>
+                <th className="px-2 py-2 font-medium min-w-[140px]">{t("tp.colNext")}</th>
+                <th className="px-2 py-2 font-medium w-24">{t("tp.colNextDate")}</th>
+                <th className="px-2 py-2 font-medium min-w-[200px]">{t("tp.colChart")}</th>
               </tr>
             </thead>
             <tbody>
@@ -1454,7 +1474,7 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
                       <button
                         onClick={() => onJumpToSubject(planId)}
                         className="text-xs font-medium text-foreground hover:text-primary hover:underline text-left"
-                        title="この教科の指導計画を開く"
+                        title={t("tp.openSubjectPlan")}
                       >
                         {subject}
                       </button>
@@ -1472,7 +1492,7 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
                     <td className="px-2 py-2">
                       <div className="text-xs">
                         {prog.currentRow ? cellContent(prog.currentRow) : (
-                          <span className="text-muted-foreground">{prog.completedCount === 0 ? "未開始" : "—"}</span>
+                          <span className="text-muted-foreground">{prog.completedCount === 0 ? t("tp.notStarted") : "—"}</span>
                         )}
                       </div>
                     </td>
@@ -1484,10 +1504,10 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
                       )}>
                         {prog.nextRow ? (
                           <>
-                            <span className="text-[10px]">{prog.nextRow.status === "today" ? "▶ 今日" : "→ 次回"}</span>
+                            <span className="text-[10px]">{prog.nextRow.status === "today" ? t("tp.todayMark") : t("tp.nextMark")}</span>
                             {cellContent(prog.nextRow)}
                           </>
-                        ) : "完了"}
+                        ) : t("tp.done")}
                       </div>
                     </td>
                     <td className="px-2 py-2 text-[11px] whitespace-nowrap text-muted-foreground">
@@ -1506,7 +1526,7 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
                                 statusCellColor(r.status, r.delayed, r.advanced),
                                 isNext && "ring-1 ring-green-600",
                               )}
-                              title={`${r.n}時 ${r.unitName}${r.content ? ` / ${r.content}` : ""}${r.slot ? ` (${fmtDate(r.slot)})` : r.status === "overflow" ? " (日程超過)" : ""}${r.delayed ? " ⚠進まず" : r.advanced ? " ⏩前倒し" : ""}`}
+                              title={`${tpf(t, "tp.chartCellTitle", { n: r.n, unit: r.unitName })}${r.content ? ` / ${r.content}` : ""}${r.slot ? ` (${fmtDate(r.slot)})` : r.status === "overflow" ? t("tp.overflowParen") : ""}${r.delayed ? t("tp.behindShort") : r.advanced ? t("tp.advancedShort") : ""}`}
                             />
                           );
                         })}
@@ -1521,7 +1541,7 @@ function HomeroomClassView({ combos, effectiveEntries, planMap, hiddenSubjectSet
       )}
 
       <p className="text-[10px] text-muted-foreground/60">
-        教科名をクリックすると、その教科の指導計画（単元×コマ表）へ移動します。
+        {t("tp.jumpHint")}
       </p>
     </div>
   );
@@ -1540,6 +1560,7 @@ export function TeachingPlanView() {
     isLoaded,
     mode,
   } = useTimetable();
+  const { t } = useLanguage();
 
   const hiddenSubjectSet = useMemo(
     () => new Set(teachingPlanHiddenSubjects),
@@ -1608,7 +1629,7 @@ export function TeachingPlanView() {
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-        ファイルを読み込んでください
+        {t("tp.loadFilePrompt")}
       </div>
     );
   }
@@ -1643,7 +1664,7 @@ export function TeachingPlanView() {
               : "border-transparent text-muted-foreground hover:text-foreground",
           )}
         >
-          <BookOpen size={13} />クラス別（学級担任）
+          <BookOpen size={13} />{t("tp.tabHomeroom")}
         </button>
         <button
           onClick={() => setMainView("subject")}
@@ -1654,7 +1675,7 @@ export function TeachingPlanView() {
               : "border-transparent text-muted-foreground hover:text-foreground",
           )}
         >
-          <FileText size={13} />教科別（指導計画編集）
+          <FileText size={13} />{t("tp.tabSubject")}
         </button>
       </div>
 
@@ -1674,15 +1695,15 @@ export function TeachingPlanView() {
       {/* ── 左サイドバー ── */}
       <div className="w-48 shrink-0 border-r border-border flex flex-col bg-muted/10">
         <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground">学年 × 教科</span>
-          <span className="text-[10px] text-muted-foreground">{allSidebarItems.length}件</span>
+          <span className="text-xs font-semibold text-muted-foreground">{t("tp.gradeSubject")}</span>
+          <span className="text-[10px] text-muted-foreground">{tpf(t, "tp.itemsCount", { n: allSidebarItems.length })}</span>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {allSidebarItems.length === 0 ? (
             <div className="px-3 py-6 text-xs text-muted-foreground text-center">
               <BookOpen size={20} className="mx-auto mb-2 opacity-30" />
-              時間割に教科データがありません
+              {t("tp.noSubjectData")}
             </div>
           ) : (
             allSidebarItems.map(item => {
@@ -1724,16 +1745,16 @@ export function TeachingPlanView() {
                       )} */}
                     </div>
                     <div className="text-[9px] text-muted-foreground mt-0.5 flex gap-1.5">
-                      {item.fromTimetable && <span>{totalCount}コマ</span>}
-                      {skipCount > 0 && <span className="text-orange-500">{skipCount}回スキップ</span>}
-                      {!hasPlan && item.fromTimetable && <span className="opacity-50">未入力</span>}
-                      {!item.fromTimetable && <span className="opacity-50">手動追加</span>}
+                      {item.fromTimetable && <span>{totalCount}{t("tp.komaCountSuffix")}</span>}
+                      {skipCount > 0 && <span className="text-orange-500">{skipCount}</span>}
+                      {!hasPlan && item.fromTimetable && <span className="opacity-50">{t("tp.notEntered")}</span>}
+                      {!item.fromTimetable && <span className="opacity-50">{t("tp.manualAdded")}</span>}
                     </div>
                   </button>
                   {/* v107 Phase G: その学年×教科だけ非表示 */}
                   <button
                     onClick={() => toggleTeachingPlanHiddenCombo(item.id)}
-                    title={`「${item.grade} ${item.subject}」を指導計画一覧から非表示にする`}
+                    title={tpf(t, "tp.hideThisCombo", { g: item.grade, s: item.subject })}
                     className="absolute top-2 right-1.5 p-1 rounded opacity-0 group-hover/side:opacity-100 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-opacity"
                   >
                     <EyeOff size={12} />
@@ -1750,24 +1771,24 @@ export function TeachingPlanView() {
             {hiddenCombosInUse.length > 0 && (
               <div>
                 <div className="text-[10px] text-muted-foreground/70 mb-1 flex items-center gap-1">
-                  <EyeOff size={10} />非表示（{hiddenCombosInUse.length}）
+                  <EyeOff size={10} />{tpf(t, "tp.hiddenN", { n: hiddenCombosInUse.length })}
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {hiddenCombosInUse.map(item => (
                     <span key={item.id} className="inline-flex items-center rounded border border-dashed border-border overflow-hidden">
                       <button
                         onClick={() => toggleTeachingPlanHiddenCombo(item.id)}
-                        title={`「${item.grade} ${item.subject}」を再表示`}
+                        title={tpf(t, "tp.showThisCombo", { g: item.grade, s: item.subject })}
                         className="text-[10px] px-1.5 py-0.5 text-muted-foreground hover:text-foreground hover:bg-muted/40 flex items-center gap-0.5"
                       >
                         <Eye size={10} />{item.grade} {item.subject}
                       </button>
                       <button
                         onClick={() => toggleTeachingPlanHiddenSubject(item.subject)}
-                        title={`「${item.subject}」を全学年で非表示にする`}
+                        title={tpf(t, "tp.hideAllGrades", { s: item.subject })}
                         className="text-[9px] px-1 py-0.5 border-l border-dashed border-border text-muted-foreground/60 hover:text-foreground hover:bg-muted/40"
                       >
-                        全学年
+                        {t("tp.allGrades")}
                       </button>
                     </span>
                   ))}
@@ -1777,17 +1798,17 @@ export function TeachingPlanView() {
             {hiddenSubjectsInUse.length > 0 && (
               <div>
                 <div className="text-[10px] text-muted-foreground/70 mb-1 flex items-center gap-1">
-                  <EyeOff size={10} />全学年非表示（{hiddenSubjectsInUse.length}）
+                  <EyeOff size={10} />{tpf(t, "tp.allGradesHiddenN", { n: hiddenSubjectsInUse.length })}
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {hiddenSubjectsInUse.map(subj => (
                     <button
                       key={subj}
                       onClick={() => toggleTeachingPlanHiddenSubject(subj)}
-                      title={`「${subj}」を全学年で再表示`}
+                      title={tpf(t, "tp.showAllGrades", { s: subj })}
                       className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 flex items-center gap-0.5"
                     >
-                      <Eye size={10} />{subj}（全学年）
+                      <Eye size={10} />{subj}{t("tp.allGradesParen")}
                     </button>
                   ))}
                 </div>
@@ -1803,7 +1824,7 @@ export function TeachingPlanView() {
             className="w-full h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
             onClick={() => setShowManualAdd(true)}
           >
-            <Plus size={11} />手動で追加
+            <Plus size={11} />{t("tp.manualAddBtn")}
           </Button>
         </div>
       </div>
@@ -1828,7 +1849,7 @@ export function TeachingPlanView() {
                   className="h-7 text-xs gap-1 text-destructive/60 hover:text-destructive hover:bg-destructive/10"
                   onClick={() => setConfirmDeleteId(activePlan.id)}
                 >
-                  <Trash2 size={11} />この指導計画のデータを削除
+                  <Trash2 size={11} />{t("tp.deleteThisPlan")}
                 </Button>
               </div>
             )}
@@ -1836,7 +1857,7 @@ export function TeachingPlanView() {
         ) : (
           <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
             <FileText size={32} className="text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">左から学年×教科を選択してください</p>
+            <p className="text-sm text-muted-foreground">{t("tp.selectGradeSubject")}</p>
           </div>
         )}
       </div>
@@ -1851,13 +1872,13 @@ export function TeachingPlanView() {
       <Dialog open={!!confirmDeleteId} onOpenChange={() => setConfirmDeleteId(null)}>
         <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle className="text-sm">指導計画データを削除しますか？</DialogTitle>
+            <DialogTitle className="text-sm">{t("tp.deleteConfirmTitle")}</DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground py-2">
-            入力した授業内容・単元データがすべて削除されます。この操作は取り消せません。
+            {t("tp.deleteConfirmBody")}
           </p>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setConfirmDeleteId(null)} className="h-7 text-xs">キャンセル</Button>
+            <Button variant="outline" size="sm" onClick={() => setConfirmDeleteId(null)} className="h-7 text-xs">{t("tp.cancel")}</Button>
             <Button
               variant="destructive" size="sm" className="h-7 text-xs"
               onClick={() => {
@@ -1867,7 +1888,7 @@ export function TeachingPlanView() {
                 }
                 setConfirmDeleteId(null);
               }}
-            >削除</Button>
+            >{t("tp.delete")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
