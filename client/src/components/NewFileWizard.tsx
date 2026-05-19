@@ -54,6 +54,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { normalizeClassName, classSort, generateDefaultClasses, SchoolType } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
+import { useLanguage, type TranslationKey } from "@/contexts/LanguageContext";
+
+type WizTFn = (k: TranslationKey) => string;
+function wfmt(t: WizTFn, key: TranslationKey, vars: Record<string, string | number> = {}): string {
+  let s: string = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
 
 interface Props {
   open: boolean;
@@ -62,11 +70,11 @@ interface Props {
 
 // Weekday columns in order
 const WEEKDAYS = [
-  { key: "Mon", label: "月" },
-  { key: "Tue", label: "火" },
-  { key: "Wed", label: "水" },
-  { key: "Thu", label: "木" },
-  { key: "Fri", label: "金" },
+  { key: "Mon", labelKey: "wiz.dayMon" as TranslationKey },
+  { key: "Tue", labelKey: "wiz.dayTue" as TranslationKey },
+  { key: "Wed", labelKey: "wiz.dayWed" as TranslationKey },
+  { key: "Thu", labelKey: "wiz.dayThu" as TranslationKey },
+  { key: "Fri", labelKey: "wiz.dayFri" as TranslationKey },
 ];
 
 const PERIODS = [1, 2, 3, 4, 5, 6];
@@ -99,11 +107,11 @@ const DEFAULT_SUBJECTS: SubjectDef[] = [
   { name: "外国語活動", color: "#6d28d9" },
 ];
 
-// School type definitions
-const SCHOOL_TYPES: { value: SchoolType; label: string; grades: number; defaultClasses: number }[] = [
-  { value: "elementary", label: "小学校（6年制）", grades: 6, defaultClasses: 3 },
-  { value: "junior", label: "中学校（3年制）", grades: 3, defaultClasses: 3 },
-  { value: "high", label: "高等学校（3年制）", grades: 3, defaultClasses: 3 },
+// School type definitions（labelKeyからt()で解決）
+const SCHOOL_TYPES: { value: SchoolType; labelKey: TranslationKey; grades: number; defaultClasses: number }[] = [
+  { value: "elementary", labelKey: "wiz.schoolElementary", grades: 6, defaultClasses: 3 },
+  { value: "junior", labelKey: "wiz.schoolJunior", grades: 3, defaultClasses: 3 },
+  { value: "high", labelKey: "wiz.schoolHigh", grades: 3, defaultClasses: 3 },
 ];
 
 // Compute default academic year from current date
@@ -140,25 +148,26 @@ function getSemesterDefaults(year: number, semester: 1 | 2 | 3, system: Semester
 
 // Step indicator component
 function StepIndicator({ current, total, isHomeroom, isSubjectTeacher }: { current: number; total: number; isHomeroom: boolean; isSubjectTeacher?: boolean }) {
+  const { t } = useLanguage();
   const baseSteps = [
-    { icon: <School size={14} />, label: "学校情報" },
-    { icon: <Calendar size={14} />, label: "授業日設定" },
-    { icon: <Grid3X3 size={14} />, label: "基本時間割" },
-    { icon: <Check size={14} />, label: "確認・作成" },
+    { icon: <School size={14} />, label: t("wiz.stepSchoolInfo") },
+    { icon: <Calendar size={14} />, label: t("wiz.stepClassDays") },
+    { icon: <Grid3X3 size={14} />, label: t("wiz.stepBaseTimetable") },
+    { icon: <Check size={14} />, label: t("wiz.stepConfirm") },
   ];
   const homeroomSteps = [
-    { icon: <School size={14} />, label: "学校情報" },
-    { icon: <Calendar size={14} />, label: "授業日設定" },
-    { icon: <Grid3X3 size={14} />, label: "授業コマ設定" },
-    { icon: <BookMarked size={14} />, label: "教科設定" },
-    { icon: <Check size={14} />, label: "確認・作成" },
+    { icon: <School size={14} />, label: t("wiz.stepSchoolInfo") },
+    { icon: <Calendar size={14} />, label: t("wiz.stepClassDays") },
+    { icon: <Grid3X3 size={14} />, label: t("wiz.stepPeriodSetup") },
+    { icon: <BookMarked size={14} />, label: t("wiz.stepSubjectSetup") },
+    { icon: <Check size={14} />, label: t("wiz.stepConfirm") },
   ];
   const subjectTeacherSteps = [
-    { icon: <School size={14} />, label: "学校情報" },
-    { icon: <Calendar size={14} />, label: "授業日設定" },
-    { icon: <Grid3X3 size={14} />, label: "基本時間割" },
-    { icon: <BookMarked size={14} />, label: "教科設定" },
-    { icon: <Check size={14} />, label: "確認・作成" },
+    { icon: <School size={14} />, label: t("wiz.stepSchoolInfo") },
+    { icon: <Calendar size={14} />, label: t("wiz.stepClassDays") },
+    { icon: <Grid3X3 size={14} />, label: t("wiz.stepBaseTimetable") },
+    { icon: <BookMarked size={14} />, label: t("wiz.stepSubjectSetup") },
+    { icon: <Check size={14} />, label: t("wiz.stepConfirm") },
   ];
   const steps = isHomeroom ? homeroomSteps : isSubjectTeacher ? subjectTeacherSteps : baseSteps;
 
@@ -203,6 +212,8 @@ function StepIndicator({ current, total, isHomeroom, isSubjectTeacher }: { curre
 
 export function NewFileWizard({ open, onClose }: Props) {
   const { loadTimetableFile, goToDate } = useTimetable();
+  const { t } = useLanguage();
+  const wf = (key: TranslationKey, vars: Record<string, string | number> = {}) => wfmt(t, key, vars);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   // 祝日コマ削除確認ダイアログ
@@ -264,7 +275,7 @@ export function NewFileWizard({ open, onClose }: Props) {
   const [weekCount, setWeekCount] = useState<1 | 2 | 3 | 4>(1);
   const [activeWeekTab, setActiveWeekTab] = useState(0);
   const [customWeekCycleStart, setCustomWeekCycleStart] = useState(""); // 基準日手動入力
-  const WEEK_LABELS = ["A週", "B週", "C週", "D週"];
+  const WEEK_LABELS = [t("wiz.weekA"), t("wiz.weekB"), t("wiz.weekC"), t("wiz.weekD")];
 
   // 複数週のbaseSchedule配列（weekCount分）
   const makeEmptySchedule = () => {
@@ -395,7 +406,7 @@ export function NewFileWizard({ open, onClose }: Props) {
     const normalized = normalizeClassName(raw);
     if (!normalized) return;
     if (generatedClasses.includes(normalized) || extraClasses.includes(normalized)) {
-      setCustomClassError("すでに存在するクラス名です");
+      setCustomClassError(t("wiz.dupClassName"));
       return;
     }
     setExtraClasses(prev => [...prev, normalized]);
@@ -467,7 +478,7 @@ export function NewFileWizard({ open, onClose }: Props) {
     const raw = (name ?? newSubjectInput).trim();
     if (!raw) return;
     if (subjects.some(s => s.name === raw)) {
-      if (!name) setNewSubjectError("すでに存在する教科名です");
+      if (!name) setNewSubjectError(t("wiz.dupSubjectName"));
       return;
     }
     setSubjects(prev => [...prev, { name: raw }]);
@@ -575,7 +586,7 @@ export function NewFileWizard({ open, onClose }: Props) {
           if (Object.keys(dayTimes).length > 0) newByDay[dk] = dayTimes;
         });
         if (!hasAny) {
-          setWizardPeriodLLMError('有効な時刻データが見つかりません。HH:MM形式で入力されているか確認してください。');
+          setWizardPeriodLLMError(t("wiz.invalidTimeData"));
           return;
         }
         setWizardPeriodTimesByDay(newByDay);
@@ -597,7 +608,7 @@ export function NewFileWizard({ open, onClose }: Props) {
           if (t && isValidTime(t.start) && isValidTime(t.end)) newTimes[p] = { start: t.start, end: t.end };
         });
         if (Object.keys(newTimes).length === 0) {
-          setWizardPeriodLLMError('有効な時刻データが見つかりません。HH:MM形式で入力されているか確認してください。');
+          setWizardPeriodLLMError(t("wiz.invalidTimeData"));
           return;
         }
         setWizardPeriodTimes(newTimes);
@@ -606,7 +617,7 @@ export function NewFileWizard({ open, onClose }: Props) {
       setWizardPeriodLLMJson('');
       setShowWizardPeriodLLM(false);
     } catch {
-      setWizardPeriodLLMError('JSONのパースに失敗しました。正しいJSON形式で入力してください。');
+      setWizardPeriodLLMError(t("wiz.jsonParseFail"));
     }
   };
 
@@ -634,7 +645,7 @@ export function NewFileWizard({ open, onClose }: Props) {
     try {
       const parsed = JSON.parse(wizardLLMJson);
       if (!parsed.weekdays || typeof parsed.weekdays !== 'object') {
-        setWizardLLMError('weekdaysフィールドが見つかりません。テンプレートの形式で入力してください。');
+        setWizardLLMError(t("wiz.noWeekdaysField"));
         return;
       }
       const dayMap: Record<string, string> = { Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat', Sun: 'Sun' };
@@ -679,7 +690,7 @@ export function NewFileWizard({ open, onClose }: Props) {
       setWizardLLMJson('');
       setShowWizardLLM(false);
     } catch {
-      setWizardLLMError('JSONのパースに失敗しました。正しいJSON形式で入力してください。');
+      setWizardLLMError(t("wiz.jsonParseFail"));
     }
   };
 
@@ -711,7 +722,7 @@ export function NewFileWizard({ open, onClose }: Props) {
     const raw = (name ?? subjectTeacherInput).trim();
     if (!raw) return;
     if (subjectTeacherSubjects.some(s => s.name === raw)) {
-      if (!name) setSubjectTeacherError("すでに追加されています");
+      if (!name) setSubjectTeacherError(t("wiz.alreadyAdded"));
       return;
     }
     const defaultColor = DEFAULT_SUBJECTS.find(s => s.name === raw)?.color;
@@ -983,7 +994,7 @@ export function NewFileWizard({ open, onClose }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FilePlus size={18} />
-            新規時間割を作成
+            {t("wiz.dialogTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -993,45 +1004,45 @@ export function NewFileWizard({ open, onClose }: Props) {
         {step === 1 && (
           <div className="space-y-5">
             <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-              学校名・年度・学期・クラス構成・使用モードを設定します。これらは後から変更できます。
+              {wf("wiz.step1Intro")}
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">学校名 <span className="text-muted-foreground font-normal">(任意)</span></Label>
+              <Label className="text-sm font-medium">{t("wiz.schoolName")} <span className="text-muted-foreground font-normal">{t("wiz.optional")}</span></Label>
               <Input
                 value={school}
                 onChange={e => setSchool(e.target.value)}
-                placeholder="例: ○○小学校"
+                placeholder={t("wiz.schoolNamePh")}
                 className="h-9"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">学校種別 <span className="text-destructive">*</span></Label>
+              <Label className="text-sm font-medium">{t("wiz.schoolType")} <span className="text-destructive">*</span></Label>
               <Select value={schoolType} onValueChange={v => handleSchoolTypeChange(v as SchoolType)}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {SCHOOL_TYPES.map(s => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    <SelectItem key={s.value} value={s.value}>{t(s.labelKey)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">学期制 <span className="text-destructive">*</span></Label>
+              <Label className="text-sm font-medium">{t("wiz.semesterSystem")} <span className="text-destructive">*</span></Label>
               <Select value={semesterSystem} onValueChange={v => handleSemesterSystemChange(v as SemesterSystem)}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="trimester">3学期制（1学期・2学期・3学期）</SelectItem>
-                  <SelectItem value="semester">2学期制（前期・後期）</SelectItem>
+                  <SelectItem value="trimester">{t("wiz.trimester")}</SelectItem>
+                  <SelectItem value="semester">{t("wiz.bimester")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">年度 <span className="text-destructive">*</span></Label>
+                <Label className="text-sm font-medium">{t("wiz.year")} <span className="text-destructive">*</span></Label>
                 <Select
                   value={String(academicYear)}
                   onValueChange={v => handleAcademicYearChange(Number(v))}
@@ -1039,14 +1050,14 @@ export function NewFileWizard({ open, onClose }: Props) {
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent className="max-h-60 overflow-y-auto">
                     {getYearOptions().map(y => (
-                      <SelectItem key={y} value={String(y)}>{y}年度</SelectItem>
+                      <SelectItem key={y} value={String(y)}>{wf("wiz.yearSuffix", { y })}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">学期 <span className="text-destructive">*</span></Label>
+                <Label className="text-sm font-medium">{t("wiz.semester")} <span className="text-destructive">*</span></Label>
                 <Select
                   value={String(semesterNumber)}
                   onValueChange={v => handleSemesterChange(Number(v) as 1 | 2 | 3)}
@@ -1055,14 +1066,14 @@ export function NewFileWizard({ open, onClose }: Props) {
                   <SelectContent>
                     {semesterSystem === "trimester" ? (
                       <>
-                        <SelectItem value="1">1学期（4月〜7月）</SelectItem>
-                        <SelectItem value="2">2学期（9月〜12月）</SelectItem>
-                        <SelectItem value="3">3学期（1月〜3月）</SelectItem>
+                        <SelectItem value="1">{t("wiz.term1")}</SelectItem>
+                        <SelectItem value="2">{t("wiz.term2")}</SelectItem>
+                        <SelectItem value="3">{t("wiz.term3")}</SelectItem>
                       </>
                     ) : (
                       <>
-                        <SelectItem value="1">前期（4月〜9月）</SelectItem>
-                        <SelectItem value="2">後期（10月〜3月）</SelectItem>
+                        <SelectItem value="1">{t("wiz.firstHalf")}</SelectItem>
+                        <SelectItem value="2">{t("wiz.secondHalf")}</SelectItem>
                       </>
                     )}
                   </SelectContent>
@@ -1074,19 +1085,19 @@ export function NewFileWizard({ open, onClose }: Props) {
             <div className="space-y-3 border-t border-border/50 pt-4">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 <BookOpen size={14} />
-                使用モード <span className="text-destructive">*</span>
+                {t("wiz.useMode")} <span className="text-destructive">*</span>
               </Label>
               <div className="grid grid-cols-1 gap-2">
                 {[
                   {
                     value: 'single_subject' as TimetableMode,
-                    label: '教科担任モード',
-                    desc: '複数クラスを担当する教科担任向け。各コマにクラスを割り当て、担当教科を登録できます。',
+                    label: t("wiz.modeSubjectTeacher"),
+                    desc: t("wiz.modeSubjectTeacherDesc"),
                   },
                   {
                     value: 'homeroom' as TimetableMode,
-                    label: '学級担任モード',
-                    desc: '担任クラスを固定し、各コマに教科名を表示する。学級担任向け。',
+                    label: t("wiz.modeHomeroom"),
+                    desc: t("wiz.modeHomeroomDesc"),
                   },
                 ].map(m => (
                   <div
@@ -1114,9 +1125,9 @@ export function NewFileWizard({ open, onClose }: Props) {
               {/* 教科担任モード: 担当教科設定 */}
               {isSubjectTeacherMode && (
                 <div className="space-y-2 pl-1 pt-1">
-                  <Label className="text-xs font-medium">担当教科 <span className="text-muted-foreground font-normal">(任意)</span></Label>
+                  <Label className="text-xs font-medium">{t("wiz.taughtSubjects")} <span className="text-muted-foreground font-normal">{t("wiz.optional")}</span></Label>
                   <p className="text-[10px] text-muted-foreground/70">
-                    担当教科を登録するとコマに教科情報を表示できます。1教科の場合は全コマに自動適用されます。
+                    {t("wiz.taughtSubjectsDesc")}
                   </p>
 
                   {/* 登録済み教科のチップ表示 */}
@@ -1131,7 +1142,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                             color: s.color ?? '#666',
                             border: `1.5px solid ${s.color ?? '#ccc'}60`,
                           }}
-                          title="クリックで削除"
+                          title={t("wiz.clickToDelete")}
                           onClick={() => removeSubjectTeacherSubject(s.name)}
                         >
                           {s.name} <X size={9} />
@@ -1142,7 +1153,7 @@ export function NewFileWizard({ open, onClose }: Props) {
 
                   {/* 教科を選択（チップボタン一覧） */}
                   <div className="space-y-1.5">
-                    <p className="text-[10px] text-muted-foreground font-medium">教科を選択:</p>
+                    <p className="text-[10px] text-muted-foreground font-medium">{t("wiz.selectSubjectLabel")}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {DEFAULT_SUBJECTS.filter(s => !subjectTeacherSubjects.some(x => x.name === s.name)).map(s => (
                         <button
@@ -1168,18 +1179,18 @@ export function NewFileWizard({ open, onClose }: Props) {
                       className="text-[11px] text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors"
                     >
                       <Plus size={10} />
-                      <span>リストにない教科を追加</span>
+                      <span>{t("wiz.addSubjectNotInList")}</span>
                     </button>
                     <div className="flex gap-2">
                       <Input
                         value={subjectTeacherInput}
                         onChange={e => { setSubjectTeacherInput(e.target.value); setSubjectTeacherError(""); }}
                         onKeyDown={e => e.key === "Enter" && addSubjectTeacherSubject()}
-                        placeholder="教科名を入力..."
+                        placeholder={t("wiz.subjectNamePh")}
                         className="h-8 text-xs flex-1"
                       />
                       <Button size="sm" variant="outline" className="gap-1 text-xs h-8" onClick={() => addSubjectTeacherSubject()}>
-                        <Plus size={11} />追加
+                        <Plus size={11} />{t("wiz.add")}
                       </Button>
                     </div>
                     {subjectTeacherError && <p className="text-xs text-red-500">{subjectTeacherError}</p>}
@@ -1187,7 +1198,7 @@ export function NewFileWizard({ open, onClose }: Props) {
 
                   {subjectTeacherSubjects.length >= 2 && (
                     <p className="text-[10px] text-primary/70 bg-primary/5 rounded px-2 py-1">
-                      ✓ 担当教科が2つ以上のため、複数教科担任として処理されます
+                      {t("wiz.multiSubjectNote")}
                     </p>
                   )}
                 </div>
@@ -1196,14 +1207,14 @@ export function NewFileWizard({ open, onClose }: Props) {
               {/* Homeroom class selection */}
               {isHomeroomMode && (
                 <div className="space-y-1.5 pl-1 pt-1">
-                  <Label className="text-xs text-muted-foreground">担任クラス <span className="text-destructive">*</span></Label>
+                  <Label className="text-xs text-muted-foreground">{t("wiz.homeroomClass")} <span className="text-destructive">*</span></Label>
                   <Select value={homeroomClass || "__none__"} onValueChange={v => setHomeroomClass(v === "__none__" ? "" : v)}>
                     <SelectTrigger className="h-9">
-                      <SelectValue placeholder="担任クラスを選択..." />
+                      <SelectValue placeholder={t("wiz.homeroomClassSelect")} />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
                       <SelectItem value="__none__">
-                        <span className="text-muted-foreground">— 選択してください —</span>
+                        <span className="text-muted-foreground">{t("wiz.selectPlaceholder")}</span>
                       </SelectItem>
                       {allClasses.map(c => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -1211,7 +1222,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     </SelectContent>
                   </Select>
                   {!homeroomClass && (
-                    <p className="text-xs text-amber-600">担任クラスを選択してください（次へ進むために必要）</p>
+                    <p className="text-xs text-amber-600">{t("wiz.selectHomeroomFirst")}</p>
                   )}
                 </div>
               )}
@@ -1220,16 +1231,16 @@ export function NewFileWizard({ open, onClose }: Props) {
             {/* Class Setup */}
             <div className="space-y-3 border-t border-border/50 pt-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">クラス構成</Label>
+                <Label className="text-sm font-medium">{t("wiz.classSetup")}</Label>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">一括設定:</span>
+                  <span className="text-xs text-muted-foreground">{t("wiz.bulkSet")}</span>
                   {[2, 3, 4, 5].map(n => (
                     <button
                       key={n}
                       onClick={() => setBulkCount(n)}
                       className="text-[11px] px-2 py-0.5 rounded border border-border hover:bg-muted transition-colors"
                     >
-                      各{n}組
+                      {wf("wiz.bulkEach", { n })}
                     </button>
                   ))}
                 </div>
@@ -1239,9 +1250,9 @@ export function NewFileWizard({ open, onClose }: Props) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-muted/50">
-                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">学年</th>
-                      <th className="text-center px-3 py-2 text-xs font-medium text-muted-foreground">クラス数</th>
-                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">生成されるクラス</th>
+                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">{t("wiz.grade")}</th>
+                      <th className="text-center px-3 py-2 text-xs font-medium text-muted-foreground">{t("wiz.classCount")}</th>
+                      <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">{t("wiz.generatedClasses")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1251,7 +1262,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                       const classes = Array.from({ length: count }, (_, j) => `${gradeNum}年${j + 1}組`);
                       return (
                         <tr key={gradeNum} className="border-t border-border/50">
-                          <td className="px-3 py-2 font-medium">{gradeNum}年生</td>
+                          <td className="px-3 py-2 font-medium">{wf("wiz.gradeNthGrade", { g: gradeNum })}</td>
                           <td className="px-3 py-2">
                             <div className="flex items-center justify-center gap-1.5">
                               <button
@@ -1298,7 +1309,7 @@ export function NewFileWizard({ open, onClose }: Props) {
 
               {/* Extra custom classes */}
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">追加クラス（自由記述）</p>
+                <p className="text-xs text-muted-foreground font-medium">{t("wiz.extraClassesFreeText")}</p>
                 <div className="flex gap-2">
                   <Input
                     value={customClassInput}
@@ -1307,12 +1318,12 @@ export function NewFileWizard({ open, onClose }: Props) {
                       setCustomClassError("");
                     }}
                     onKeyDown={e => e.key === "Enter" && addCustomClass()}
-                    placeholder="例: 特別支援学級、英語グループA"
+                    placeholder={t("wiz.classNameExtraPh")}
                     className="h-8 text-sm flex-1"
                   />
                   <Button size="sm" variant="outline" className="gap-1 text-xs h-8" onClick={addCustomClass}>
                     <Plus size={11} />
-                    追加
+                    {t("wiz.add")}
                   </Button>
                 </div>
                 {customClassError && <p className="text-xs text-red-500">{customClassError}</p>}
@@ -1323,7 +1334,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                         key={c}
                         className="flex items-center gap-1 text-[11px] bg-orange-100 text-orange-700 rounded px-2 py-0.5 cursor-pointer hover:bg-red-100 hover:text-red-600 transition-colors"
                         onClick={() => setExtraClasses(prev => prev.filter(x => x !== c))}
-                        title="クリックで削除"
+                        title={t("wiz.clickToDelete")}
                       >
                         {c} ×
                       </span>
@@ -1333,12 +1344,12 @@ export function NewFileWizard({ open, onClose }: Props) {
               </div>
 
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">作成されるファイル名</p>
+                <p className="text-xs text-muted-foreground mb-1">{t("wiz.generatedFileName")}</p>
                 <p className="text-sm font-semibold text-foreground">{title}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  クラス合計: <span className="font-medium text-foreground">{allClasses.length}</span> クラス
+                  {wf("wiz.classTotal", { n: allClasses.length })}
                   {isHomeroomMode && homeroomClass && (
-                    <span className="ml-2 text-amber-600">/ 担任: <span className="font-medium">{homeroomClass}</span></span>
+                    <span className="ml-2 text-amber-600">{t("wiz.homeroomPrefix")}<span className="font-medium">{homeroomClass}</span></span>
                   )}
                 </p>
               </div>
@@ -1350,12 +1361,12 @@ export function NewFileWizard({ open, onClose }: Props) {
         {step === 2 && (
           <div className="space-y-5">
             <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-              学期の始業式・終業式の日付と、土日授業の有無を設定します。
+              {t("wiz.step2Desc")}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">始業式 <span className="text-destructive">*</span></Label>
+                <Label className="text-sm font-medium">{t("wiz.startCeremony")} <span className="text-destructive">*</span></Label>
                 <Input
                   type="date"
                   value={startDate}
@@ -1364,7 +1375,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">終業式 <span className="text-destructive">*</span></Label>
+                <Label className="text-sm font-medium">{t("wiz.endCeremony")} <span className="text-destructive">*</span></Label>
                 <Input
                   type="date"
                   value={endDate}
@@ -1376,7 +1387,7 @@ export function NewFileWizard({ open, onClose }: Props) {
 
             {startDate && endDate && startDate > endDate && (
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
-                終業式は始業式より後の日付にしてください
+                {t("wiz.endAfterStart")}
               </div>
             )}
 
@@ -1387,69 +1398,68 @@ export function NewFileWizard({ open, onClose }: Props) {
               const weekdays = Math.floor(days * 5 / 7);
               return (
                 <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">{days}</span>日間 /
-                  平日約<span className="font-medium text-foreground"> {weekdays}</span>日
-                  {hasSaturday && <span>・土曜<span className="font-medium text-foreground"> {Math.floor(days / 7)}</span>日</span>}
+                  <span className="font-medium text-foreground">{wf("wiz.dateSummaryBase", { days, weekdays })}</span>
+                  {hasSaturday && <span>{wf("wiz.dateSummarySat", { n: Math.floor(days / 7) })}</span>}
                 </div>
               );
             })()}
 
             <div className="space-y-3">
-              <p className="text-sm font-medium">週末授業の設定</p>
+              <p className="text-sm font-medium">{t("wiz.weekendClassSetup")}</p>
 
               <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
                 <div>
-                  <p className="text-sm font-medium">土曜授業</p>
-                  <p className="text-xs text-muted-foreground">毎週土曜日を授業日として追加</p>
+                  <p className="text-sm font-medium">{t("wiz.saturdayClass")}</p>
+                  <p className="text-xs text-muted-foreground">{t("wiz.saturdayClassAdd")}</p>
                 </div>
                 <Switch checked={hasSaturday} onCheckedChange={setHasSaturday} />
               </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
                 <div>
-                  <p className="text-sm font-medium">日曜授業</p>
-                  <p className="text-xs text-muted-foreground">毎週日曜日を授業日として追加</p>
+                  <p className="text-sm font-medium">{t("wiz.sundayClass")}</p>
+                  <p className="text-xs text-muted-foreground">{t("wiz.sundayClassAdd")}</p>
                 </div>
                 <Switch checked={hasSunday} onCheckedChange={setHasSunday} />
               </div>
 
               <p className="text-xs text-muted-foreground">
-                ※ 土日授業をOFFにしても、後から週単位で臨時授業日を追加できます
+                {t("wiz.weekendOffNote")}
               </p>
             </div>
 
             {/* 祝日自動設定 */}
             <div className="space-y-2">
-              <p className="text-sm font-medium">祝日の設定</p>
+              <p className="text-sm font-medium">{t("wiz.holidaySetup")}</p>
               <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
                 <div>
-                  <p className="text-sm font-medium">祝日を自動で休校日に設定</p>
-                  <p className="text-xs text-muted-foreground">内閣府の祝日データを取得し、学期期間内の祝日を休校日として登録します。後から変更も可能です</p>
+                  <p className="text-sm font-medium">{t("wiz.holidayAuto")}</p>
+                  <p className="text-xs text-muted-foreground">{t("wiz.holidayAutoDesc")}</p>
                 </div>
                 <Switch checked={autoSetHolidays} onCheckedChange={setAutoSetHolidays} />
               </div>
               {!autoSetHolidays && (
                 <p className="text-xs text-muted-foreground pl-1">
-                  ※ 祝日を休校日にしない場合は、作成後に「祝日・休校日の設定」から手動で登録できます
+                  {t("wiz.holidayManualNote")}
                 </p>
               )}
             </div>
 
             {/* 時程表設定（オプション） */}
             <div className="space-y-2">
-              <p className="text-sm font-medium">時程表の設定（オプション）</p>
+              <p className="text-sm font-medium">{t("wiz.periodTimesOption")}</p>
 
               {/* 時程表LLMヘルパーパネル */}
               {showWizardPeriodLLM && (
                 <div className="border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">✨ 時程表 LLM読み取りヘルパー</p>
+                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">{t("wiz.llmHelperPeriodTimes")}</p>
                     <button onClick={() => { setShowWizardPeriodLLM(false); setWizardPeriodLLMError(null); }} className="text-blue-400 hover:text-blue-600 transition-colors">
                       <X size={14} />
                     </button>
                   </div>
                   <p className="text-xs text-blue-700 dark:text-blue-400">
-                    手順：① JSONテンプレートをコピー → ② プロンプトをコピー → ③ ChatGPT/Claudeに「プロンプト＋テンプレート＋時程表画像」を貼り付けて送信 → ④ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
+                    {t("wiz.llmStepsPeriodTimes")}
                   </p>
                   <div className="flex gap-2 flex-wrap">
                     <Button
@@ -1459,7 +1469,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                       onClick={handleWizardPeriodLLMCopyTemplate}
                     >
                       {wizardPeriodLLMTemplateCopied ? <Check size={12} /> : null}
-                      {wizardPeriodLLMTemplateCopied ? 'コピー済み!' : '① JSONテンプレートをコピー'}
+                      {wizardPeriodLLMTemplateCopied ? t("wiz.copied") : t("wiz.copyJsonTemplate")}
                     </Button>
                     <Button
                       size="sm"
@@ -1468,11 +1478,11 @@ export function NewFileWizard({ open, onClose }: Props) {
                       onClick={handleWizardPeriodLLMCopyPrompt}
                     >
                       {wizardPeriodLLMCopied ? <Check size={12} /> : null}
-                      {wizardPeriodLLMCopied ? 'コピー済み!' : '② プロンプトをコピー'}
+                      {wizardPeriodLLMCopied ? t("wiz.copied") : t("wiz.copyPrompt")}
                     </Button>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-blue-700 dark:text-blue-400">③ LLMが返したJSONを貼り付け</Label>
+                    <Label className="text-xs text-blue-700 dark:text-blue-400">{t("wiz.llmStep3Paste")}</Label>
                     <textarea
                       className="w-full h-28 text-xs font-mono rounded border border-blue-200 bg-white dark:bg-slate-900 p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
                       value={wizardPeriodLLMJson}
@@ -1487,7 +1497,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                       disabled={!wizardPeriodLLMJson.trim()}
                     >
                       <Check size={12} />
-                      インポートして時程表に反映
+                      {t("wiz.importToPeriodTimes")}
                     </Button>
                   </div>
                 </div>
@@ -1497,11 +1507,11 @@ export function NewFileWizard({ open, onClose }: Props) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">
                     {wizardPeriodTimes && Object.keys(wizardPeriodTimes).length > 0
-                      ? `時程表設定済 — ${Object.keys(wizardPeriodTimes).length}コマ`
-                      : "各コマの開始・終了時刻"}
+                      ? wf("wiz.periodTimesSet", { n: Object.keys(wizardPeriodTimes).length })
+                      : t("wiz.periodStartEnd")}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    設定するとGoogleカレンダー等へのICS書き出しで正確な時刻が反映されます。後から変更も可能です
+                    {t("wiz.periodTimesDesc")}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 ml-3 shrink-0">
@@ -1511,7 +1521,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     className="gap-1.5 text-xs"
                     onClick={() => { setShowWizardPeriodLLM(v => !v); setWizardPeriodLLMError(null); }}
                   >
-                    ✨ LLM読み取り
+                    {t("wiz.llmRead")}
                   </Button>
                   <Button
                     variant="outline"
@@ -1520,7 +1530,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     onClick={() => setShowPeriodTimesInWizard(true)}
                   >
                     <Clock size={13} />
-                    {wizardPeriodTimes && Object.keys(wizardPeriodTimes).length > 0 ? "手動編集" : "手動設定"}
+                    {wizardPeriodTimes && Object.keys(wizardPeriodTimes).length > 0 ? t("wiz.manualEdit") : t("wiz.manualSet")}
                   </Button>
                 </div>
               </div>
@@ -1549,17 +1559,17 @@ export function NewFileWizard({ open, onClose }: Props) {
             {showWizardLLM && (
               <div className="border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">✨ LLM読み取りヘルパー</p>
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">{t("wiz.llmHelper")}</p>
                   <button onClick={() => { setShowWizardLLM(false); setWizardLLMError(null); }} className="text-blue-400 hover:text-blue-600 transition-colors">
                     <X size={14} />
                   </button>
                 </div>
                 <p className="text-xs text-blue-700 dark:text-blue-400">
-                  手順：① JSONテンプレートをコピー → ② プロンプトをコピー → ③ ChatGPT/Claudeに「プロンプト＋テンプレート＋時間割画像」を貼り付けて送信 → ④ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
+                  {t("wiz.llmStepsTimetable")}
                 </p>
                 {isHomeroomMode && (
                   <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded px-2 py-1">
-                    ℹ️ 学級担任モード: 各コマに「教科名」を入れるように指示します。授業あり/なし（Step 3）と教科割り当て（Step 4）が一度に反映されます。
+                    {t("wiz.homeroomModeHint")}
                   </p>
                 )}
                 <div className="flex gap-2 flex-wrap">
@@ -1570,7 +1580,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     onClick={handleWizardLLMCopyTemplate}
                   >
                     {wizardLLMTemplateCopied ? <Check size={12} /> : null}
-                    {wizardLLMTemplateCopied ? 'コピー済み!' : '① JSONテンプレートをコピー'}
+                    {wizardLLMTemplateCopied ? t("wiz.copied") : t("wiz.copyJsonTemplate")}
                   </Button>
                   <Button
                     size="sm"
@@ -1579,11 +1589,11 @@ export function NewFileWizard({ open, onClose }: Props) {
                     onClick={handleWizardLLMCopyPrompt}
                   >
                     {wizardLLMCopied ? <Check size={12} /> : null}
-                    {wizardLLMCopied ? 'コピー済み!' : '② プロンプトをコピー'}
+                    {wizardLLMCopied ? t("wiz.copied") : t("wiz.copyPrompt")}
                   </Button>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-blue-700 dark:text-blue-400">③ LLMが返したJSONを貼り付け</Label>
+                  <Label className="text-xs text-blue-700 dark:text-blue-400">{t("wiz.llmStep3Paste")}</Label>
                   <textarea
                     className="w-full h-28 text-xs font-mono rounded border border-blue-200 bg-white dark:bg-slate-900 p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
                     value={wizardLLMJson}
@@ -1600,7 +1610,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     disabled={!wizardLLMJson.trim()}
                   >
                     <Check size={12} />
-                    インポートしてグリッドに反映
+                    {t("wiz.importToGrid")}
                   </Button>
                 </div>
               </div>
@@ -1611,10 +1621,10 @@ export function NewFileWizard({ open, onClose }: Props) {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-semibold mb-1">担任モード — {homeroomClass} の授業コマ設定</p>
+                      <p className="font-semibold mb-1">{wf("wiz.homeroomModePeriodSetup", { c: homeroomClass })}</p>
                       <p className="text-xs">
-                        各コマをクリックして「授業あり（ON）」「授業なし（OFF）」を切り替えます。<br />
-                        デフォルトはすべてONです。学年によって5時間目まで、4時間目まで等の違いをここで設定してください。
+                        {t("wiz.periodToggleDesc1")}<br />
+                        {t("wiz.periodToggleDesc2")}
                       </p>
                     </div>
                     <Button
@@ -1623,7 +1633,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                       className="shrink-0 gap-1.5 text-xs h-7 border-amber-300 text-amber-700 hover:bg-amber-100"
                       onClick={() => { setShowWizardLLM(v => !v); setWizardLLMError(null); }}
                     >
-                      ✨ LLM読み取り
+                      {t("wiz.llmRead")}
                     </Button>
                   </div>
                 </div>
@@ -1635,7 +1645,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                         <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
                         {WEEKDAYS.map(d => (
                           <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
-                            {d.label}
+                            {t(d.labelKey)}
                           </th>
                         ))}
                       </tr>
@@ -1644,7 +1654,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                       {PERIODS.map(period => (
                         <tr key={period}>
                           <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
-                            {period}限
+                            {wf("wiz.periodNth", { p: period })}
                           </td>
                           {WEEKDAYS.map(d => {
                             const isOn = homeroomSlots[d.key]?.[period] ?? true;
@@ -1662,7 +1672,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                                         "flex-1 text-xs font-semibold transition-all text-amber-700 hover:bg-amber-100 px-1",
                                         isOverridden && "text-blue-700"
                                       )}
-                                      title="クリックでOFFに切り替え"
+                                      title={t("wiz.clickToOff")}
                                     >
                                       {displayClass || "—"}
                                     </button>
@@ -1676,7 +1686,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                                       </SelectTrigger>
                                       <SelectContent className="max-h-48">
                                         <SelectItem value="__homeroom__" className="text-xs">
-                                          <span className="text-amber-700 font-medium">{homeroomClass || "担任クラス"} （担任）</span>
+                                          <span className="text-amber-700 font-medium">{homeroomClass || t("wiz.homeroomClass")} {t("wiz.homeroomParen")}</span>
                                         </SelectItem>
                                         {allClasses.filter(c => c !== homeroomClass).map(c => (
                                           <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
@@ -1702,9 +1712,8 @@ export function NewFileWizard({ open, onClose }: Props) {
                 </div>
 
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-                  <div><span className="font-medium text-primary">{homeroomOnCount}</span> コマが授業ありに設定されています
-                  （週あたり {homeroomOnCount} コマ xd7 学期期間の週数 で自動展開されます）</div>
-                  <div className="text-muted-foreground/70">コマ右端の <span className="inline-flex items-center justify-center bg-amber-100 border border-amber-200 rounded w-5 h-5 text-amber-700"><ChevronDown size={10} /></span> をクリックすると、そのコマだけ別のクラスに変更できます。担任クラス以外の授業（学年全体担当など）に対応できます。</div>
+                  <div>{wf("wiz.komaOnSetFull", { n: homeroomOnCount })}</div>
+                  <div className="text-muted-foreground/70">{t("wiz.cornerArrowPrefix")}<span className="inline-flex items-center justify-center bg-amber-100 border border-amber-200 rounded w-5 h-5 text-amber-700"><ChevronDown size={10} /></span>{t("wiz.cornerArrowDesc")}</div>
                 </div>
               </>
             ) : (
@@ -1713,8 +1722,8 @@ export function NewFileWizard({ open, onClose }: Props) {
                 <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <span>基本時間割を入力します。ここで設定した内容が学期期間の各週に自動展開されます。</span>
-                      <span className="block mt-1 text-xs">空欄のままでも作成できます（後から週間グリッドで編集可能）</span>
+                      <span>{t("wiz.baseTimetableDesc")}</span>
+                      <span className="block mt-1 text-xs">{t("wiz.canLeaveEmpty")}</span>
                     </div>
                     <Button
                       size="sm"
@@ -1722,14 +1731,14 @@ export function NewFileWizard({ open, onClose }: Props) {
                       className="shrink-0 gap-1.5 text-xs h-7"
                       onClick={() => { setShowWizardLLM(v => !v); setWizardLLMError(null); }}
                     >
-                      ✨ LLM読み取り
+                      {t("wiz.llmRead")}
                     </Button>
                   </div>
                 </div>
 
                 {/* 複週設定：週数選択 */}
                 <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
-                  <span className="text-sm font-medium shrink-0">時間割の週パターン数</span>
+                  <span className="text-sm font-medium shrink-0">{t("wiz.weekPatternCount")}</span>
                   <div className="flex gap-1.5">
                     {([1, 2, 3, 4] as const).map(n => (
                       <button
@@ -1742,7 +1751,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                             : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
                         )}
                       >
-                        {n === 1 ? "1週（通常）" : `${n}週（${WEEK_LABELS.slice(0, n).join("/")}）`}
+                        {n === 1 ? t("wiz.week1Normal") : wf("wiz.weekNPattern", { n, labels: WEEK_LABELS.slice(0, n).join("/") })}
                       </button>
                     ))}
                   </div>
@@ -1752,8 +1761,8 @@ export function NewFileWizard({ open, onClose }: Props) {
                 {weekCount > 1 && (
                   <div className="flex items-center gap-3 p-3 rounded-lg border border-blue-200 bg-blue-50/50">
                     <div className="flex-1">
-                      <p className="text-xs font-semibold text-blue-800 mb-0.5">A週の開始日（基準日）</p>
-                      <p className="text-[11px] text-blue-600/80">A週に当たる月曜日を指定します。空白の場合は学期開始日の週をA週として自動設定します。</p>
+                      <p className="text-xs font-semibold text-blue-800 mb-0.5">{t("wiz.weekAStartDate")}</p>
+                      <p className="text-[11px] text-blue-600/80">{t("wiz.weekAStartDesc")}</p>
                     </div>
                     <input
                       type="date"
@@ -1766,7 +1775,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                         onClick={() => setCustomWeekCycleStart("")}
                         className="text-[11px] text-blue-500 hover:text-blue-700 underline shrink-0"
                       >
-                        自動設定に戻す
+                        {t("wiz.resetToAuto")}
                       </button>
                     )}
                   </div>
@@ -1803,7 +1812,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     </div>
                     {/* 他の週からコピーボタン */}
                     <div className="flex items-center gap-1 pr-2 pb-1">
-                      <span className="text-[10px] text-muted-foreground">コピー元:</span>
+                      <span className="text-[10px] text-muted-foreground">{t("wiz.copyFrom")}</span>
                       {WEEK_LABELS.slice(0, weekCount)
                         .map((label, srcIdx) => ({ label, srcIdx }))
                         .filter(({ srcIdx }) => srcIdx !== activeWeekTab)
@@ -1818,7 +1827,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                               });
                             }}
                             className="px-2 py-0.5 text-[11px] font-medium rounded border border-border bg-muted hover:bg-primary/10 hover:border-primary/40 transition-colors"
-                            title={`${label}の内容を現在のタブにコピー`}
+                            title={wf("wiz.copyToCurrentTab", { label })}
                           >
                             [{label}]
                           </button>
@@ -1835,7 +1844,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                         <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
                         {WEEKDAYS.map(d => (
                           <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
-                            {d.label}
+                            {t(d.labelKey)}
                           </th>
                         ))}
                       </tr>
@@ -1844,7 +1853,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                       {PERIODS.map(period => (
                         <tr key={period}>
                           <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
-                            {period}限
+                            {wf("wiz.periodNth", { p: period })}
                           </td>
                           {WEEKDAYS.map(d => {
                             const cls = baseSchedule[d.key]?.[period] ?? null;
@@ -1866,7 +1875,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                                   </SelectTrigger>
                                   <SelectContent className="max-h-48">
                                     <SelectItem value="__empty__">
-                                      <span className="text-muted-foreground">— 空き —</span>
+                                      <span className="text-muted-foreground">{t("wiz.emptyDash")}</span>
                                     </SelectItem>
                                     {allClasses.map(c => (
                                       <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
@@ -1885,16 +1894,16 @@ export function NewFileWizard({ open, onClose }: Props) {
                 {filledCells > 0 && (
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
                     {weekCount === 1 ? (
-                      <><span className="font-medium text-primary">{filledCells}</span> コマの授業が設定されています（週あたり {filledCells} コマ × 学期期間の週数 で自動展開されます）</>
+                      <>{wf("wiz.komaClassSetFull", { c: filledCells })}</>
                     ) : (
                       <>
                         {WEEK_LABELS.slice(0, weekCount).map((label, idx) => {
                           const n = Object.values(baseSchedulesArr[idx] ?? {}).reduce(
                             (sum, day) => sum + Object.values(day).filter(v => v !== null).length, 0
                           );
-                          return <span key={idx} className="mr-3">{label}: <span className="font-medium text-primary">{n}</span>コマ</span>;
+                          return <span key={idx} className="mr-3">{wf("wiz.weekBreakdownKoma", { label, n })}</span>;
                         })}
-                        <span className="text-muted-foreground/70">（{WEEK_LABELS.slice(0, weekCount).join("→")}→{WEEK_LABELS[0]}... の順で交互展開）</span>
+                        <span className="text-muted-foreground/70">{wf("wiz.weekAltExpand", { seq: WEEK_LABELS.slice(0, weekCount).join("→"), first: WEEK_LABELS[0] })}</span>
                       </>
                     )}
                   </div>
@@ -1910,10 +1919,10 @@ export function NewFileWizard({ open, onClose }: Props) {
             {subjectTeacherSubjects.length === 1 ? (
               <>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
-                  <p className="font-semibold mb-1">教科担任モード — 単数教科自動適用</p>
+                  <p className="font-semibold mb-1">{t("wiz.modeSubjectSingle")}</p>
                   <p className="text-xs">
-                    担当教科「<span className="font-bold">{subjectTeacherSubjects[0].name}</span>」が、クラスの設定された全コマに自動適用されます。<br />
-                    後から週間グリッドで個別に変更することもできます。
+                    {wf("wiz.subjectAutoApply", { s: subjectTeacherSubjects[0].name })}<br />
+                    {t("wiz.canChangeLater")}
                   </p>
                 </div>
                 {filledCells > 0 ? (
@@ -1923,14 +1932,14 @@ export function NewFileWizard({ open, onClose }: Props) {
                         <tr>
                           <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
                           {WEEKDAYS.map(d => (
-                            <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">{d.label}</th>
+                            <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">{t(d.labelKey)}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {PERIODS.map(period => (
                           <tr key={period}>
-                            <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{period}限</td>
+                            <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{wf("wiz.periodNth", { p: period })}</td>
                             {WEEKDAYS.map(d => {
                               const cls = baseSchedule[d.key]?.[period] ?? null;
                               return (
@@ -1951,23 +1960,23 @@ export function NewFileWizard({ open, onClose }: Props) {
                   </div>
                 ) : (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
-                    基本時間割（Step 3）でクラスが設定されていないため、教科の自動適用対象コマがありません。戻ってクラスを設定してください。
+                    {t("wiz.noClassInBaseTimetable")}
                   </div>
                 )}
               </>
             ) : subjectTeacherSubjects.length >= 2 ? (
               <>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-700">
-                  <p className="font-semibold mb-1">教科担任モード — 複数教科設定</p>
+                  <p className="font-semibold mb-1">{t("wiz.modeSubjectMulti")}</p>
                   <p className="text-xs">
-                    各コマに担当教科を割り当てます。「…年をすべて」ボタンで学年単位の一括設定もできます。
+                    {t("wiz.multiSubjectAssignDesc")}
                   </p>
                 </div>
 
                 {/* A週/B週タブ (複数週のときのみ表示) */}
                 {weekCount > 1 && (
                   <div className="flex items-center gap-2 border-b border-border pb-2">
-                    <span className="text-xs text-muted-foreground font-medium">週選択:</span>
+                    <span className="text-xs text-muted-foreground font-medium">{t("wiz.weekSelect")}</span>
                     <div className="flex gap-1">
                       {WEEK_LABELS.slice(0, weekCount).map((label, idx) => (
                         <button
@@ -2000,7 +2009,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                             }}
                             className="text-[10px] px-2 py-0.5 rounded border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
                           >
-                            {label}からコピー
+                            {wf("wiz.copyFromLabel", { label })}
                           </button>
                         );
                       })}
@@ -2010,13 +2019,13 @@ export function NewFileWizard({ open, onClose }: Props) {
 
                 {/* 一括設定ツール */}
                 <div className="flex flex-wrap gap-2 p-3 bg-muted/20 rounded-lg border border-border">
-                  <span className="text-xs text-muted-foreground font-medium self-center">一括設定:</span>
+                  <span className="text-xs text-muted-foreground font-medium self-center">{t("wiz.bulkSet")}</span>
                   {Array.from(new Set(allClasses.map(c => {
                     const m = c.match(/(\d+)年/);
                     return m ? parseInt(m[1]) : null;
                   }).filter((g): g is number => g !== null))).sort().map(grade => (
                     <div key={grade} className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">{grade}年:</span>
+                      <span className="text-xs text-muted-foreground">{wf("wiz.gradeColon", { g: grade })}</span>
                       {subjectTeacherSubjects.map(s => (
                         <button
                           key={s.name}
@@ -2046,7 +2055,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                             borderColor: s.color ? `${s.color}50` : '#ccc',
                           }}
                         >
-                          {grade}年→{s.name}
+                          {wf("wiz.gradeArrowSubject", { g: grade, s: s.name })}
                         </button>
                       ))}
                     </div>
@@ -2062,7 +2071,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     })}
                     className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted transition-colors ml-auto"
                   >
-                    リセット
+                    {t("wiz.reset")}
                   </button>
                 </div>
 
@@ -2073,14 +2082,14 @@ export function NewFileWizard({ open, onClose }: Props) {
                       <tr>
                         <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
                         {WEEKDAYS.map(d => (
-                          <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">{d.label}</th>
+                          <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">{t(d.labelKey)}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {PERIODS.map(period => (
                         <tr key={period}>
-                          <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{period}限</td>
+                          <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{wf("wiz.periodNth", { p: period })}</td>
                           {WEEKDAYS.map(d => {
                             const currentBase = baseSchedulesArr[activeSubjectTab] ?? baseSchedule;
                             const cls = currentBase[d.key]?.[period] ?? null;
@@ -2113,7 +2122,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                                   </SelectTrigger>
                                   <SelectContent className="max-h-48">
                                     <SelectItem value="__empty__">
-                                      <span className="text-muted-foreground">— 未設定 —</span>
+                                      <span className="text-muted-foreground">{t("wiz.unsetDash")}</span>
                                     </SelectItem>
                                     {subjectTeacherSubjects.map(s => (
                                       <SelectItem key={s.name} value={s.name} className="text-xs">
@@ -2133,16 +2142,16 @@ export function NewFileWizard({ open, onClose }: Props) {
                 </div>
 
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
-                  <span className="font-medium text-primary">{subjectFilledCount}</span> コマに教科が設定されています
+                  <span className="font-medium text-primary">{subjectFilledCount}</span>{t("wiz.komaSubjectSetSuffix")}
                   {filledCells > 0 && subjectFilledCount < filledCells && (
-                    <span className="ml-2 text-amber-600">（残り {filledCells - subjectFilledCount} コマは未設定）</span>
+                    <span className="ml-2 text-amber-600">{wf("wiz.komaRemainingUnset", { n: filledCells - subjectFilledCount })}</span>
                   )}
                 </div>
               </>
             ) : (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
-                <p className="font-semibold">担当教科が未登録です</p>
-                <p className="text-xs mt-1">戻ってStep 1の「担当教科」で教科を登録してください。登録しなくても作成できますが、教科情報は空になります。</p>
+                <p className="font-semibold">{t("wiz.noTaughtSubjects")}</p>
+                <p className="text-xs mt-1">{t("wiz.goBackRegisterSubjects")}</p>
               </div>
             )}
           </div>
@@ -2154,16 +2163,16 @@ export function NewFileWizard({ open, onClose }: Props) {
             {showWizardLLM && (
               <div className="border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">✨ LLM読み取りヘルパー</p>
+                  <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">{t("wiz.llmHelper")}</p>
                   <button onClick={() => { setShowWizardLLM(false); setWizardLLMError(null); }} className="text-blue-400 hover:text-blue-600 transition-colors">
                     <X size={14} />
                   </button>
                 </div>
                 <p className="text-xs text-blue-700 dark:text-blue-400">
-                  手順：① JSONテンプレートをコピー → ② プロンプトをコピー → ③ ChatGPT/Claudeに「プロンプト＋テンプレート＋時間割画像」を貼り付けて送信 → ④ 返ってきたJSONを下のテキストエリアに貼り付けて「インポート」
+                  {t("wiz.llmStepsTimetable")}
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded px-2 py-1">
-                  ℹ️ 学級担任モードでは、JSONの各コマに「教科名」を入れるように指示します（例: 「国語」「算数」等）。クラス名は不要です。
+                  {t("wiz.homeroomJsonHint")}
                 </p>
                 <div className="flex gap-2 flex-wrap">
                   <Button
@@ -2173,7 +2182,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     onClick={handleWizardLLMCopyTemplate}
                   >
                     {wizardLLMTemplateCopied ? <Check size={12} /> : null}
-                    {wizardLLMTemplateCopied ? 'コピー済み!' : '① JSONテンプレートをコピー'}
+                    {wizardLLMTemplateCopied ? t("wiz.copied") : t("wiz.copyJsonTemplate")}
                   </Button>
                   <Button
                     size="sm"
@@ -2182,11 +2191,11 @@ export function NewFileWizard({ open, onClose }: Props) {
                     onClick={handleWizardLLMCopyPrompt}
                   >
                     {wizardLLMCopied ? <Check size={12} /> : null}
-                    {wizardLLMCopied ? 'コピー済み!' : '② プロンプトをコピー'}
+                    {wizardLLMCopied ? t("wiz.copied") : t("wiz.copyPrompt")}
                   </Button>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-blue-700 dark:text-blue-400">③ LLMが返したJSONを貼り付け</Label>
+                  <Label className="text-xs text-blue-700 dark:text-blue-400">{t("wiz.llmStep3Paste")}</Label>
                   <textarea
                     className="w-full h-28 text-xs font-mono rounded border border-blue-200 bg-white dark:bg-slate-900 p-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
                     value={wizardLLMJson}
@@ -2201,7 +2210,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     disabled={!wizardLLMJson.trim()}
                   >
                     <Check size={12} />
-                    インポートしてグリッドに反映
+                    {t("wiz.importToGrid")}
                   </Button>
                 </div>
               </div>
@@ -2210,10 +2219,10 @@ export function NewFileWizard({ open, onClose }: Props) {
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-semibold mb-1">教科の基礎時間割を設定（任意）</p>
+                  <p className="font-semibold mb-1">{t("wiz.subjectBaseTimetableOpt")}</p>
                   <p className="text-xs">
-                    授業ありのコマに教科を割り当てます。ここで設定した教科が学期全体の基礎時間割として適用されます。<br />
-                    設定しなくても作成できます（後から週間グリッドで個別に設定可能）。
+                    {t("wiz.subjectBaseDesc1")}<br />
+                    {t("wiz.subjectBaseDesc2")}
                   </p>
                 </div>
                 <Button
@@ -2222,7 +2231,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                   className="shrink-0 gap-1.5 text-xs h-7 border-amber-300 text-amber-700 hover:bg-amber-100"
                   onClick={() => { setShowWizardLLM(v => !v); setWizardLLMError(null); }}
                 >
-                  ✨ LLM読み取り
+                  {t("wiz.llmRead")}
                 </Button>
               </div>
             </div>
@@ -2230,9 +2239,9 @@ export function NewFileWizard({ open, onClose }: Props) {
             {/* Subject list management */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium text-muted-foreground">使用する教科リスト</Label>
+                <Label className="text-xs font-medium text-muted-foreground">{t("wiz.subjectListUsed")}</Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground">{subjects.length}教科</span>
+                  <span className="text-[10px] text-muted-foreground">{wf("wiz.subjectCount", { n: subjects.length })}</span>
                   {subjects.length < DEFAULT_SUBJECTS.length && (
                     <Button
                       size="sm"
@@ -2241,7 +2250,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                       onClick={addAllDefaultSubjects}
                     >
                       <Plus size={9} />
-                      デフォルト教科を全て追加
+                      {t("wiz.addAllDefaultSubjects")}
                     </Button>
                   )}
                 </div>
@@ -2256,7 +2265,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                       color: s.color ?? '#666',
                       border: `1px solid ${s.color ?? '#ccc'}50`,
                     }}
-                    title="クリックで削除"
+                    title={t("wiz.clickToDelete")}
                     onClick={() => removeSubject(s.name)}
                   >
                     {s.name}
@@ -2272,12 +2281,12 @@ export function NewFileWizard({ open, onClose }: Props) {
                     setNewSubjectError("");
                   }}
                   onKeyDown={e => e.key === "Enter" && addSubject()}
-                  placeholder="教科名を追加（例: 外国語、総合学習）"
+                  placeholder={t("wiz.addSubjectExample")}
                   className="h-8 text-sm flex-1"
                 />
                 <Button size="sm" variant="outline" className="gap-1 text-xs h-8" onClick={() => addSubject()}>
                   <Plus size={11} />
-                  追加
+                  {t("wiz.add")}
                 </Button>
               </div>
               {newSubjectError && <p className="text-xs text-red-500">{newSubjectError}</p>}
@@ -2291,7 +2300,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                     <th className="w-12 text-center text-xs text-muted-foreground font-medium py-2 border-b border-border" />
                     {WEEKDAYS.map(d => (
                       <th key={d.key} className="text-center text-xs font-bold py-2 border-b border-border px-1">
-                        {d.label}
+                        {t(d.labelKey)}
                       </th>
                     ))}
                   </tr>
@@ -2300,7 +2309,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                   {PERIODS.map(period => (
                     <tr key={period}>
                       <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">
-                        {period}限
+                        {wf("wiz.periodNth", { p: period })}
                       </td>
                       {WEEKDAYS.map(d => {
                         const isOn = homeroomSlots[d.key]?.[period] ?? true;
@@ -2327,12 +2336,12 @@ export function NewFileWizard({ open, onClose }: Props) {
                                     if (e.key === 'Enter') addInlineSubject(d.key, period);
                                     if (e.key === 'Escape') { setAddingSubjectForCell(null); setInlineSubjectInput(''); }
                                   }}
-                                  placeholder="教科名"
+                                  placeholder={t("wiz.subjectName")}
                                   className="h-7 text-xs"
                                 />
                                 <div className="flex gap-1">
                                   <Button size="sm" className="h-6 px-2 text-[10px] flex-1" onClick={() => addInlineSubject(d.key, period)}>
-                                    <Plus size={9} /> 追加
+                                    <Plus size={9} /> {t("wiz.add")}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -2375,7 +2384,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                               </SelectTrigger>
                               <SelectContent className="max-h-48">
                                 <SelectItem value="__empty__">
-                                  <span className="text-muted-foreground">— 未設定 —</span>
+                                  <span className="text-muted-foreground">{t("wiz.unsetDash")}</span>
                                 </SelectItem>
                                 {subjects.map(s => (
                                   <SelectItem key={s.name} value={s.name} className="text-xs">
@@ -2385,7 +2394,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                                 <SelectItem value="__add_new__" className="text-xs text-primary">
                                   <span className="flex items-center gap-1">
                                     <Plus size={10} />
-                                    教科を追加...
+                                    {t("wiz.addSubjectDots")}
                                   </span>
                                 </SelectItem>
                               </SelectContent>
@@ -2401,9 +2410,9 @@ export function NewFileWizard({ open, onClose }: Props) {
             </div>
 
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
-              <span className="font-medium text-primary">{subjectFilledCount}</span> コマに教科が設定されています
+              <span className="font-medium text-primary">{subjectFilledCount}</span>{t("wiz.komaSubjectSetSuffix")}
               {subjectFilledCount < homeroomOnCount && (
-                <span className="ml-2 text-amber-600">（残り {homeroomOnCount - subjectFilledCount} コマは未設定）</span>
+                <span className="ml-2 text-amber-600">{wf("wiz.komaRemainingUnset", { n: homeroomOnCount - subjectFilledCount })}</span>
               )}
             </div>
           </div>
@@ -2413,51 +2422,51 @@ export function NewFileWizard({ open, onClose }: Props) {
         {step === confirmStep && (
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground">
-              以下の内容で時間割を作成します。確認してください。
+              {t("wiz.confirmDesc")}
             </div>
 
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-card border border-border rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground mb-1">ファイル名</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("wiz.fileName")}</p>
                   <p className="text-sm font-semibold">{title}</p>
                 </div>
                 <div className="bg-card border border-border rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground mb-1">学校名</p>
-                  <p className="text-sm font-semibold">{school || "（未設定）"}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("wiz.schoolName")}</p>
+                  <p className="text-sm font-semibold">{school || t("wiz.unset")}</p>
                 </div>
               </div>
 
               {/* Mode summary */}
               <div className="bg-card border border-border rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">使用モード</p>
+                <p className="text-xs text-muted-foreground mb-1">{t("wiz.useMode")}</p>
                 <p className="text-sm font-semibold">
                   {isSubjectTeacherMode && (
                     subjectTeacherSubjects.length === 1
-                      ? `教科担任モード（単数教科） — 担当: ${subjectTeacherSubjects[0].name}`
+                      ? wf("wiz.modeSummarySingle", { s: subjectTeacherSubjects[0].name })
                       : subjectTeacherSubjects.length >= 2
-                      ? `教科担任モード（複数教科） — 担当: ${subjectTeacherSubjects.map(s => s.name).join('・')}`
-                      : '教科担任モード'
+                      ? wf("wiz.modeSummaryMulti", { s: subjectTeacherSubjects.map(s => s.name).join('・') })
+                      : t("wiz.modeSummarySubject")
                   )}
-                  {isHomeroomMode && `学級担任モード${homeroomClass ? ` — 担任クラス: ${homeroomClass}` : ''}`}
+                  {isHomeroomMode && `${t("wiz.modeSummaryHomeroom")}${homeroomClass ? wf("wiz.modeSummaryHomeroomClass", { c: homeroomClass }) : ''}`}
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-card border border-border rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground mb-1">始業式</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("wiz.startCeremony")}</p>
                   <p className="text-sm font-semibold">{startDate}</p>
                 </div>
                 <div className="bg-card border border-border rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground mb-1">終業式</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("wiz.endCeremony")}</p>
                   <p className="text-sm font-semibold">{endDate}</p>
                 </div>
                 <div className="bg-card border border-border rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground mb-1">週末授業</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("wiz.weekendClassLabel")}</p>
                   <p className="text-sm font-semibold">
-                    {hasSaturday && hasSunday ? "土・日" :
-                     hasSaturday ? "土曜のみ" :
-                     hasSunday ? "日曜のみ" : "なし"}
+                    {hasSaturday && hasSunday ? t("wiz.satSunBoth") :
+                     hasSaturday ? t("wiz.satOnly") :
+                     hasSunday ? t("wiz.sunOnly") : t("wiz.none")}
                   </p>
                 </div>
               </div>
@@ -2465,7 +2474,7 @@ export function NewFileWizard({ open, onClose }: Props) {
               {/* Class list summary */}
               <div className="bg-card border border-border rounded-lg p-3">
                 <p className="text-xs text-muted-foreground mb-2">
-                  クラス構成 — {schoolTypeInfo.label}、合計 {allClasses.length} クラス
+                  {wf("wiz.classSetupSummary", { type: t(schoolTypeInfo.labelKey), n: allClasses.length })}
                 </p>
                 <div className="flex flex-wrap gap-1">
                   {allClasses.map(c => (
@@ -2489,8 +2498,8 @@ export function NewFileWizard({ open, onClose }: Props) {
               {isHomeroomMode && (
                 <div className="bg-card border border-border rounded-lg p-3">
                   <p className="text-xs text-muted-foreground mb-2">
-                    授業コマ設定 — 週{homeroomOnCount}コマ
-                    {subjectFilledCount > 0 && <span className="ml-1 text-amber-600">（教科設定: {subjectFilledCount}コマ）</span>}
+                    {wf("wiz.periodSetupSummary", { n: homeroomOnCount })}
+                    {subjectFilledCount > 0 && <span className="ml-1 text-amber-600">{wf("wiz.subjectSetSummary", { n: subjectFilledCount })}</span>}
                   </p>
                   <div className="overflow-x-auto">
                     <table className="text-xs border-collapse">
@@ -2498,7 +2507,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                         <tr>
                           <th className="w-8 text-muted-foreground font-normal border-b border-border pb-1" />
                           {WEEKDAYS.map(d => (
-                            <th key={d.key} className="text-center font-bold px-2 pb-1 border-b border-border">{d.label}</th>
+                            <th key={d.key} className="text-center font-bold px-2 pb-1 border-b border-border">{t(d.labelKey)}</th>
                           ))}
                         </tr>
                       </thead>
@@ -2540,7 +2549,7 @@ export function NewFileWizard({ open, onClose }: Props) {
               {/* Subject teacher subjects summary (confirmation step) */}
               {isSubjectTeacherMode && subjectTeacherSubjects.length > 0 && (
                 <div className="bg-card border border-border rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground mb-2">担当教科</p>
+                  <p className="text-xs text-muted-foreground mb-2">{t("wiz.taughtSubjects")}</p>
                   <div className="flex flex-wrap gap-1">
                     {subjectTeacherSubjects.map(s => (
                       <span
@@ -2562,7 +2571,7 @@ export function NewFileWizard({ open, onClose }: Props) {
               {/* Single subject schedule summary */}
               {!isHomeroomMode && (
                 <div className="bg-card border border-border rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground mb-2">基本時間割</p>
+                  <p className="text-xs text-muted-foreground mb-2">{t("wiz.baseTimetable")}</p>
                   {filledCells > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="text-xs border-collapse">
@@ -2570,7 +2579,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                           <tr>
                             <th className="w-8 text-muted-foreground font-normal border-b border-border pb-1" />
                             {WEEKDAYS.map(d => (
-                              <th key={d.key} className="text-center font-bold px-2 pb-1 border-b border-border">{d.label}</th>
+                              <th key={d.key} className="text-center font-bold px-2 pb-1 border-b border-border">{t(d.labelKey)}</th>
                             ))}
                           </tr>
                         </thead>
@@ -2596,7 +2605,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground/60">基本時間割は設定されていません（空きコマで作成）</p>
+                    <p className="text-xs text-muted-foreground/60">{t("wiz.baseTimetableNotSet")}</p>
                   )}
                 </div>
               )}
@@ -2604,14 +2613,14 @@ export function NewFileWizard({ open, onClose }: Props) {
               {/* 時程表設定状況 */}
               {wizardPeriodTimes && Object.keys(wizardPeriodTimes).length > 0 && (
                 <div className="bg-card border border-border rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground mb-1">時程表</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("wiz.periodTimes")}</p>
                   <div className="flex flex-wrap gap-2">
                     {PERIODS.map(p => {
                       const t = wizardPeriodTimes[p];
                       if (!t?.start || !t?.end) return null;
                       return (
                         <div key={p} className="flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded px-2 py-1">
-                          <span className="font-bold text-blue-700 dark:text-blue-400">{p}限</span>
+                          <span className="font-bold text-blue-700 dark:text-blue-400">{wf("wiz.periodNth", { p })}</span>
                           <span className="text-muted-foreground">{t.start}〜{t.end}</span>
                         </div>
                       );
@@ -2630,9 +2639,8 @@ export function NewFileWizard({ open, onClose }: Props) {
                   : filledCells * Math.floor(days / 7);
                 return (
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">{days}</span>日間 /
-                    平日約<span className="font-medium text-foreground"> {weekdays}</span>日 /
-                    総コマ数（予定）<span className="font-medium text-primary"> {totalPeriods}</span>コマ
+                    <span className="font-medium text-foreground">{wf("wiz.dateSummaryBase", { days, weekdays })}</span>
+                    {wf("wiz.dateSummaryTotal", { n: totalPeriods })}
                   </div>
                 );
               })()}
@@ -2649,7 +2657,7 @@ export function NewFileWizard({ open, onClose }: Props) {
             className="gap-1.5"
           >
             <ChevronLeft size={14} />
-            {step > 1 ? "戻る" : "キャンセル"}
+            {step > 1 ? t("wiz.back") : t("wiz.cancel")}
           </Button>
 
           <div className="flex items-center gap-2">
@@ -2661,7 +2669,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                 disabled={!canGoNext()}
                 className="gap-1.5"
               >
-                次へ
+                {t("wiz.next")}
                 <ChevronRight size={14} />
               </Button>
             ) : (
@@ -2672,7 +2680,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                 className="gap-1.5"
               >
                 <FilePlus size={13} />
-                {loading ? "作成中..." : "作成する"}
+                {loading ? t("wiz.creating") : t("wiz.create")}
               </Button>
             )}
           </div>
@@ -2684,16 +2692,16 @@ export function NewFileWizard({ open, onClose }: Props) {
     <AlertDialog open={holidayClearDialogOpen} onOpenChange={setHolidayClearDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>祝日の授業コマを削除しますか？</AlertDialogTitle>
+          <AlertDialogTitle>{t("wiz.holidayDeleteConfirm")}</AlertDialogTitle>
           <AlertDialogDescription>
-            自動取得した祝日（{pendingCreateData?.clearOps ? new Set(pendingCreateData.clearOps.map(op => op.date)).size : 0}日分）に授業コマが入っています。<br />
-            「削除する」を選ぶと、祝日のコマが空白になります。<br />
-            「そのまま」を選ぶと、祝日のコマは残ります（時数集計からは除外されます）。
+            {wf("wiz.holidayDeleteBody1", { n: pendingCreateData?.clearOps ? new Set(pendingCreateData.clearOps.map(op => op.date)).size : 0 })}<br />
+            {t("wiz.holidayDeleteBody2")}<br />
+            {t("wiz.holidayDeleteBody3")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={handleHolidayClearSkip}>そのまま</AlertDialogCancel>
-          <AlertDialogAction onClick={handleHolidayClearConfirm}>削除する</AlertDialogAction>
+          <AlertDialogCancel onClick={handleHolidayClearSkip}>{t("wiz.keepAction")}</AlertDialogCancel>
+          <AlertDialogAction onClick={handleHolidayClearConfirm}>{t("wiz.deleteAction")}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
