@@ -79,8 +79,8 @@ const WEEKDAYS = [
 
 const PERIODS = [1, 2, 3, 4, 5, 6];
 
-// Default subjects for homeroom mode
-const DEFAULT_SUBJECTS: SubjectDef[] = [
+// Default subjects for homeroom mode (canonical JA names with colors)
+const DEFAULT_SUBJECTS_BASE: SubjectDef[] = [
   { name: "国語", color: "#ef4444" },
   { name: "算数", color: "#3b82f6" },
   { name: "理科", color: "#22c55e" },
@@ -106,6 +106,30 @@ const DEFAULT_SUBJECTS: SubjectDef[] = [
   { name: "保健", color: "#b91c1c" },
   { name: "外国語活動", color: "#6d28d9" },
 ];
+
+// English equivalents (same order as DEFAULT_SUBJECTS_BASE)
+const DEFAULT_SUBJECTS_EN_NAMES: string[] = [
+  "Japanese", "Math", "Science", "Social Studies", "English", "Music",
+  "Art", "P.E.", "Life Studies", "Ethics", "Integrated Studies", "Homeroom",
+  "Library", "Club", "Committee", "Calligraphy", "Self-Study", "PC",
+  "Advanced Math", "Home Ec.", "Tech.", "Computing", "Health", "Foreign Language",
+];
+
+function getDefaultSubjects(language: string): SubjectDef[] {
+  if (language !== "en") return DEFAULT_SUBJECTS_BASE;
+  return DEFAULT_SUBJECTS_BASE.map((s, i) => ({
+    name: DEFAULT_SUBJECTS_EN_NAMES[i] ?? s.name,
+    color: s.color,
+  }));
+}
+
+function getDefaultSubjectColor(name: string): string | undefined {
+  const jaMatch = DEFAULT_SUBJECTS_BASE.find(s => s.name === name);
+  if (jaMatch) return jaMatch.color;
+  const enIdx = DEFAULT_SUBJECTS_EN_NAMES.indexOf(name);
+  if (enIdx >= 0) return DEFAULT_SUBJECTS_BASE[enIdx]?.color;
+  return undefined;
+}
 
 // School type definitions（labelKeyからt()で解決）
 const SCHOOL_TYPES: { value: SchoolType; labelKey: TranslationKey; grades: number; defaultClasses: number }[] = [
@@ -212,8 +236,9 @@ function StepIndicator({ current, total, isHomeroom, isSubjectTeacher }: { curre
 
 export function NewFileWizard({ open, onClose }: Props) {
   const { loadTimetableFile, goToDate } = useTimetable();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const wf = (key: TranslationKey, vars: Record<string, string | number> = {}) => wfmt(t, key, vars);
+  const defaultSubjects = useMemo(() => getDefaultSubjects(language), [language]);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   // 祝日コマ削除確認ダイアログ
@@ -363,7 +388,7 @@ export function NewFileWizard({ open, onClose }: Props) {
   });
 
   // Step 4: subjects list (starts with defaults, user can add/remove)
-  const [subjects, setSubjects] = useState<SubjectDef[]>(DEFAULT_SUBJECTS);
+  const [subjects, setSubjects] = useState<SubjectDef[]>(() => getDefaultSubjects(language));
   const [newSubjectInput, setNewSubjectInput] = useState("");
   const [newSubjectError, setNewSubjectError] = useState("");
 
@@ -490,7 +515,7 @@ export function NewFileWizard({ open, onClose }: Props) {
 
   // Add all default subjects at once
   const addAllDefaultSubjects = () => {
-    DEFAULT_SUBJECTS.forEach(s => {
+    defaultSubjects.forEach(s => {
       if (!subjects.some(x => x.name === s.name)) {
         setSubjects(prev => [...prev, s]);
       }
@@ -725,7 +750,7 @@ export function NewFileWizard({ open, onClose }: Props) {
       if (!name) setSubjectTeacherError(t("wiz.alreadyAdded"));
       return;
     }
-    const defaultColor = DEFAULT_SUBJECTS.find(s => s.name === raw)?.color;
+    const defaultColor = getDefaultSubjectColor(raw);
     setSubjectTeacherSubjects(prev => [...prev, { name: raw, color: defaultColor }]);
     if (!name) { setSubjectTeacherInput(""); setSubjectTeacherError(""); }
   };
@@ -1155,7 +1180,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                   <div className="space-y-1.5">
                     <p className="text-[10px] text-muted-foreground font-medium">{t("wiz.selectSubjectLabel")}</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {DEFAULT_SUBJECTS.filter(s => !subjectTeacherSubjects.some(x => x.name === s.name)).map(s => (
+                      {defaultSubjects.filter(s => !subjectTeacherSubjects.some(x => x.name === s.name)).map(s => (
                         <button
                           key={s.name}
                           onClick={() => addSubjectTeacherSubject(s.name)}
@@ -2242,7 +2267,7 @@ export function NewFileWizard({ open, onClose }: Props) {
                 <Label className="text-xs font-medium text-muted-foreground">{t("wiz.subjectListUsed")}</Label>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground">{wf("wiz.subjectCount", { n: subjects.length })}</span>
-                  {subjects.length < DEFAULT_SUBJECTS.length && (
+                  {subjects.length < defaultSubjects.length && (
                     <Button
                       size="sm"
                       variant="outline"
