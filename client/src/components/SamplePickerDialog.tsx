@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { deserializeTimetableFile } from "@/lib/timetableFile";
 import type { TimetableFile } from "@/lib/timetableFile";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/contexts/LanguageContext";
 
 interface SampleDef {
   id: string;
@@ -28,6 +30,12 @@ interface SampleDef {
   icon: React.ReactNode;
   filename: string;
   details: string[];
+}
+
+function wf(t: (k: TranslationKey) => string, key: TranslationKey, vars: Record<string, string | number>): string {
+  let s = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
 }
 
 // 現在の年度を取得（4月以降なら当年、1〜3月なら前年）
@@ -46,73 +54,75 @@ function getCurrentSemesterStart(fiscalYear: number): string {
   return `${fiscalYear + 1}-01-08`;
 }
 
-const SAMPLES: SampleDef[] = [
-  {
-    id: "homeroom",
-    title: "担任サンプル（4年1組）",
-    description: "担任モードのデモデータです。1年間の時間割が入っています。",
-    mode: "homeroom",
-    modeLabel: "担任モード",
-    modeColor: "bg-amber-500/15 text-amber-600 border-amber-200",
-    icon: <BookOpen size={20} className="text-amber-500" />,
-    filename: "/samples/sample_homeroom.timetable",
-    details: [
-      "担任クラス: 4年1組",
-      "教科: 国語・算数・理科・社会・道徳・体育・図工・音楽・外国語",
-      "期間: 通年（第1〜3学期）",
-      "読み込み後、今日の学期に自動ジャンプします",
-    ],
-  },
-  {
-    id: "single",
-    title: "理科専科サンプル",
-    description: "単一教科モードのデモデータです。4〜6年生の理科を担当する専科教員の例です。",
-    mode: "single_subject",
-    modeLabel: "単一教科モード",
-    modeColor: "bg-blue-500/15 text-blue-600 border-blue-200",
-    icon: <FlaskConical size={20} className="text-blue-500" />,
-    filename: "/samples/sample_single.timetable",
-    details: [
-      "担当クラス: 4〜6年生 10クラス",
-      "教科: 理科",
-      "期間: 通年（第1〜3学期）",
-      "読み込み後、今日の学期に自動ジャンプします",
-    ],
-  },
-  {
-    id: "multi",
-    title: "複数教科サンプル（音楽・家庭科）",
-    description: "複数教科モードのデモデータです。音楽（3・4年）と家庭科（5・6年）を担当する専科教員の例です。",
-    mode: "multi_subject",
-    modeLabel: "複数教科モード",
-    modeColor: "bg-purple-500/15 text-purple-600 border-purple-200",
-    icon: <Music size={20} className="text-purple-500" />,
-    filename: "/samples/sample_multi.timetable",
-    details: [
-      "担当クラス: 3ー6年生 8クラス",
-      "教科: 音楽（3・4年）・家庭科（5・6年）",
-      "期間: 通年（第1ー3学期）",
-      "読み込み後、今日の学期に自動ジャンプします",
-    ],
-  },
-  {
-    id: "ab_week",
-    title: "A週・B週サンプル（理科専科）",
-    description: "A週・B週の2週ローテーションのデモデータです。週ごとに授業クラスが切り替わる時間割の例です。",
-    mode: "single_subject",
-    modeLabel: "単一教科モード",
-    modeColor: "bg-green-500/15 text-green-600 border-green-200",
-    icon: <RefreshCw size={20} className="text-green-500" />,
-    filename: "/samples/sample_ab.timetable",
-    details: [
-      "担当クラス: 4ー6年生 12クラス",
-      "教科: 理科",
-      "A週: 月・水・金中心の授業パターン",
-      "B週: 火・木中心の授業パターン",
-      "週ヘッダーのA週/B週バッジをタップして手動変更も可能",
-    ],
-  },
-];
+function getSamples(t: (k: TranslationKey) => string): SampleDef[] {
+  return [
+    {
+      id: "homeroom",
+      title: t("sample.homeroom.title"),
+      description: t("sample.homeroom.desc"),
+      mode: "homeroom",
+      modeLabel: t("sample.modeHomeroom"),
+      modeColor: "bg-amber-500/15 text-amber-600 border-amber-200",
+      icon: <BookOpen size={20} className="text-amber-500" />,
+      filename: "/samples/sample_homeroom.timetable",
+      details: [
+        t("sample.homeroom.d1"),
+        t("sample.homeroom.d2"),
+        t("sample.sharedDuration"),
+        t("sample.sharedAutoJump"),
+      ],
+    },
+    {
+      id: "single",
+      title: t("sample.single.title"),
+      description: t("sample.single.desc"),
+      mode: "single_subject",
+      modeLabel: t("sample.modeSingle"),
+      modeColor: "bg-blue-500/15 text-blue-600 border-blue-200",
+      icon: <FlaskConical size={20} className="text-blue-500" />,
+      filename: "/samples/sample_single.timetable",
+      details: [
+        t("sample.single.d1"),
+        t("sample.single.d2"),
+        t("sample.sharedDuration"),
+        t("sample.sharedAutoJump"),
+      ],
+    },
+    {
+      id: "multi",
+      title: t("sample.multi.title"),
+      description: t("sample.multi.desc"),
+      mode: "multi_subject",
+      modeLabel: t("sample.modeMulti"),
+      modeColor: "bg-purple-500/15 text-purple-600 border-purple-200",
+      icon: <Music size={20} className="text-purple-500" />,
+      filename: "/samples/sample_multi.timetable",
+      details: [
+        t("sample.multi.d1"),
+        t("sample.multi.d2"),
+        t("sample.sharedDuration"),
+        t("sample.sharedAutoJump"),
+      ],
+    },
+    {
+      id: "ab_week",
+      title: t("sample.abWeek.title"),
+      description: t("sample.abWeek.desc"),
+      mode: "single_subject",
+      modeLabel: t("sample.modeSingle"),
+      modeColor: "bg-green-500/15 text-green-600 border-green-200",
+      icon: <RefreshCw size={20} className="text-green-500" />,
+      filename: "/samples/sample_ab.timetable",
+      details: [
+        t("sample.abWeek.d1"),
+        t("sample.single.d2"),
+        t("sample.abWeek.d2"),
+        t("sample.abWeek.d3"),
+        t("sample.abWeek.d4"),
+      ],
+    },
+  ];
+}
 
 interface Props {
   open: boolean;
@@ -121,7 +131,9 @@ interface Props {
 
 export function SamplePickerDialog({ open, onClose }: Props) {
   const { loadTimetableFile, goToDate } = useTimetable();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState<string | null>(null);
+  const SAMPLES = getSamples(t);
 
   const handleLoad = async (sample: SampleDef) => {
     setLoading(sample.id);
@@ -142,10 +154,10 @@ export function SamplePickerDialog({ open, onClose }: Props) {
       const jumpDate = getCurrentSemesterStart(fiscalYear);
       goToDate(new Date(jumpDate + "T00:00:00"));
 
-      toast.success(`サンプル読み込み完了: ${sample.title}`);
+      toast.success(wf(t, "sample.toastDone", { title: sample.title }));
       onClose();
     } catch (err) {
-      toast.error(`読み込みエラー: ${String(err)}`);
+      toast.error(wf(t, "sample.toastError", { msg: String(err) }));
     } finally {
       setLoading(null);
     }
@@ -155,9 +167,9 @@ export function SamplePickerDialog({ open, onClose }: Props) {
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>サンプルデータを選択</DialogTitle>
+          <DialogTitle>{t("sample.dialogTitle")}</DialogTitle>
           <DialogDescription className="text-xs">
-            デモ用の通年サンプルデータを読み込めます。年度は現在の年度（{getCurrentFiscalYear()}年度）に自動調整されます。
+            {wf(t, "sample.dialogDesc", { y: getCurrentFiscalYear() })}
           </DialogDescription>
         </DialogHeader>
 
@@ -196,7 +208,7 @@ export function SamplePickerDialog({ open, onClose }: Props) {
                   {loading === sample.id ? (
                     <Loader2 size={12} className="animate-spin" />
                   ) : (
-                    "読み込む"
+                    t("sample.load")
                   )}
                 </Button>
               </div>
@@ -206,7 +218,7 @@ export function SamplePickerDialog({ open, onClose }: Props) {
 
         <div className="flex justify-end pt-1">
           <Button variant="ghost" size="sm" onClick={onClose}>
-            閉じる
+            {t("sample.close")}
           </Button>
         </div>
       </DialogContent>

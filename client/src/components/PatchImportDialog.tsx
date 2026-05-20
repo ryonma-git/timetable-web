@@ -16,6 +16,14 @@ import { cn } from "@/lib/utils";
 import { Upload, FileJson, AlertTriangle, CheckCircle2, X, Info, Download, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import type { OverrideOp } from "@/lib/timetable";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/contexts/LanguageContext";
+
+function wf(t: (k: TranslationKey) => string, key: TranslationKey, vars: Record<string, string | number>): string {
+  let s = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
 
 // ─── Patch Format ─────────────────────────────────────────────
 
@@ -37,30 +45,26 @@ interface ParseResult {
 
 // ─── Parser ───────────────────────────────────────────────────
 
-function parsePatchFile(json: string): ParseResult {
+function parsePatchFile(json: string, t: (k: TranslationKey) => string): ParseResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(json);
   } catch {
-    throw new Error("JSONの解析に失敗しました。有効なJSONファイルか確認してください。");
+    throw new Error(t("patch.errInvalidJson"));
   }
 
   const obj = parsed as Record<string, unknown>;
 
   if (obj.format !== "timetable-patch/v1") {
-    throw new Error(
-      `フォーマットが不正です。"format": "timetable-patch/v1" が必要ですが、"${obj.format}" が指定されています。`
-    );
+    throw new Error(wf(t, "patch.errBadFormat", { fmt: String(obj.format) }));
   }
 
   if (obj.mode !== "partial" && obj.mode !== "full_replace") {
-    throw new Error(
-      `"mode" は "partial" または "full_replace" を指定してください（現在: "${obj.mode}"）。`
-    );
+    throw new Error(wf(t, "patch.errBadMode", { mode: String(obj.mode) }));
   }
 
   if (!Array.isArray(obj.ops) || obj.ops.length === 0) {
-    throw new Error('"ops" 配列が空か、存在しません。操作リストを指定してください。');
+    throw new Error(t("patch.errOpsEmpty"));
   }
 
   const warnings: string[] = [];
@@ -70,11 +74,11 @@ function parsePatchFile(json: string): ParseResult {
   for (let i = 0; i < (obj.ops as unknown[]).length; i++) {
     const op = (obj.ops as Record<string, unknown>[])[i];
     if (!op.op || !op.date) {
-      warnings.push(`ops[${i}]: "op" または "date" フィールドがありません。スキップします。`);
+      warnings.push(wf(t, "patch.errNoOpField", { i }));
       continue;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(op.date as string)) {
-      warnings.push(`ops[${i}]: 日付フォーマットが不正です（"${op.date}"）。YYYY-MM-DD 形式で指定してください。`);
+      warnings.push(wf(t, "patch.errBadDate", { i, date: String(op.date) }));
       continue;
     }
     dateSet.add(op.date as string);
@@ -82,7 +86,7 @@ function parsePatchFile(json: string): ParseResult {
   }
 
   if (validOps.length === 0) {
-    throw new Error("有効な操作が1件もありません。ops の内容を確認してください。");
+    throw new Error(t("patch.errNoValidOps"));
   }
 
   const affectedDates = Array.from(dateSet).sort();
@@ -232,6 +236,7 @@ interface Props {
 
 export function PatchImportDialog({ open, onClose }: Props) {
   const { applyOps } = useTimetable();
+  const { t, language } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -249,14 +254,14 @@ export function PatchImportDialog({ open, onClose }: Props) {
 
   const handleFile = useCallback((file: File) => {
     if (!file.name.endsWith(".json")) {
-      setParseError("JSONファイル（.json）のみ対応しています。");
+      setParseError(t("patch.jsonOnlyError"));
       setParseResult(null);
       return;
     }
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const result = parsePatchFile(e.target?.result as string);
+        const result = parsePatchFile(e.target?.result as string, t);
         setParseResult(result);
         setParseError(null);
       } catch (err) {
@@ -265,7 +270,7 @@ export function PatchImportDialog({ open, onClose }: Props) {
       }
     };
     reader.readAsText(file, "utf-8");
-  }, []);
+  }, [t]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -312,18 +317,18 @@ export function PatchImportDialog({ open, onClose }: Props) {
 
       applyOps(opsToApply, desc);
       toast.success(
-        `インポート完了: ${parseResult.opsCount}件の操作を適用しました`,
+        wf(t, "patch.toastDone", { n: parseResult.opsCount }),
         { description: parseResult.patch.description ?? undefined }
       );
       onClose();
     } catch (err) {
-      toast.error("インポートに失敗しました", { description: (err as Error).message });
+      toast.error(t("patch.toastError"), { description: (err as Error).message });
     } finally {
       setIsApplying(false);
     }
   };
 
-  const modeLabel = parseResult?.patch.mode === "full_replace" ? "全書き換え" : "部分書き換え";
+  const modeLabel = parseResult?.patch.mode === "full_replace" ? t("patch.modeFull") : t("patch.modePartial");
   const modeColor = parseResult?.patch.mode === "full_replace" ? "text-red-600" : "text-blue-600";
   const modeBg = parseResult?.patch.mode === "full_replace" ? "bg-red-50 border-red-200" : "bg-blue-50 border-blue-200";
 
@@ -333,13 +338,13 @@ export function PatchImportDialog({ open, onClose }: Props) {
         <DialogHeader className="px-5 pt-4 pb-3 border-b border-border">
           <DialogTitle className="text-base font-bold flex items-center gap-2">
             <Upload size={16} />
-            パッチインポート
+            {t("patch.dialogTitle")}
           </DialogTitle>
         </DialogHeader>
 
         {/* Download templates section */}
         <div className="px-5 py-3 border-b border-border bg-muted/20">
-          <p className="text-xs text-muted-foreground mb-2 font-medium">テンプレート・仕様書のダウンロード</p>
+          <p className="text-xs text-muted-foreground mb-2 font-medium">{t("patch.templateSection")}</p>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
@@ -348,7 +353,7 @@ export function PatchImportDialog({ open, onClose }: Props) {
               onClick={() => downloadText("partial_import_template.json", PARTIAL_TEMPLATE_JSON)}
             >
               <Download size={11} />
-              部分書き換えテンプレート
+              {t("patch.downloadPartial")}
             </Button>
             <Button
               variant="outline"
@@ -357,7 +362,7 @@ export function PatchImportDialog({ open, onClose }: Props) {
               onClick={() => downloadText("full_replace_import_template.json", FULL_REPLACE_TEMPLATE_JSON)}
             >
               <Download size={11} />
-              全書き換えテンプレート
+              {t("patch.downloadFull")}
             </Button>
             <Button
               variant="outline"
@@ -366,7 +371,7 @@ export function PatchImportDialog({ open, onClose }: Props) {
               onClick={() => downloadText("README_import.md", README_IMPORT_MD, "text/markdown")}
             >
               <BookOpen size={11} />
-              仕様書 README.md
+              {t("patch.downloadReadme")}
             </Button>
           </div>
         </div>
@@ -399,21 +404,21 @@ export function PatchImportDialog({ open, onClose }: Props) {
             {parseResult ? (
               <div className="flex flex-col items-center gap-2">
                 <CheckCircle2 size={28} className="text-green-500" />
-                <p className="text-sm font-medium text-green-700">ファイルを読み込みました</p>
-                <p className="text-xs text-muted-foreground">別のファイルを選ぶにはここをクリック</p>
+                <p className="text-sm font-medium text-green-700">{t("patch.dropSuccess")}</p>
+                <p className="text-xs text-muted-foreground">{t("patch.dropClick")}</p>
               </div>
             ) : parseError ? (
               <div className="flex flex-col items-center gap-2">
                 <AlertTriangle size={28} className="text-red-500" />
-                <p className="text-sm font-medium text-red-700">読み込みエラー</p>
-                <p className="text-xs text-muted-foreground">別のファイルを選ぶにはここをクリック</p>
+                <p className="text-sm font-medium text-red-700">{t("patch.dropError")}</p>
+                <p className="text-xs text-muted-foreground">{t("patch.dropClick")}</p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <FileJson size={28} className="text-muted-foreground" />
-                <p className="text-sm font-medium">JSONファイルをドロップ</p>
-                <p className="text-xs text-muted-foreground">またはクリックしてファイルを選択</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-1">timetable-patch/v1 形式のみ対応</p>
+                <p className="text-sm font-medium">{t("patch.dropZone")}</p>
+                <p className="text-xs text-muted-foreground">{t("patch.dropOr")}</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1">{t("patch.dropNote")}</p>
               </div>
             )}
           </div>
@@ -433,10 +438,10 @@ export function PatchImportDialog({ open, onClose }: Props) {
               <div className={cn("flex items-center gap-2 p-3 rounded-lg border text-sm", modeBg)}>
                 <Info size={14} className={cn("shrink-0", modeColor)} />
                 <div>
-                  <span className={cn("font-bold", modeColor)}>モード: {modeLabel}</span>
+                  <span className={cn("font-bold", modeColor)}>{wf(t, "patch.modeLabel", { mode: modeLabel })}</span>
                   {parseResult.patch.mode === "full_replace" && (
                     <p className="text-xs text-red-600 mt-0.5">
-                      指定期間の全コマを上書きします。元に戻すには「変更履歴」から取り消してください。
+                      {t("patch.fullReplaceWarning")}
                     </p>
                   )}
                 </div>
@@ -451,21 +456,21 @@ export function PatchImportDialog({ open, onClose }: Props) {
                   <p className="text-xs text-muted-foreground">{parseResult.patch.notes}</p>
                 )}
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mt-2">
-                  <span className="text-muted-foreground">操作数</span>
-                  <span className="font-medium">{parseResult.opsCount} 件</span>
-                  <span className="text-muted-foreground">対象日数</span>
-                  <span className="font-medium">{parseResult.affectedDates.length} 日</span>
+                  <span className="text-muted-foreground">{t("patch.opsCount")}</span>
+                  <span className="font-medium">{parseResult.opsCount}{language === "ja" ? " 件" : ""}</span>
+                  <span className="text-muted-foreground">{t("patch.affectedDays")}</span>
+                  <span className="font-medium">{parseResult.affectedDates.length}{language === "ja" ? " 日" : ""}</span>
                   {parseResult.patch.dateRange && (
                     <>
-                      <span className="text-muted-foreground">期間</span>
+                      <span className="text-muted-foreground">{t("patch.dateRange")}</span>
                       <span className="font-medium">
                         {parseResult.patch.dateRange.start} 〜 {parseResult.patch.dateRange.end}
                       </span>
                     </>
                   )}
-                  <span className="text-muted-foreground">最初の日付</span>
+                  <span className="text-muted-foreground">{t("patch.firstDate")}</span>
                   <span className="font-medium">{parseResult.affectedDates[0]}</span>
-                  <span className="text-muted-foreground">最後の日付</span>
+                  <span className="text-muted-foreground">{t("patch.lastDate")}</span>
                   <span className="font-medium">{parseResult.affectedDates[parseResult.affectedDates.length - 1]}</span>
                 </div>
               </div>
@@ -475,7 +480,7 @@ export function PatchImportDialog({ open, onClose }: Props) {
                 <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-1">
                   <p className="text-xs font-medium text-amber-700 flex items-center gap-1">
                     <AlertTriangle size={12} />
-                    警告 ({parseResult.warnings.length}件) — スキップされた操作があります
+                    {wf(t, "patch.warningCount", { n: parseResult.warnings.length })}
                   </p>
                   {parseResult.warnings.map((w, i) => (
                     <p key={i} className="text-xs text-amber-600 pl-4">{w}</p>
@@ -490,7 +495,7 @@ export function PatchImportDialog({ open, onClose }: Props) {
         <div className="px-5 py-3 border-t border-border flex items-center justify-between">
           <Button variant="outline" size="sm" onClick={onClose} className="gap-1.5">
             <X size={13} />
-            キャンセル
+            {t("wiz.cancel")}
           </Button>
           <Button
             size="sm"
@@ -502,11 +507,11 @@ export function PatchImportDialog({ open, onClose }: Props) {
             )}
           >
             {isApplying ? (
-              "適用中..."
+              t("patch.applyingBtn")
             ) : (
               <>
                 <Upload size={13} />
-                {parseResult?.patch.mode === "full_replace" ? "全書き換えで適用" : "部分適用"}
+                {parseResult?.patch.mode === "full_replace" ? t("patch.applyFull") : t("patch.applyPartial")}
               </>
             )}
           </Button>

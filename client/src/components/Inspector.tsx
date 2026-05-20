@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { ConfirmChangeDialog, ChangePreview, ChangeOpType } from "@/components/ConfirmChangeDialog";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
+import { useLanguage, type TranslationKey } from "@/contexts/LanguageContext";
 
 type OpMode = "delete" | "add" | "move" | "swap" | "reason" | "subject";
 type MultiOpMode = "delete" | "add" | "reason" | "subject";
@@ -48,6 +49,15 @@ export function Inspector() {
   // classListが空の場合はVALID_CLASSESにフォールバック
   const effectiveClassList = classList.length > 0 ? classList : [];
   const { gradeColors, subjectColors } = useGradeColors();
+  const { t } = useLanguage();
+  // {token} を変数で置換する簡易フォーマッタ（t()は補間非対応のため）
+  const tf = (key: TranslationKey, vars: Record<string, string | number>) => {
+    let s: string = t(key);
+    for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+    return s;
+  };
+  // "5/12(月) 3限" 形式の日付+時限ラベル（日付フォーマット自体は別対応）
+  const pLabel = (d: string, p: number | string) => `${formatDateJP(d)} ${p}${t("audit.periodSuffix")}`;
 
   const isHomeroomMode = mode === 'homeroom';
   const isMultiSubjectMode = mode === 'multi_subject';
@@ -97,7 +107,7 @@ export function Inspector() {
   // ─── 複数選択モードの一括操作 ─────────────────────────────────
   const handleMultiExecute = () => {
     if (selectedCells.size === 0) {
-      toast.error("コマが選択されていません");
+      toast.error(t("inspector.errNoSelection"));
       return;
     }
     if (multiOpMode === "delete") {
@@ -107,11 +117,11 @@ export function Inspector() {
       });
       const preview: ChangePreview = {
         opType: "delete",
-        description: `${selectedCells.size}コマの授業を一括削除します`,
+        description: tf("inspector.batchDeleteDesc", { n: selectedCells.size }),
         items: parsedSelectedCells.map(({ date, period }) => {
           const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
           return {
-            label: `${formatDateJP(date)} ${period}限`,
+            label: pLabel(date, period),
             fromDate: date, fromPeriod: period, fromClass: slot?.class ?? null,
             toDate: date, toPeriod: period, toClass: null,
           };
@@ -124,7 +134,7 @@ export function Inspector() {
         const audit = applyOps(ops, `一括削除: ${selectedCells.size}コマ`);
         const errors = audit.filter(a => a.level === "error");
         if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
-        else toast.success(`${selectedCells.size}コマを削除しました`);
+        else toast.success(tf("inspector.okBatchDeleted", { n: selectedCells.size }));
         setReason("");
         clearSelectedCells();
         setMultiSelectMode(false);
@@ -133,7 +143,7 @@ export function Inspector() {
       const targetClass = newClass || (isHomeroomMode ? (homeroomClass ?? null) : null);
       const targetSubject = newSubject || null;
       if (!targetClass && !targetSubject) {
-        toast.error("クラスまたは教科を指定してください");
+        toast.error(t("inspector.errClassOrSubject"));
         return;
       }
       const ops = parsedSelectedCells.flatMap(({ date, period }) => {
@@ -149,11 +159,11 @@ export function Inspector() {
       const displayLabel = [targetClass, targetSubject].filter(Boolean).join(' / ');
       const preview: ChangePreview = {
         opType: "add",
-        description: `${selectedCells.size}コマに「${displayLabel}」を一括追加します`,
+        description: tf("inspector.batchAddDesc", { n: selectedCells.size }),
         items: parsedSelectedCells.map(({ date, period }) => {
           const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
           return {
-            label: `${formatDateJP(date)} ${period}限`,
+            label: pLabel(date, period),
             fromDate: date, fromPeriod: period, fromClass: slot?.class ?? null,
             toDate: date, toPeriod: period, toClass: targetClass,
           };
@@ -166,21 +176,21 @@ export function Inspector() {
         const audit = applyOps(ops, `一括追加: ${selectedCells.size}コマ → ${displayLabel}`);
         const errors = audit.filter(a => a.level === "error");
         if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
-        else toast.success(`${selectedCells.size}コマに「${displayLabel}」を追加しました`);
+        else toast.success(tf("inspector.okBatchAdded", { n: selectedCells.size, label: displayLabel }));
         setNewClass(""); setNewSubject(""); setReason("");
         clearSelectedCells();
         setMultiSelectMode(false);
       });
     } else if (multiOpMode === "reason") {
-      if (!reason) { toast.error("理由を入力してください"); return; }
+      if (!reason) { toast.error(t("inspector.errEnterReason")); return; }
       const ops = parsedSelectedCells.map(({ date, period }) => buildReasonOp(date, period, reason));
       const preview: ChangePreview = {
         opType: "add",
-        description: `${selectedCells.size}コマに理由「${reason}」を一括設定します`,
+        description: tf("inspector.batchReasonDesc", { n: selectedCells.size }),
         items: parsedSelectedCells.map(({ date, period }) => {
           const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
           return {
-            label: `${formatDateJP(date)} ${period}限`,
+            label: pLabel(date, period),
             fromDate: date, fromPeriod: period, fromClass: slot?.class ?? null,
             toDate: date, toPeriod: period, toClass: slot?.class ?? null, toReason: reason,
           };
@@ -191,7 +201,7 @@ export function Inspector() {
       setConfirmOpen(true);
       setPendingExecute(() => () => {
         applyOps(ops, `一括理由設定: ${selectedCells.size}コマ → ${reason}`);
-        toast.success(`${selectedCells.size}コマに理由を設定しました`);
+        toast.success(tf("inspector.okBatchReason", { n: selectedCells.size }));
         setReason("");
         clearSelectedCells();
         setMultiSelectMode(false);
@@ -204,11 +214,11 @@ export function Inspector() {
       });
       const preview: ChangePreview = {
         opType: "add",
-        description: `${selectedCells.size}コマの教科を「${subjectValue ?? "なし"}」に一括設定します`,
+        description: tf("inspector.batchSubjectDesc", { n: selectedCells.size }),
         items: parsedSelectedCells.map(({ date, period }) => {
           const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
           return {
-            label: `${formatDateJP(date)} ${period}限`,
+            label: pLabel(date, period),
             fromDate: date, fromPeriod: period, fromClass: slot?.class ?? null,
             toDate: date, toPeriod: period, toClass: slot?.class ?? null,
           };
@@ -219,7 +229,9 @@ export function Inspector() {
       setConfirmOpen(true);
       setPendingExecute(() => () => {
         applyOps(ops, `一括教科設定: ${selectedCells.size}コマ → ${subjectValue ?? "なし"}`);
-        toast.success(subjectValue ? `${selectedCells.size}コマの教科を「${subjectValue}」に設定しました` : `${selectedCells.size}コマの教科を削除しました`);
+        toast.success(subjectValue
+          ? tf("inspector.okBatchSubjectSet", { n: selectedCells.size, label: subjectValue })
+          : tf("inspector.okBatchSubjectDeleted", { n: selectedCells.size }));
         setNewSubject("");
         clearSelectedCells();
         setMultiSelectMode(false);
@@ -236,7 +248,7 @@ export function Inspector() {
       if (!v.valid) { toast.error(v.errors.join("\n")); return; }
       const preview: ChangePreview = {
         opType: "delete",
-        description: `${formatDateJP(date)} ${period}限の授業を削除します`,
+        description: tf("inspector.descDelete", { d: pLabel(date, period) }),
         items: [{
           label: "",
           fromDate: date, fromPeriod: period, fromClass: currentClass, fromReason: currentSlot?.reason,
@@ -248,7 +260,7 @@ export function Inspector() {
         const audit = applyOps([op], `削除: ${date} ${period}限 (${currentClass ?? "空き"})`);
         const errors = audit.filter(a => a.level === "error");
         if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
-        else toast.success(`削除しました: ${formatDateJP(date)} ${period}限`);
+        else toast.success(tf("inspector.okDeleted", { d: pLabel(date, period) }));
         setReason("");
       });
     } else if (opMode === "add") {
@@ -258,7 +270,7 @@ export function Inspector() {
       const targetSubject = newSubject || null;
       // クラスも教科もない場合はエラー
       if (!targetClass && !targetSubject) {
-        toast.error("クラスまたは教科を指定してください");
+        toast.error(t("inspector.errClassOrSubject"));
         return;
       }
       let op;
@@ -277,7 +289,7 @@ export function Inspector() {
       const displayLabel = [targetClass, targetSubject].filter(Boolean).join(' / ');
       const preview: ChangePreview = {
         opType: "add",
-        description: `${formatDateJP(date)} ${period}限に授業を追加します`,
+        description: tf("inspector.descAdd", { d: pLabel(date, period) }),
         items: [{
           label: "",
           fromDate: date, fromPeriod: period, fromClass: currentClass,
@@ -289,52 +301,52 @@ export function Inspector() {
         const audit = applyOps([op], `追加: ${date} ${period}限 → ${displayLabel}`);
         const errors = audit.filter(a => a.level === "error");
         if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
-        else toast.success(`追加しました: ${displayLabel}`);
+        else toast.success(tf("inspector.okAdded", { label: displayLabel }));
         setNewClass(""); setNewSubject(""); setReason("");
       });
     } else if (opMode === "move") {
-      if (!dstDate) { toast.error("移動先の日付を選択してください"); return; }
+      if (!dstDate) { toast.error(t("inspector.errSelectMoveDate")); return; }
       const dstSlot = entryByDate.get(dstDate)?.periods.find(p => p.period === Number(dstPeriod));
       const ops = buildMoveOps(date, period, currentClass, dstDate, Number(dstPeriod), dstSlot?.class ?? null, reason || undefined, currentSubject);
       const preview: ChangePreview = {
         opType: "move",
-        description: `${formatDateJP(date)} ${period}限を ${formatDateJP(dstDate)} ${dstPeriod}限に移動します`,
+        description: tf("inspector.descMove", { from: pLabel(date, period), to: pLabel(dstDate, dstPeriod) }),
         items: [
           {
-            label: "移動元",
+            label: t("inspector.moveFrom"),
             fromDate: date, fromPeriod: period, fromClass: currentClass,
             toDate: date, toPeriod: period, toClass: null,
           },
           {
-            label: "移動先",
+            label: t("inspector.moveTo"),
             fromDate: dstDate, fromPeriod: Number(dstPeriod), fromClass: dstSlot?.class ?? null,
             toDate: dstDate, toPeriod: Number(dstPeriod), toClass: currentClass, toReason: reason || undefined,
           },
         ],
-        warnings: dstSlot?.class ? [`移動先 (${formatDateJP(dstDate)} ${dstPeriod}限) には ${dstSlot.class} が入っています。上書きされます。`] : [],
+        warnings: dstSlot?.class ? [tf("inspector.moveOverwriteWarn", { to: pLabel(dstDate, dstPeriod), c: dstSlot.class })] : [],
       };
       showConfirm("move", `移動: ${date} ${period}限 → ${dstDate} ${dstPeriod}限`, preview, () => {
         const audit = applyOps(ops, `移動: ${date} ${period}限 → ${dstDate} ${dstPeriod}限`);
         const errors = audit.filter(a => a.level === "error");
         if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
-        else toast.success(`移動しました`);
+        else toast.success(t("inspector.okMoved"));
         setReason("");
       });
     } else if (opMode === "swap") {
-      if (!swapDate) { toast.error("交換先の日付を選択してください"); return; }
+      if (!swapDate) { toast.error(t("inspector.errSelectSwapDate")); return; }
       const swapSlot = entryByDate.get(swapDate)?.periods.find(p => p.period === Number(swapPeriod));
       const ops = buildSwapOps(date, period, currentClass, swapDate, Number(swapPeriod), swapSlot?.class ?? null, reason || undefined, currentSubject, swapSlot?.subject);
       const preview: ChangePreview = {
         opType: "swap",
-        description: `${formatDateJP(date)} ${period}限 と ${formatDateJP(swapDate)} ${swapPeriod}限 を交換します`,
+        description: tf("inspector.descSwap", { a: pLabel(date, period), b: pLabel(swapDate, swapPeriod) }),
         items: [
           {
-            label: `${formatDateJP(date)} ${period}限`,
+            label: pLabel(date, period),
             fromClass: currentClass,
             toClass: swapSlot?.class ?? null,
           },
           {
-            label: `${formatDateJP(swapDate)} ${swapPeriod}限`,
+            label: pLabel(swapDate, swapPeriod),
             fromClass: swapSlot?.class ?? null,
             toClass: currentClass,
           },
@@ -345,14 +357,14 @@ export function Inspector() {
         const audit = applyOps(ops, `交換: ${date} ${period}限 ↔ ${swapDate} ${swapPeriod}限`);
         const errors = audit.filter(a => a.level === "error");
         if (errors.length > 0) toast.error(errors.map(e => e.message).join("\n"));
-        else toast.success(`交換しました`);
+        else toast.success(t("inspector.okSwapped"));
       });
     } else if (opMode === "reason") {
-      if (!reason) { toast.error("理由を入力してください"); return; }
+      if (!reason) { toast.error(t("inspector.errEnterReason")); return; }
       const ops = [buildReasonOp(date, period, reason)];
       const preview: ChangePreview = {
         opType: "add",
-        description: `${formatDateJP(date)} ${period}限の理由を設定します`,
+        description: tf("inspector.descReason", { d: pLabel(date, period) }),
         items: [{
           label: "",
           fromDate: date, fromPeriod: period, fromClass: currentClass, fromReason: currentSlot?.reason,
@@ -362,7 +374,7 @@ export function Inspector() {
       };
       showConfirm("add", `理由設定: ${date} ${period}限`, preview, () => {
         applyOps(ops, `理由設定: ${date} ${period}限`);
-        toast.success(`理由を設定しました`);
+        toast.success(t("inspector.okReasonSet"));
         setReason("");
       });
     } else if (opMode === "subject") {
@@ -371,7 +383,7 @@ export function Inspector() {
       const op = buildSetSubjectOp(date, period, currentClass, subjectValue);
       const preview: ChangePreview = {
         opType: "add",
-        description: `${formatDateJP(date)} ${period}限の教科を設定します`,
+        description: tf("inspector.descSubject", { d: pLabel(date, period) }),
         items: [{
           label: "",
           fromDate: date, fromPeriod: period, fromClass: currentClass,
@@ -381,7 +393,7 @@ export function Inspector() {
       };
       showConfirm("add", `教科設定: ${date} ${period}限 → ${subjectValue ?? "なし"}`, preview, () => {
         applyOps([op], `教科設定: ${date} ${period}限 → ${subjectValue ?? "なし"}`);
-        toast.success(subjectValue ? `教科を「${subjectValue}」に設定しました` : "教科を削除しました");
+        toast.success(subjectValue ? tf("inspector.okSubjectSet", { label: subjectValue }) : t("inspector.okSubjectDeleted"));
         setNewSubject("");
       });
     }
@@ -403,19 +415,19 @@ export function Inspector() {
   };
 
   const opModes: { id: OpMode; label: string }[] = [
-    { id: "delete", label: "削除" },
-    { id: "add", label: "追加" },
-    { id: "move", label: "移動" },
-    { id: "swap", label: "交換" },
-    { id: "reason", label: "理由" },
-    ...(showSubjectOp ? [{ id: "subject" as OpMode, label: "教科" }] : []),
+    { id: "delete", label: t("inspector.opDelete") },
+    { id: "add", label: t("inspector.opAdd") },
+    { id: "move", label: t("inspector.opMove") },
+    { id: "swap", label: t("inspector.opSwap") },
+    { id: "reason", label: t("inspector.opReason") },
+    ...(showSubjectOp ? [{ id: "subject" as OpMode, label: t("inspector.opSubject") }] : []),
   ];
 
   const multiOpModes: { id: MultiOpMode; label: string }[] = [
-    { id: "delete", label: "削除" },
-    { id: "add", label: "追加" },
-    { id: "reason", label: "理由" },
-    ...(showSubjectOp ? [{ id: "subject" as MultiOpMode, label: "教科" }] : []),
+    { id: "delete", label: t("inspector.opDelete") },
+    { id: "add", label: t("inspector.opAdd") },
+    { id: "reason", label: t("inspector.opReason") },
+    ...(showSubjectOp ? [{ id: "subject" as MultiOpMode, label: t("inspector.opSubject") }] : []),
   ];
 
   // 追加モードの初期クラス値: homeroomモードは担任クラスをデフォルトに設定
@@ -448,9 +460,9 @@ export function Inspector() {
             <div className="flex items-center gap-2">
               <CheckSquare size={14} className="text-amber-600" />
               <div>
-                <p className="text-xs text-amber-600 font-medium">複数選択モード</p>
+                <p className="text-xs text-amber-600 font-medium">{t("inspector.multiSelectMode")}</p>
                 <p className="text-sm font-bold text-foreground">
-                  {selectedCells.size > 0 ? `${selectedCells.size}コマ選択中` : "コマを選択してください"}
+                  {selectedCells.size > 0 ? tf("inspector.nSelected", { n: selectedCells.size }) : t("inspector.selectPeriodsPrompt")}
                 </p>
               </div>
             </div>
@@ -470,21 +482,21 @@ export function Inspector() {
                   const slot = entryByDate.get(date)?.periods.find(p => p.period === period);
                   return (
                     <div key={`${date}|${period}`} className="flex items-center gap-1.5 text-[11px]">
-                      <span className="text-muted-foreground">{formatDateJP(date)} {period}限</span>
-                      <span className="font-medium text-foreground">{slot?.class ?? "空き"}</span>
+                      <span className="text-muted-foreground">{pLabel(date, period)}</span>
+                      <span className="font-medium text-foreground">{slot?.class ?? t("inspector.empty")}</span>
                       {slot?.subject && <span className="text-muted-foreground">/ {slot.subject}</span>}
                     </div>
                   );
                 })}
                 {selectedCells.size > 5 && (
-                  <div className="text-[10px] text-muted-foreground">...他 {selectedCells.size - 5} コマ</div>
+                  <div className="text-[10px] text-muted-foreground">{tf("inspector.othersCount", { n: selectedCells.size - 5 })}</div>
                 )}
               </div>
               <button
                 onClick={() => clearSelectedCells()}
                 className="mt-1 text-[10px] text-muted-foreground hover:text-foreground underline"
               >
-                選択をすべて解除
+                {t("inspector.clearAll")}
               </button>
             </div>
           )}
@@ -513,28 +525,28 @@ export function Inspector() {
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
             {multiOpMode === "delete" && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">選択した <span className="font-medium text-foreground">{selectedCells.size}コマ</span> の授業を削除します</p>
+                <p className="text-xs text-muted-foreground">{tf("inspector.batchDeleteDesc", { n: selectedCells.size })}</p>
                 <ReasonField reason={reason} setReason={setReason} />
               </div>
             )}
             {multiOpMode === "add" && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">選択した <span className="font-medium text-foreground">{selectedCells.size}コマ</span> に一括追加します</p>
+                <p className="text-xs text-muted-foreground">{tf("inspector.batchAddDesc", { n: selectedCells.size })}</p>
                 <div>
                   <Label className="text-xs text-muted-foreground mb-1 block">
-                    クラス
-                    {isHomeroomMode && <span className="ml-1 text-[10px] text-amber-600">(担任: {homeroomClass ?? '未設定'})</span>}
+                    {t("inspector.classLabel")}
+                    {isHomeroomMode && <span className="ml-1 text-[10px] text-amber-600">{tf("inspector.homeroomHint", { c: homeroomClass ?? t("inspector.notSet") })}</span>}
                   </Label>
                   <Select
                     value={newClass || (isHomeroomMode ? (homeroomClass ?? "__none__") : "__none__")}
                     onValueChange={v => setNewClass(v === "__none__" ? "" : v)}
                   >
                     <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="クラスを選択..." />
+                      <SelectValue placeholder={t("inspector.selectClassPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">
-                        <span className="text-muted-foreground">— 指定なし —</span>
+                        <span className="text-muted-foreground">{t("inspector.noneSelectable")}</span>
                       </SelectItem>
                       {effectiveClassList.map(c => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -548,26 +560,26 @@ export function Inspector() {
                   subjects={subjects.map(s => s.name)}
                   required={isHomeroomMode && !newClass && !homeroomClass}
                   allowEmpty
-                  emptyLabel="指定なし"
+                  emptyLabel={t("inspector.notSpecified")}
                 />
                 <ReasonField reason={reason} setReason={setReason} />
               </div>
             )}
             {multiOpMode === "reason" && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">選択した <span className="font-medium text-foreground">{selectedCells.size}コマ</span> に理由を一括設定します</p>
+                <p className="text-xs text-muted-foreground">{tf("inspector.batchReasonDesc", { n: selectedCells.size })}</p>
                 <ReasonField reason={reason} setReason={setReason} required />
               </div>
             )}
             {multiOpMode === "subject" && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">選択した <span className="font-medium text-foreground">{selectedCells.size}コマ</span> の教科を一括設定します</p>
+                <p className="text-xs text-muted-foreground">{tf("inspector.batchSubjectDesc", { n: selectedCells.size })}</p>
                 <SubjectField
                   value={newSubject}
                   onChange={setNewSubject}
                   subjects={subjects.map(s => s.name)}
                   allowEmpty
-                  emptyLabel="教科なし（削除）"
+                  emptyLabel={t("inspector.subjectNoneDelete")}
                 />
               </div>
             )}
@@ -580,10 +592,10 @@ export function Inspector() {
               disabled={selectedCells.size === 0}
               onClick={handleMultiExecute}
             >
-              {multiOpMode === "delete" && `${selectedCells.size}コマを削除`}
-              {multiOpMode === "add" && `${selectedCells.size}コマに追加`}
-              {multiOpMode === "reason" && `${selectedCells.size}コマに理由を設定`}
-              {multiOpMode === "subject" && `${selectedCells.size}コマの教科を設定`}
+              {multiOpMode === "delete" && tf("inspector.execDelete", { n: selectedCells.size })}
+              {multiOpMode === "add" && tf("inspector.execAdd", { n: selectedCells.size })}
+              {multiOpMode === "reason" && tf("inspector.execReason", { n: selectedCells.size })}
+              {multiOpMode === "subject" && tf("inspector.execSubject", { n: selectedCells.size })}
             </Button>
           </div>
         </div>
@@ -655,9 +667,9 @@ export function Inspector() {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div>
-            <p className="text-xs text-muted-foreground">選択中のコマ</p>
+            <p className="text-xs text-muted-foreground">{t("inspector.selectedCell")}</p>
             <p className="text-sm font-bold text-foreground">
-              {formatDateJP(date)} — {period}限
+              {formatDateJP(date)} — {period}{t("audit.periodSuffix")}
             </p>
           </div>
           <button
@@ -686,16 +698,16 @@ export function Inspector() {
                     ? currentSubject
                     : currentClass
                       ? currentClass
-                      : <span className="text-muted-foreground font-normal">授業なし</span>
+                      : <span className="text-muted-foreground font-normal">{t("inspector.noClass")}</span>
                   }
                 </p>
               ) : (
                 <>
                   <p className="text-sm font-semibold" style={currentClass ? { color: cellColors?.text } : {}}>
-                    {currentClass ?? <span className="text-muted-foreground font-normal">授業なし</span>}
+                    {currentClass ?? <span className="text-muted-foreground font-normal">{t("inspector.noClass")}</span>}
                   </p>
                   {currentSubject && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">教科: {currentSubject}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{tf("inspector.subjectPrefix", { s: currentSubject })}</p>
                   )}
                 </>
               )}
@@ -734,10 +746,10 @@ export function Inspector() {
               <p className="text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">
                   {isHomeroomMode
-                    ? (currentSubject ?? currentClass ?? "空きコマ")
-                    : (currentClass ?? "空きコマ")
+                    ? (currentSubject ?? currentClass ?? t("inspector.emptyPeriod"))
+                    : (currentClass ?? t("inspector.emptyPeriod"))
                   }
-                </span> を削除します
+                </span> {t("inspector.deleteTargetSuffix")}
               </p>
               <ReasonField reason={reason} setReason={setReason} />
             </div>
@@ -749,19 +761,19 @@ export function Inspector() {
               {/* Class field: 全モードで表示。homeroomモードは担任クラスをデフォルトに設定 */}
               <div>
                 <Label className="text-xs text-muted-foreground mb-1 block">
-                  クラス
-                  {isHomeroomMode && <span className="ml-1 text-[10px] text-amber-600">(担任: {homeroomClass ?? '未設定'})</span>}
+                  {t("inspector.classLabel")}
+                  {isHomeroomMode && <span className="ml-1 text-[10px] text-amber-600">{tf("inspector.homeroomHint", { c: homeroomClass ?? t("inspector.notSet") })}</span>}
                 </Label>
                 <Select
                   value={newClass || (isHomeroomMode ? (homeroomClass ?? "__none__") : "__none__")}
                   onValueChange={v => setNewClass(v === "__none__" ? "" : v)}
                 >
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="クラスを選択...　(空白=指定なし)" />
+                    <SelectValue placeholder={t("inspector.selectClassBlankHint")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">
-                      <span className="text-muted-foreground">— 指定なし —</span>
+                      <span className="text-muted-foreground">{t("inspector.noneSelectable")}</span>
                     </SelectItem>
                     {effectiveClassList.map(c => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -776,7 +788,7 @@ export function Inspector() {
                 subjects={subjects.map(s => s.name)}
                 required={isHomeroomMode && !newClass && !homeroomClass}
                 allowEmpty
-                emptyLabel="指定なし"
+                emptyLabel={t("inspector.notSpecified")}
               />
               <ReasonField reason={reason} setReason={setReason} />
             </div>
@@ -785,9 +797,9 @@ export function Inspector() {
           {/* Move mode */}
           {opMode === "move" && (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">移動先を指定してください</p>
+              <p className="text-xs text-muted-foreground">{t("inspector.specifyMoveDest")}</p>
               <DatePeriodPicker
-                label="移動先"
+                label={t("inspector.moveTo")}
                 dates={availableDates}
                 date={dstDate} setDate={setDstDate}
                 period={dstPeriod} setPeriod={setDstPeriod}
@@ -796,7 +808,7 @@ export function Inspector() {
                 const dstSlot = entryByDate.get(dstDate)?.periods.find(p => p.period === Number(dstPeriod));
                 return dstSlot?.class ? (
                   <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-700">
-                    ⚠ 移動先に <strong>{dstSlot.class}</strong> が入っています（上書きされます）
+                    {tf("inspector.moveDestOccupied", { c: dstSlot.class })}
                   </div>
                 ) : null;
               })()}
@@ -807,17 +819,17 @@ export function Inspector() {
           {/* Swap mode */}
           {opMode === "swap" && (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">交換先を指定してください</p>
+              <p className="text-xs text-muted-foreground">{t("inspector.specifySwapDest")}</p>
               <DatePeriodPicker
-                label="交換先"
+                label={t("inspector.swapTo")}
                 dates={availableDates}
                 date={swapDate} setDate={setSwapDate}
                 period={swapPeriod} setPeriod={setSwapPeriod}
               />
               {swapDate && swapPeriod && (
                 <div className="bg-muted/50 rounded p-2 text-xs text-muted-foreground">
-                  交換先: <span className="font-medium text-foreground">
-                    {entryByDate.get(swapDate)?.periods.find(p => p.period === Number(swapPeriod))?.class ?? "空き"}
+                  {t("inspector.swapTo")}: <span className="font-medium text-foreground">
+                    {entryByDate.get(swapDate)?.periods.find(p => p.period === Number(swapPeriod))?.class ?? t("inspector.empty")}
                   </span>
                 </div>
               )}
@@ -828,7 +840,7 @@ export function Inspector() {
           {/* Reason mode */}
           {opMode === "reason" && (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">理由を設定します（既存の理由を上書き）</p>
+              <p className="text-xs text-muted-foreground">{t("inspector.reasonOverwriteNote")}</p>
               <ReasonField reason={reason} setReason={setReason} required />
             </div>
           )}
@@ -837,15 +849,15 @@ export function Inspector() {
           {opMode === "subject" && (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
-                このコマの教科を設定します
-                {currentSubject && <span className="ml-1">(現在: <strong>{currentSubject}</strong>)</span>}
+                {t("inspector.setSubjectForCell")}
+                {currentSubject && <span className="ml-1">{tf("inspector.currentSubjectHint", { s: currentSubject })}</span>}
               </p>
               <SubjectField
                 value={newSubject}
                 onChange={setNewSubject}
                 subjects={subjects.map(s => s.name)}
                 allowEmpty
-                emptyLabel="教科なし（削除）"
+                emptyLabel={t("inspector.subjectNoneDelete")}
               />
             </div>
           )}
@@ -857,12 +869,12 @@ export function Inspector() {
             className="w-full h-9 text-sm font-medium"
             onClick={handleExecute}
           >
-            {opMode === "delete" && "削除を確認"}
-            {opMode === "add" && "追加を確認"}
-            {opMode === "move" && "移動を確認"}
-            {opMode === "swap" && "交換を確認"}
-            {opMode === "reason" && "理由を設定"}
-            {opMode === "subject" && "教科を設定"}
+            {opMode === "delete" && t("inspector.confirmDelete")}
+            {opMode === "add" && t("inspector.confirmAdd")}
+            {opMode === "move" && t("inspector.confirmMove")}
+            {opMode === "swap" && t("inspector.confirmSwap")}
+            {opMode === "reason" && t("inspector.confirmReason")}
+            {opMode === "subject" && t("inspector.confirmSubject")}
           </Button>
         </div>
       </div>
@@ -885,16 +897,17 @@ function ReasonField({
 }: {
   reason: string; setReason: (v: string) => void; required?: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <div>
       <Label className="text-xs text-muted-foreground mb-1 block">
-        理由{required ? " *" : " (任意)"}
+        {t("inspector.reasonField")}{required ? " *" : ` ${t("inspector.optional")}`}
       </Label>
       <div className="space-y-1.5">
         <Input
           value={reason}
           onChange={e => setReason(e.target.value)}
-          placeholder="理由を入力..."
+          placeholder={t("inspector.reasonPlaceholder")}
           className="h-8 text-sm"
         />
         <div className="flex flex-wrap gap-1">
@@ -919,7 +932,7 @@ function ReasonField({
 }
 
 function SubjectField({
-  value, onChange, subjects, required = false, allowEmpty = false, emptyLabel = "教科なし"
+  value, onChange, subjects, required = false, allowEmpty = false, emptyLabel
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -928,18 +941,19 @@ function SubjectField({
   allowEmpty?: boolean;
   emptyLabel?: string;
 }) {
+  const { t } = useLanguage();
   return (
     <div>
       <Label className="text-xs text-muted-foreground mb-1 block">
-        教科{required ? " *" : " (任意)"}
+        {t("inspector.subjectField")}{required ? " *" : ` ${t("inspector.optional")}`}
       </Label>
       <Select value={value || (allowEmpty ? "__none__" : "")} onValueChange={v => onChange(v === "__none__" ? "" : v)}>
         <SelectTrigger className="h-8 text-sm">
-          <SelectValue placeholder="教科を選択..." />
+          <SelectValue placeholder={t("inspector.selectSubjectPlaceholder")} />
         </SelectTrigger>
         <SelectContent>
           {allowEmpty && (
-            <SelectItem value="__none__">{emptyLabel}</SelectItem>
+            <SelectItem value="__none__">{emptyLabel ?? t("inspector.subjectNone")}</SelectItem>
           )}
           {subjects.map(s => (
             <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -958,13 +972,14 @@ function DatePeriodPicker({
   date: string; setDate: (v: string) => void;
   period: string; setPeriod: (v: string) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-1.5">
       <div>
-        <Label className="text-xs text-muted-foreground mb-1 block">{label}の日付</Label>
+        <Label className="text-xs text-muted-foreground mb-1 block">{t("inspector.dateOf").split("{label}").join(label)}</Label>
         <Select value={date} onValueChange={setDate}>
           <SelectTrigger className="h-8 text-sm">
-            <SelectValue placeholder="日付を選択..." />
+            <SelectValue placeholder={t("inspector.selectDatePlaceholder")} />
           </SelectTrigger>
           <SelectContent className="max-h-48">
             {dates.map(d => (
@@ -974,14 +989,14 @@ function DatePeriodPicker({
         </Select>
       </div>
       <div>
-        <Label className="text-xs text-muted-foreground mb-1 block">{label}の時限</Label>
+        <Label className="text-xs text-muted-foreground mb-1 block">{t("inspector.periodOf").split("{label}").join(label)}</Label>
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {[1, 2, 3, 4, 5, 6].map(p => (
-              <SelectItem key={p} value={String(p)}>{p}限</SelectItem>
+              <SelectItem key={p} value={String(p)}>{p}{t("audit.periodSuffix")}</SelectItem>
             ))}
           </SelectContent>
         </Select>

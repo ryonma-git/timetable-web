@@ -33,6 +33,14 @@ import { exportTimetablePdf } from "@/lib/timetablePdfExport";
 import { exportToICS, downloadICS } from "@/lib/icsExport";
 import { useGoogleDrive } from "@/contexts/GoogleDriveContext";
 import { insertCalendarEvents, listCalendars, isTokenValid, deleteCalendarEvents, deleteCalendarEventsInRange, type CalendarEvent } from "@/lib/googleDrive";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/contexts/LanguageContext";
+
+function wf(t: (k: TranslationKey) => string, key: TranslationKey, vars: Record<string, string | number>): string {
+  let s = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -244,6 +252,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
   } = useTimetable();
   const { gradeColors } = useGradeColors();
   const { isLoggedIn, login } = useGoogleDrive();
+  const { t, language } = useLanguage();
 
   const [format, setFormat] = useState<ExportFormat>(initialTab ?? "excel");
   // openが変わったとき（ダイアログが開くとき）にinitialTabを反映
@@ -302,12 +311,12 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
     return allWeeks.map(w => {
       const d = isoToDate(w);
       const fri = addDays(d, 4);
-      return {
-        value: w,
-        label: `${d.getMonth() + 1}/${d.getDate()}（月）〜 ${fri.getMonth() + 1}/${fri.getDate()}（金）`,
-      };
+      const label = language === "ja"
+        ? `${d.getMonth() + 1}/${d.getDate()}（月）〜 ${fri.getMonth() + 1}/${fri.getDate()}（金）`
+        : `${d.getMonth() + 1}/${d.getDate()} (Mon) – ${fri.getMonth() + 1}/${fri.getDate()} (Fri)`;
+      return { value: w, label };
     });
-  }, [allWeeks]);
+  }, [allWeeks, language]);
   // ── Month options for select (月単位モード: 月の最初の週を代表値として使用) ──
   const monthOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -317,14 +326,14 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (!seen.has(key)) {
         seen.add(key);
-        opts.push({
-          value: w,
-          label: `${d.getFullYear()}年${d.getMonth() + 1}月`,
-        });
+        const label = language === "ja"
+          ? `${d.getFullYear()}年${d.getMonth() + 1}月`
+          : `${d.toLocaleString("en-US", { month: "long" })} ${d.getFullYear()}`;
+        opts.push({ value: w, label });
       }
     }
     return opts;
-  }, [allWeeks]);
+  }, [allWeeks, language]);
 
   // ── Auto-select closest week ─────────────────────────────────
   useMemo(() => {
@@ -372,17 +381,19 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
 
   // ── Range label ──────────────────────────────────────────────
   const rangeLabel = useMemo(() => {
-    if (weeksToPrint.length === 0) return "なし";
+    if (weeksToPrint.length === 0) return t("exp.rangeNone");
+    const sep = language === "ja" ? "〜" : "–";
     if (weeksToPrint.length === 1) {
       const d = isoToDate(weeksToPrint[0]);
       const fri = addDays(d, 4);
-      return `${d.getMonth() + 1}/${d.getDate()}〜${fri.getMonth() + 1}/${fri.getDate()}`;
+      return `${d.getMonth() + 1}/${d.getDate()}${sep}${fri.getMonth() + 1}/${fri.getDate()}`;
     }
     const first = isoToDate(weeksToPrint[0]);
     const last = isoToDate(weeksToPrint[weeksToPrint.length - 1]);
     const lastFri = addDays(last, 4);
-    return `${first.getMonth() + 1}/${first.getDate()}〜${lastFri.getMonth() + 1}/${lastFri.getDate()}（${weeksToPrint.length}週）`;
-  }, [weeksToPrint]);
+    const suffix = language === "ja" ? `（${weeksToPrint.length}週）` : ` (${weeksToPrint.length} wk)`;
+    return `${first.getMonth() + 1}/${first.getDate()}${sep}${lastFri.getMonth() + 1}/${lastFri.getDate()}${suffix}`;
+  }, [weeksToPrint, t, language]);
 
   // ── Holiday map ──────────────────────────────────────────────
   const holidayDates = useMemo(() => new Set(holidays.map(h => h.date)), [holidays]);
@@ -399,10 +410,10 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
     if (!semesterMeta) return "";
     const sem = semesterMeta;
     const termLabel = sem.semesterSystem === "semester"
-      ? (sem.semesterNumber === 1 ? "前期" : "後期")
-      : `${sem.semesterNumber}学期`;
+      ? (sem.semesterNumber === 1 ? t("set.semHalf1") : t("set.semHalf2"))
+      : t(`set.semShort${sem.semesterNumber}` as TranslationKey);
     return termLabel;
-  }, [semesterMeta]);
+  }, [semesterMeta, t]);
 
   const showSaturday = false;
   const showSunday = false;
@@ -411,9 +422,10 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
   const handleExportPdf = useCallback(async () => {
     if (weeksToPrint.length === 0) return;
     setIsExporting(true);
-    const toastId = toast.loading(`PDF を生成中... (${weeksToPrint.length}週分)`);
+    const toastId = toast.loading(`${t("exp.toastPdfGenerating")} ${wf(t, "exp.toastWeeksOf", { n: weeksToPrint.length })}`);
     onClose();
     try {
+      const defaultName = t("exp.defaultFileName");
       await exportTimetablePdf({
         weeksToPrint,
         effectiveEntries,
@@ -423,28 +435,28 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
         showReason,
         showEmptyCells,
         orientation,
-        title: currentFile?.meta.title ?? "時間割",
+        title: currentFile?.meta.title ?? defaultName,
         semLabel,
         schoolName: currentFile?.meta.school ?? "",
-        filename: currentFile?.meta.title ?? "時間割",
+        filename: currentFile?.meta.title ?? defaultName,
         outputType: "pdf",
       });
-      toast.success("PDF のダウンロードが完了しました", { id: toastId });
+      toast.success(t("exp.toastPdfDone"), { id: toastId });
     } catch (e) {
-      toast.error(`PDF 生成に失敗しました: ${e instanceof Error ? e.message : String(e)}`, { id: toastId });
+      toast.error(wf(t, "exp.toastPdfError", { msg: e instanceof Error ? e.message : String(e) }), { id: toastId });
     } finally {
       setIsExporting(false);
     }
-  }, [weeksToPrint, effectiveEntries, holidays, gradeColors, filterClass, showReason, showEmptyCells, orientation, currentFile, semLabel, onClose]);
+  }, [weeksToPrint, effectiveEntries, holidays, gradeColors, filterClass, showReason, showEmptyCells, orientation, currentFile, semLabel, onClose, t]);
 
   // ── Export: Excel ────────────────────────────────────────────
   const handleExportExcel = useCallback(async () => {
     if (weeksToPrint.length === 0) return;
     setIsExporting(true);
-    const toastId = toast.loading(`Excel を生成中... (${weeksToPrint.length}週分)`);
+    const toastId = toast.loading(`${t("exp.toastExcelGenerating")} ${wf(t, "exp.toastWeeksOf", { n: weeksToPrint.length })}`);
     onClose();
     try {
-      const title = currentFile?.meta.title ?? "時間割";
+      const title = currentFile?.meta.title ?? t("exp.defaultFileName");
       await exportTimetableExcel(
         effectiveEntries,
         weeksToPrint,
@@ -453,13 +465,13 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
         gradeColors,
         showReason,
       );
-      toast.success("Excel のダウンロードが完了しました", { id: toastId });
+      toast.success(t("exp.toastExcelDone"), { id: toastId });
     } catch (e) {
-      toast.error(`Excel 生成に失敗しました: ${e instanceof Error ? e.message : String(e)}`, { id: toastId });
+      toast.error(wf(t, "exp.toastExcelError", { msg: e instanceof Error ? e.message : String(e) }), { id: toastId });
     } finally {
       setIsExporting(false);
     }
-  }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason, onClose]);
+  }, [weeksToPrint, currentFile, effectiveEntries, filterClass, gradeColors, showReason, onClose, t]);
   // ── Export: Google Calendar ───────────────────────────────
   const handleLoadCalendars = useCallback(async () => {
     if (gcalCalendarLoaded) return;
@@ -523,11 +535,11 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
           default: summary = className || subjectName;
         }
         const descParts: string[] = [];
-        if (school) descParts.push(`学校: ${school}`);
-        descParts.push(`${period.period}限`);
-        if (subjectName) descParts.push(`教科: ${subjectName}`);
-        if (className) descParts.push(`クラス: ${className}`);
-        if (period.reason) descParts.push(`備考: ${period.reason}`);
+        if (school) descParts.push(wf(t, "exp.gcalSchoolLabel", { school }));
+        descParts.push(wf(t, "wiz.periodNth", { p: period.period }));
+        if (subjectName) descParts.push(wf(t, "exp.gcalSubjectLabel", { subject: subjectName }));
+        if (className) descParts.push(wf(t, "exp.gcalClassLabel", { class: className }));
+        if (period.reason) descParts.push(wf(t, "exp.gcalReasonLabel", { reason: period.reason }));
         // 重複防止UID: 日付+時限+クラスの組み合わせ
         const uid = `timetable-${entry.date}-p${period.period}-${(className || subjectName).replace(/[^a-zA-Z0-9぀-鿿]/g, "")}`;
         const timeSlot = getPeriodTime(entry.date, period.period);
@@ -556,13 +568,13 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
     } catch {
       setGcalProgress(prev => ({ ...prev, status: "error" }));
     }
-  }, [weeksToPrint, semester, effectiveEntries, currentFile, gcalCalendarId, gcalSummaryFormat, login]);
+  }, [weeksToPrint, semester, effectiveEntries, currentFile, gcalCalendarId, gcalSummaryFormat, login, t]);
 
   // ── Export: ICS ───────────────────────────────────────────
   const handleExportICS = useCallback(async () => {
     if (!semester) return;
     setIsExporting(true);
-    const toastId = toast.loading(`ICS を生成中... (${weeksToPrint.length}週分)`);
+    const toastId = toast.loading(`${t("exp.toastIcsGenerating")} ${wf(t, "exp.toastWeeksOf", { n: weeksToPrint.length })}`);
     onClose();
     try {
       // 選択された週のエントリをフィルタリング
@@ -571,22 +583,23 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
         return getWeekDates(mondayDate, { includeSaturday: semester.hasSaturday, includeSunday: semester.hasSunday });
       }));
       const filteredEntries = effectiveEntries.filter(e => targetDates.has(e.date));
+      const defaultName = t("exp.defaultFileName");
       const icsContent = exportToICS({
         entries: filteredEntries,
         semester,
-        title: currentFile?.meta?.title ?? "時間割",
+        title: currentFile?.meta?.title ?? defaultName,
         school: currentFile?.meta?.school,
         fallbackToAllDay: true,
       });
-      const filename = `${currentFile?.meta?.title ?? "時間割"}.ics`;
+      const filename = `${currentFile?.meta?.title ?? defaultName}.ics`;
       downloadICS(icsContent, filename);
-      toast.success("ICS のダウンロードが完了しました", { id: toastId });
+      toast.success(t("exp.toastIcsDone"), { id: toastId });
     } catch (e) {
-      toast.error(`ICS 生成に失敗しました: ${e instanceof Error ? e.message : String(e)}`, { id: toastId });
+      toast.error(wf(t, "exp.toastIcsError", { msg: e instanceof Error ? e.message : String(e) }), { id: toastId });
     } finally {
       setIsExporting(false);
     }
-  }, [weeksToPrint, semester, effectiveEntries, currentFile, onClose]);
+  }, [weeksToPrint, semester, effectiveEntries, currentFile, onClose, t]);
 
     // ── Delete from Google Calendar ─────────────────────────
   const handleDeleteGCal = useCallback(async () => {
@@ -629,17 +642,17 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
   }, [format, handleExportExcel, handleExportPdf, handleExportICS]);
 
   const formatButtons: { value: ExportFormat; label: string; icon: React.ReactNode; desc: string }[] = [
-    { value: "excel", label: "Excel", icon: <FileSpreadsheet size={12} />, desc: ".xlsx形式でダウンロード" },
-    { value: "pdf", label: "PDF", icon: <FileText size={12} />, desc: ".pdf形式でダウンロード（日本語フォント埋め込み）" },
-    { value: "ics", label: "ICS / Google連携", icon: <CalendarDays size={12} />, desc: ".icsダウンロード または Googleカレンダーに直接追加" },
-    { value: "raw", label: "生データ", icon: <Database size={12} />, desc: "CSV / JSON形式で書き出し" },
+    { value: "excel", label: "Excel", icon: <FileSpreadsheet size={12} />, desc: t("exp.fmtExcelDesc") },
+    { value: "pdf", label: "PDF", icon: <FileText size={12} />, desc: t("exp.fmtPdfDesc") },
+    { value: "ics", label: t("exp.fmtIcsLabel"), icon: <CalendarDays size={12} />, desc: t("exp.fmtIcsDesc") },
+    { value: "raw", label: t("exp.fmtRawLabel"), icon: <Database size={12} />, desc: t("exp.fmtRawDesc") },
   ];
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-5xl w-[95vw] h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-5 pt-4 pb-3 border-b border-border shrink-0">
-          <DialogTitle className="text-base font-bold">エクスポート</DialogTitle>
+          <DialogTitle className="text-base font-bold">{t("exp.dialogTitle")}</DialogTitle>
         </DialogHeader>
 
         {/* Controls */}
@@ -648,7 +661,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
           <div className="flex flex-wrap items-end gap-4">
             {/* Format */}
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">形式</Label>
+              <Label className="text-xs text-muted-foreground">{t("exp.formatLabel")}</Label>
               <div className="flex gap-1">
                 {formatButtons.map(fb => (
                   <button
@@ -669,21 +682,21 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
               </div>
               {format === "pdf" && (
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  ※ 初回のみフォント読み込みのため数秒かかる場合があります。
+                  {t("exp.pdfNote")}
                 </p>
               )}
             </div>
 
             {/* Range mode */}
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">範囲</Label>
+              <Label className="text-xs text-muted-foreground">{t("exp.rangeLabel")}</Label>
               <div className="flex gap-1 flex-wrap">
                 {([
-                  { value: "single", label: "1週" },
-                  { value: "month", label: "月単位" },
-                  { value: "semester", label: "学期全体" },
-                  { value: "from_today_n", label: "今週から先n週" },
-                  { value: "from_today_all", label: "今週から先全て" },
+                  { value: "single", label: t("exp.range1week") },
+                  { value: "month", label: t("exp.rangeMonth") },
+                  { value: "semester", label: t("exp.rangeSemester") },
+                  { value: "from_today_n", label: t("exp.rangeFromNWeeks") },
+                  { value: "from_today_all", label: t("exp.rangeFromAll") },
                 ] as const).map(m => (
                   <button
                     key={m.value}
@@ -705,11 +718,11 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
             {(rangeMode === "single" || rangeMode === "month") && (
               <div className="space-y-1 min-w-[200px]">
                 <Label className="text-xs text-muted-foreground">
-                  {rangeMode === "month" ? "月を選択" : "週を選択"}
+                  {rangeMode === "month" ? t("exp.selectMonth") : t("exp.selectWeek")}
                 </Label>
                 <Select value={selectedWeekMonday} onValueChange={setSelectedWeekMonday}>
                   <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder={rangeMode === "month" ? "月を選択..." : "週を選択..."} />
+                    <SelectValue placeholder={rangeMode === "month" ? t("exp.selectMonthPh") : t("exp.selectWeekPh")} />
                   </SelectTrigger>
                   <SelectContent className="max-h-64 overflow-y-auto">
                     {(rangeMode === "month" ? monthOptions : weekOptions).map(w => (
@@ -725,7 +738,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
             {/* n weeks input */}
             {rangeMode === "from_today_n" && (
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">週数</Label>
+                <Label className="text-xs text-muted-foreground">{t("exp.nWeeksLabel")}</Label>
                 <div className="flex items-center gap-1.5">
                   <Input
                     type="number"
@@ -735,7 +748,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                     onChange={e => setFromTodayN(Math.max(1, Math.min(40, parseInt(e.target.value) || 1)))}
                     className="h-8 w-20 text-xs"
                   />
-                  <span className="text-xs text-muted-foreground">週</span>
+                  <span className="text-xs text-muted-foreground">{t("exp.weeksSuffix")}</span>
                 </div>
               </div>
             )}
@@ -745,13 +758,13 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
           <div className="flex flex-wrap items-end gap-4">
             {/* Class filter */}
             <div className="space-y-1 min-w-[160px]">
-              <Label className="text-xs text-muted-foreground">クラスで絞り込み</Label>
+              <Label className="text-xs text-muted-foreground">{t("exp.classFilter")}</Label>
               <Select value={filterClass} onValueChange={setFilterClass}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-64 overflow-y-auto">
-                  <SelectItem value="__all__" className="text-xs">すべて表示</SelectItem>
+                  <SelectItem value="__all__" className="text-xs">{t("exp.classAll")}</SelectItem>
                   {classList.map(c => (
                     <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
                   ))}
@@ -761,7 +774,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
 
             {/* Orientation */}
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">用紙向き</Label>
+              <Label className="text-xs text-muted-foreground">{t("exp.orientation")}</Label>
               <div className="flex gap-1">
                 {(["landscape", "portrait"] as const).map(o => (
                   <button
@@ -774,7 +787,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                         : "bg-background border-border hover:bg-muted"
                     )}
                   >
-                    {o === "landscape" ? "横（A4）" : "縦（A4）"}
+                    {o === "landscape" ? t("exp.landscape") : t("exp.portrait")}
                   </button>
                 ))}
               </div>
@@ -784,17 +797,17 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">
                 <Switch id="exp-show-reason" checked={showReason} onCheckedChange={setShowReason} className="scale-75" />
-                <Label htmlFor="exp-show-reason" className="text-xs text-muted-foreground cursor-pointer">備考表示</Label>
+                <Label htmlFor="exp-show-reason" className="text-xs text-muted-foreground cursor-pointer">{t("exp.showReason")}</Label>
               </div>
               <div className="flex items-center gap-1.5">
                 <Switch id="exp-show-empty" checked={showEmptyCells} onCheckedChange={setShowEmptyCells} className="scale-75" />
-                <Label htmlFor="exp-show-empty" className="text-xs text-muted-foreground cursor-pointer">空きコマ表示</Label>
+                <Label htmlFor="exp-show-empty" className="text-xs text-muted-foreground cursor-pointer">{t("exp.showEmpty")}</Label>
               </div>
             </div>
 
             {/* Range summary */}
             <div className="ml-auto text-xs text-muted-foreground">
-              範囲: <span className="font-medium text-foreground">{rangeLabel}</span>
+              {t("exp.rangeDisplay")} <span className="font-medium text-foreground">{rangeLabel}</span>
             </div>
           </div>
         </div>
@@ -806,10 +819,10 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             {isPreviewVisible ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            プレビュー{isPreviewVisible ? "を非表示" : "を表示"}
+            {isPreviewVisible ? t("exp.previewHide") : t("exp.previewShow")}
           </button>
           {isPreviewVisible && (
-            <span className="text-xs text-muted-foreground">印刷イメージを確認できます</span>
+            <span className="text-xs text-muted-foreground">{t("exp.previewHint")}</span>
           )}
         </div>
         {/* Preview area */}
@@ -825,14 +838,16 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
             <div ref={printRef}>
               {weeksToPrint.length === 0 ? (
                 <div className="text-center py-16 text-sm text-muted-foreground">
-                  学期データを読み込むとプレビューが表示されます
+                  {t("exp.previewNoData")}
                 </div>
               ) : (
                 weeksToPrint.map((mondayStr, wIdx) => {
                   const monday = isoToDate(mondayStr);
                   const fri = addDays(monday, 4);
                   const weekDates = getWeekDates(monday, { includeSaturday: showSaturday, includeSunday: showSunday });
-                  const weekLabel = `${monday.getFullYear()}年 ${monday.getMonth() + 1}月${monday.getDate()}日（月）〜 ${fri.getMonth() + 1}月${fri.getDate()}日（金）`;
+                  const weekLabel = language === "ja"
+                    ? `${monday.getFullYear()}年 ${monday.getMonth() + 1}月${monday.getDate()}日（月）〜 ${fri.getMonth() + 1}月${fri.getDate()}日（金）`
+                    : `${monday.getFullYear()} ${monday.getMonth() + 1}/${monday.getDate()} (Mon) – ${fri.getMonth() + 1}/${fri.getDate()} (Fri)`;
 
                   return (
                     <div key={mondayStr} className={cn("week-block", wIdx < weeksToPrint.length - 1 && "mb-8")}>
@@ -840,7 +855,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                       <div className="week-header flex items-baseline justify-between border-b-2 border-gray-800 pb-1 mb-2">
                         <div>
                           <span className="week-title text-sm font-bold">
-                            {currentFile?.meta.title ?? "時間割"}
+                            {currentFile?.meta.title ?? t("exp.defaultFileName")}
                             {filterClass !== "__all__" && ` — ${filterClass}`}
                           </span>
                           <span className="week-subtitle text-xs text-muted-foreground ml-3">
@@ -849,7 +864,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                           </span>
                         </div>
                         <span className="text-[9px] text-muted-foreground/50">
-                          {wIdx + 1}/{weeksToPrint.length}ページ
+                          {wf(t, "exp.printPageOf", { current: wIdx + 1, total: weeksToPrint.length })}
                         </span>
                       </div>
 
@@ -858,7 +873,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                         <thead>
                           <tr>
                             <th className="period-col border border-gray-300 py-1 w-9 text-center text-[9px] text-gray-500 bg-gray-100">
-                              時限
+                              {t("exp.printPeriodHeader")}
                             </th>
                             {weekDates.map(date => {
                               const isHoliday = holidayDates.has(date);
@@ -874,7 +889,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                                     <span className="text-[10px] font-bold">{formatDateJP(date)}</span>
                                     {isHoliday && (
                                       <span className="holiday-badge text-[7px] bg-red-100 text-red-600 rounded px-1">
-                                        {holidayNameMap.get(date) ?? "休校"}
+                                        {holidayNameMap.get(date) ?? t("exp.printHolidayDefault")}
                                       </span>
                                     )}
                                   </div>
@@ -890,7 +905,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                                 <td className="period-col border border-gray-300 text-center py-1 bg-gray-50">
                                   <div className="flex flex-col items-center">
                                     <span className="font-bold text-[10px] text-gray-700">{period}</span>
-                                    <span className="text-[7px] text-gray-400">限</span>
+                                    {t("exp.printPeriodSuffix") && <span className="text-[7px] text-gray-400">{t("exp.printPeriodSuffix")}</span>}
                                   </div>
                                 </td>
                                 {weekDates.map(date => {
@@ -956,13 +971,13 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
           <div className="px-5 py-3 border-t border-border bg-muted/20 overflow-y-auto flex-1 space-y-3">
             <div className="flex items-center gap-2">
               <CalendarDays size={13} className="text-blue-400" />
-              <span className="text-xs font-medium">Googleカレンダーに直接追加</span>
+              <span className="text-xs font-medium">{t("exp.gcalTitle")}</span>
             </div>
             {!isLoggedIn ? (
               <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">ログインするとGoogleカレンダーに直接追加できます</p>
+                <p className="text-xs text-muted-foreground">{t("exp.gcalLoginHint")}</p>
                 <Button size="sm" variant="outline" onClick={login} className="h-7 text-xs gap-1">
-                  Googleでログイン
+                  {t("exp.gcalLogin")}
                 </Button>
               </div>
             ) : (
@@ -972,28 +987,28 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                 <div className="flex flex-wrap items-center gap-2">
                   {/* イベント名形式 */}
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-xs text-muted-foreground">表示形式:</span>
+                    <span className="text-xs text-muted-foreground">{t("exp.gcalSummaryFmtLabel")}</span>
                     <select
                       value={gcalSummaryFormat}
                       onChange={e => setGcalSummaryFormat(e.target.value as GCalSummaryFormat)}
                       className="text-xs bg-background border border-border rounded px-2 py-1 text-foreground"
                     >
-                      <option value="class_subject">クラス 教科（例: 5年3組 英語）</option>
-                      <option value="subject_class">教科 クラス（例: 英語 5年3組）</option>
-                      <option value="subject_only">教科のみ（例: 英語）</option>
-                      <option value="class_only">クラスのみ（例: 5年3組）</option>
+                      <option value="class_subject">{t("exp.gcalFmtClassSubject")}</option>
+                      <option value="subject_class">{t("exp.gcalFmtSubjectClass")}</option>
+                      <option value="subject_only">{t("exp.gcalFmtSubjectOnly")}</option>
+                      <option value="class_only">{t("exp.gcalFmtClassOnly")}</option>
                     </select>
                   </div>
                   {/* カレンダー選択 */}
                   <div className="flex items-center gap-1.5 flex-1 min-w-[180px]">
-                    <span className="text-xs text-muted-foreground shrink-0">追加先:</span>
+                    <span className="text-xs text-muted-foreground shrink-0">{t("exp.gcalTargetLabel")}</span>
                     <select
                       value={gcalCalendarId}
                       onChange={e => setGcalCalendarId(e.target.value)}
                       onFocus={handleLoadCalendars}
                       className="text-xs bg-background border border-border rounded px-2 py-1 text-foreground flex-1 max-w-[240px]"
                     >
-                      <option value="primary">メインカレンダー</option>
+                      <option value="primary">{t("exp.gcalMainCalendar")}</option>
                       {gcalCalendars.filter(c => c.id !== "primary").map(c => (
                         <option key={c.id} value={c.id}>{c.summary}</option>
                       ))}
@@ -1016,8 +1031,8 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                 {gcalProgress.status === "running" && (
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Loader2 size={11} className="animate-spin" />追加中...</span>
-                      <span className="font-mono">{gcalProgress.done} / {gcalProgress.total} 件</span>
+                      <span className="flex items-center gap-1"><Loader2 size={11} className="animate-spin" />{t("exp.gcalAdding")}</span>
+                      <span className="font-mono">{gcalProgress.done} / {gcalProgress.total}</span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-1.5">
                       <div
@@ -1031,12 +1046,12 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                     <span className="flex items-center gap-1 text-green-500">
                       <CheckCircle2 size={12} />
-                      {gcalProgress.inserted > 0 && `新規 ${gcalProgress.inserted}件`}
-                      {gcalProgress.updated > 0 && `${gcalProgress.inserted > 0 ? " / " : ""}更新 ${gcalProgress.updated}件`}
-                      {gcalProgress.inserted === 0 && gcalProgress.updated === 0 && "完了"}
+                      {gcalProgress.inserted > 0 && wf(t, "exp.gcalNew", { n: gcalProgress.inserted })}
+                      {gcalProgress.updated > 0 && `${gcalProgress.inserted > 0 ? " / " : ""}${wf(t, "exp.gcalUpdated", { n: gcalProgress.updated })}`}
+                      {gcalProgress.inserted === 0 && gcalProgress.updated === 0 && t("exp.gcalDone")}
                     </span>
                     {gcalProgress.errors > 0 && (
-                      <span className="text-amber-400">(エラー: {gcalProgress.errors}件)</span>
+                      <span className="text-amber-400">{wf(t, "exp.gcalErrors", { n: gcalProgress.errors })}</span>
                     )}
                     <a
                       href="https://calendar.google.com"
@@ -1044,13 +1059,13 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                       rel="noopener noreferrer"
                       className="flex items-center gap-0.5 text-blue-400 hover:underline"
                     >
-                      Googleカレンダーを開く <ExternalLink size={10} />
+                      {t("exp.gcalOpen")} <ExternalLink size={10} />
                     </a>
                     <button
                       onClick={() => setGcalProgress(prev => ({ ...prev, status: "idle", done: 0, total: 0, inserted: 0, updated: 0, errors: 0 }))}
                       className="text-muted-foreground hover:text-foreground underline"
                     >
-                      もう一度追加
+                      {t("exp.gcalAddAgain")}
                     </button>
                   </div>
                 )}
@@ -1058,13 +1073,13 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                   <div className="flex items-center gap-2 text-xs">
                     <span className="flex items-center gap-1 text-red-400">
                       <AlertCircle size={12} />
-                      追加に失敗しました。トークンが切れている場合は再ログインしてください。
+                      {t("exp.gcalAddError")}
                     </span>
                     <button
                       onClick={() => setGcalProgress(prev => ({ ...prev, status: "idle" }))}
                       className="text-muted-foreground hover:text-foreground underline"
                     >
-                      再試行
+                      {t("exp.gcalRetry")}
                     </button>
                   </div>
                 )}
@@ -1075,7 +1090,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                     className="flex items-center gap-1.5 text-xs text-red-400/70 hover:text-red-400 transition-colors"
                   >
                     <AlertCircle size={11} className="shrink-0" />
-                    <span>Googleカレンダーからイベントを削除</span>
+                    <span>{t("exp.gcalDeleteTitle")}</span>
                     {showDeleteSection ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                   </button>
                   {showDeleteSection && (
@@ -1094,8 +1109,8 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                           className="mt-0.5 accent-red-500"
                         />
                         <div>
-                          <span className="text-xs font-medium">このアプリで追加したイベントのみ削除</span>
-                          <p className="text-xs text-muted-foreground">「カレンダーに追加」ボタンで追加したイベントを削除します。他のイベントには影響しません。</p>
+                          <span className="text-xs font-medium">{t("exp.gcalDeleteTagged")}</span>
+                          <p className="text-xs text-muted-foreground">{t("exp.gcalDeleteTaggedDesc")}</p>
                         </div>
                       </label>
                       <label className="flex items-start gap-2 cursor-pointer group">
@@ -1108,8 +1123,8 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                           className="mt-0.5 accent-red-500"
                         />
                         <div className="flex-1">
-                          <span className="text-xs font-medium">期間を指定してすべて削除</span>
-                          <p className="text-xs text-muted-foreground">⚠️ 旧バージョンで追加したイベントも含め、指定期間内の<strong>すべてのイベント</strong>を削除します。他のイベントも削除されます。</p>
+                          <span className="text-xs font-medium">{t("exp.gcalDeleteRange")}</span>
+                          <p className="text-xs text-muted-foreground">{t("exp.gcalDeleteRangePre")}<strong>{t("exp.gcalDeleteRangeBold")}</strong>{t("exp.gcalDeleteRangePost")}</p>
                           {deleteMode === "range" && (
                             <div className="flex items-center gap-2 mt-1.5">
                               <input
@@ -1139,7 +1154,7 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                       disabled={deleteMode === "range" && (!deleteRangeStart || !deleteRangeEnd)}
                       className="text-xs text-red-400 hover:text-red-300 underline disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      削除を実行する...
+                      {t("exp.gcalDeleteExecute")}
                     </button>
                   )}
 
@@ -1149,17 +1164,17 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                       <div className="flex items-start gap-1.5">
                         <AlertCircle size={13} className="text-red-400 shrink-0 mt-0.5" />
                         <div className="space-y-1">
-                          <p className="text-xs font-semibold text-red-400">本当に削除しますか？この操作は元に戻せません。</p>
+                          <p className="text-xs font-semibold text-red-400">{t("exp.gcalDeleteConfirmTitle")}</p>
                           {deleteMode === "tagged" ? (
                             <p className="text-xs text-muted-foreground">
-                              対象カレンダー：<strong>「{gcalCalendars.find(c => c.id === gcalCalendarId)?.summary ?? "メインカレンダー"}」</strong><br />
-                              このアプリで追加したすべての時間割イベントを削除します。
+                              {t("exp.gcalDeleteCalLabel")}<strong>「{gcalCalendars.find(c => c.id === gcalCalendarId)?.summary ?? t("exp.gcalMainCalendar")}」</strong><br />
+                              {t("exp.gcalDeleteTaggedBody")}
                             </p>
                           ) : (
                             <p className="text-xs text-muted-foreground">
-                              対象カレンダー：<strong>「{gcalCalendars.find(c => c.id === gcalCalendarId)?.summary ?? "メインカレンダー"}」</strong><br />
-                              期間：<strong>{deleteRangeStart} 〜 {deleteRangeEnd}</strong><br />
-                              ⚠️ この期間内の<strong>すべてのイベント</strong>（他のイベントも含む）が削除されます。
+                              {t("exp.gcalDeleteCalLabel")}<strong>「{gcalCalendars.find(c => c.id === gcalCalendarId)?.summary ?? t("exp.gcalMainCalendar")}」</strong><br />
+                              {t("exp.gcalDeleteRangeLabel")}<strong>{deleteRangeStart}{t("exp.gcalDeleteRangeDateSep")}{deleteRangeEnd}</strong><br />
+                              {t("exp.gcalDeleteRangeWarningPre")}<strong>{t("exp.gcalDeleteRangeWarningBold")}</strong>{t("exp.gcalDeleteRangeWarningPost")}
                             </p>
                           )}
                         </div>
@@ -1167,13 +1182,13 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                       <div className="flex items-center gap-2">
                         <Button size="sm" variant="destructive" onClick={handleDeleteGCal} className="h-7 text-xs px-3 gap-1">
                           <AlertCircle size={11} />
-                          削除する
+                          {t("exp.gcalDeleteBtn")}
                         </Button>
                         <button
                           onClick={() => setShowDeleteConfirm(false)}
                           className="text-xs text-muted-foreground hover:text-foreground underline"
                         >
-                          キャンセル
+                          {t("wiz.cancel")}
                         </button>
                       </div>
                     </div>
@@ -1183,8 +1198,8 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                   {gcalDeleteProgress.status === "running" && (
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><Loader2 size={11} className="animate-spin" />削除中... 中断しないでください</span>
-                        <span className="font-mono">{gcalDeleteProgress.done} / {gcalDeleteProgress.total > 0 ? gcalDeleteProgress.total : "?"} 件</span>
+                        <span className="flex items-center gap-1"><Loader2 size={11} className="animate-spin" />{t("exp.gcalDeleting")}</span>
+                        <span className="font-mono">{gcalDeleteProgress.done} / {gcalDeleteProgress.total > 0 ? gcalDeleteProgress.total : "?"}</span>
                       </div>
                       {gcalDeleteProgress.total > 0 && (
                         <div className="w-full bg-muted rounded-full h-1.5">
@@ -1199,14 +1214,14 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                     <div className="flex items-center gap-2 text-xs">
                       <span className="flex items-center gap-1 text-green-500">
                         <CheckCircle2 size={12} />
-                        {gcalDeleteProgress.deleted}件削除完了
-                        {gcalDeleteProgress.errors > 0 && `（エラー: ${gcalDeleteProgress.errors}件）`}
+                        {wf(t, "exp.gcalDeleteDone", { n: gcalDeleteProgress.deleted })}
+                        {gcalDeleteProgress.errors > 0 && wf(t, "exp.gcalDeleteErrors", { n: gcalDeleteProgress.errors })}
                       </span>
                       <button
                         onClick={() => { setGcalDeleteProgress(prev => ({ ...prev, status: "idle" })); setShowDeleteConfirm(false); }}
                         className="text-muted-foreground hover:text-foreground underline"
                       >
-                        閉じる
+                        {t("exp.gcalClose")}
                       </button>
                     </div>
                   )}
@@ -1216,13 +1231,13 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                     <div className="flex items-center gap-2 text-xs">
                       <span className="flex items-center gap-1 text-red-400">
                         <AlertCircle size={12} />
-                        削除に失敗しました。トークンが切れている場合は再ログインしてください。
+                        {t("exp.gcalDeleteError")}
                       </span>
                       <button
                         onClick={() => { setGcalDeleteProgress(prev => ({ ...prev, status: "idle" })); setShowDeleteConfirm(false); }}
                         className="text-muted-foreground hover:text-foreground underline"
                       >
-                        閉じる
+                        {t("exp.gcalClose")}
                       </button>
                     </div>
                   )}
@@ -1239,21 +1254,21 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
           <div className="px-5 py-4 border-t border-border bg-muted/20 space-y-3">
             <div className="flex items-center gap-2">
               <Database size={13} className="text-muted-foreground" />
-              <span className="text-xs font-medium">生データ書き出し</span>
+              <span className="text-xs font-medium">{t("exp.rawTitle")}</span>
             </div>
-            <p className="text-xs text-muted-foreground">時間割データをそのままファイルとして書き出します。バックアップや他ツールとの連携に使用できます。</p>
+            <p className="text-xs text-muted-foreground">{t("exp.rawDesc")}</p>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="outline" onClick={exportCSV} className="h-7 text-xs gap-1.5">
                 <span className="font-mono text-muted-foreground text-[10px]">.csv</span>
-                CSV形式でダウンロード
+                {t("exp.rawCsvBtn")}
               </Button>
               <Button size="sm" variant="outline" onClick={exportEffective} className="h-7 text-xs gap-1.5">
                 <span className="font-mono text-muted-foreground text-[10px]">.json</span>
-                確定データ（JSON）
+                {t("exp.rawJsonEffective")}
               </Button>
               <Button size="sm" variant="outline" onClick={exportOverride} className="h-7 text-xs gap-1.5">
                 <span className="font-mono text-muted-foreground text-[10px]">.json</span>
-                変更履歴（JSON）
+                {t("exp.rawJsonOverride")}
               </Button>
             </div>
           </div>
@@ -1262,10 +1277,10 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
         <div className="px-5 py-3 border-t border-border bg-background shrink-0 flex items-center justify-between">
           <Button variant="outline" size="sm" onClick={onClose} className="gap-1.5">
             <X size={13} />
-            閉じる
+            {t("exp.closeBtn")}
           </Button>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{weeksToPrint.length}週分</span>
+            <span className="text-xs text-muted-foreground">{wf(t, "exp.weekCount", { n: weeksToPrint.length })}</span>
             {/* ICSタブ: ICSダウンロード + カレンダーに追加（ログイン時のみ有効） */}
             {format === "ics" ? (
               <>
@@ -1277,9 +1292,9 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                   className="gap-1.5"
                 >
                   {isExporting ? (
-                    <><Loader2 size={13} className="animate-spin" />処理中...</>
+                    <><Loader2 size={13} className="animate-spin" />{t("exp.processing")}</>
                   ) : (
-                    <><CalendarDays size={13} />ICSでダウンロード</>
+                    <><CalendarDays size={13} />{t("exp.icsDownload")}</>
                   )}
                 </Button>
                 <Button
@@ -1287,12 +1302,12 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                   onClick={handleExportGCal}
                   disabled={!isLoggedIn || weeksToPrint.length === 0 || gcalProgress.status === "running"}
                   className="gap-1.5 bg-blue-600 hover:bg-blue-700 text-white min-w-[140px] justify-center"
-                  title={!isLoggedIn ? "Googleにログインするとカレンダーに直接追加できます" : undefined}
+                  title={!isLoggedIn ? t("exp.gcalLoginHint") : undefined}
                 >
                   {gcalProgress.status === "running" ? (
-                    <><Loader2 size={13} className="animate-spin" />追加中...</>
+                    <><Loader2 size={13} className="animate-spin" />{t("exp.gcalAdding")}</>
                   ) : (
-                    <><CalendarDays size={13} />カレンダーに追加</>
+                    <><CalendarDays size={13} />{t("exp.gcalAddBtn")}</>
                   )}
                 </Button>
               </>
@@ -1304,13 +1319,13 @@ export function ExportDialog({ open, onClose, initialTab, exportCSV, exportEffec
                 className="gap-1.5 min-w-[140px]"
               >
                 {isExporting ? (
-                  <><Loader2 size={13} className="animate-spin" />処理中...</>
+                  <><Loader2 size={13} className="animate-spin" />{t("exp.processing")}</>
                 ) : format === "excel" ? (
-                  <><FileSpreadsheet size={13} />Excelでダウンロード</>
+                  <><FileSpreadsheet size={13} />{t("exp.excelDownload")}</>
                 ) : format === "raw" ? (
-                  <><Database size={13} />生データを書き出し</>
+                  <><Database size={13} />{t("exp.rawDownload")}</>
                 ) : (
-                  <><FileText size={13} />PDFでダウンロード</>
+                  <><FileText size={13} />{t("exp.pdfDownload")}</>
                 )}
               </Button>
             )}
