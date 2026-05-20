@@ -713,9 +713,9 @@ export function NewFileWizard({ open, onClose }: Props) {
 
   // Title derived from inputs
   const semesterLabel = semesterSystem === "semester"
-    ? (semesterNumber === 1 ? "前期" : "後期")
-    : `${semesterNumber}学期`;
-  const title = `${academicYear}年度 ${semesterLabel}${school ? ` (${school})` : ""}`;
+    ? (semesterNumber === 1 ? t("set.semHalf1") : t("set.semHalf2"))
+    : t(`set.semShort${semesterNumber}` as TranslationKey);
+  const title = `${wfmt(t, "wiz.yearSuffix", { y: academicYear })} ${semesterLabel}${school ? ` (${school})` : ""}`;
 
   // 教科担任モード: 担当教科を追加
   const addSubjectTeacherSubject = (name?: string) => {
