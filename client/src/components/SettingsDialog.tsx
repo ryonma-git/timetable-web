@@ -37,26 +37,23 @@ import {
 } from "@/lib/timetable";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/contexts/LanguageContext";
+
+function wf(t: (k: TranslationKey) => string, key: TranslationKey, vars: Record<string, string | number>): string {
+  let s = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
 
-const WEEKDAYS = [
-  { key: "Mon", label: "月" },
-  { key: "Tue", label: "火" },
-  { key: "Wed", label: "水" },
-  { key: "Thu", label: "木" },
-  { key: "Fri", label: "金" },
-];
+const WEEKDAY_KEYS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 const PERIODS = [1, 2, 3, 4, 5, 6];
-
-const SCHOOL_TYPES: { value: SchoolType; label: string; grades: number; defaultClasses: number }[] = [
-  { value: "elementary", label: "小学校（6年制）", grades: 6, defaultClasses: 3 },
-  { value: "junior", label: "中学校（3年制）", grades: 3, defaultClasses: 3 },
-  { value: "high", label: "高等学校（3年制）", grades: 3, defaultClasses: 3 },
-];
+// SCHOOL_TYPES and WEEKDAYS are computed inside the component (labels are translated)
 
 function getDefaultAcademicYear(): number {
   const now = new Date();
@@ -89,12 +86,13 @@ function getSemesterDefaults(year: number, semester: 1 | 2 | 3, system: Semester
 
 // Step indicator
 function StepIndicator({ current, total }: { current: number; total: number }) {
+  const { t } = useLanguage();
   const steps = [
-    { icon: <School size={13} />, label: "学校情報" },
-    { icon: <Calendar size={13} />, label: "授業日設定" },
-    { icon: <Grid3X3 size={13} />, label: "基本時間割" },
-    { icon: <BookOpen size={13} />, label: "教科設定" },
-    { icon: <Check size={13} />, label: "確認・適用" },
+    { icon: <School size={13} />, label: t("set.stepInfo") },
+    { icon: <Calendar size={13} />, label: t("set.stepDates") },
+    { icon: <Grid3X3 size={13} />, label: t("set.stepGrid") },
+    { icon: <BookOpen size={13} />, label: t("set.stepSubjects") },
+    { icon: <Check size={13} />, label: t("set.stepConfirm") },
   ];
   return (
     <div className="flex items-center gap-0 mb-6">
@@ -132,11 +130,23 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 
 export function SettingsDialog({ open, onClose }: Props) {
+  const { t } = useLanguage();
   const { currentFile, semester: semesterFromCtx, updateSettings, isLoaded, mode, setMode, classList, subjects, activeSemesterIndex } = useTimetable();
   // semesters配列形式の場合はアクティブ学期のデータを使用（単一学期の場合はレガシーフィールドを使用）
   const semester = currentFile?.semesters && currentFile.semesters.length > 0
     ? currentFile.semesters[activeSemesterIndex]?.semester ?? semesterFromCtx
     : semesterFromCtx;
+
+  // Translated constants (must be after useLanguage)
+  const SCHOOL_TYPES: { value: SchoolType; label: string; grades: number; defaultClasses: number }[] = [
+    { value: "elementary", label: t("wiz.schoolElementary"), grades: 6, defaultClasses: 3 },
+    { value: "junior", label: t("wiz.schoolJunior"), grades: 3, defaultClasses: 3 },
+    { value: "high", label: t("wiz.schoolHigh"), grades: 3, defaultClasses: 3 },
+  ];
+  const weekdayLabels = t("ptime.weekdays").split(",");
+  const WEEKDAYS = WEEKDAY_KEYS.map((key, i) => ({ key, label: weekdayLabels[i] }));
+  const WEEK_LABELS_S = [t("wiz.weekA"), t("wiz.weekB"), t("wiz.weekC"), t("wiz.weekD")];
+
   const [step, setStep] = useState(1);
 
   // ── Step 1: Basic info ──────────────────────────────────────
@@ -162,7 +172,6 @@ export function SettingsDialog({ open, onClose }: Props) {
   const [hasSaturday, setHasSaturday] = useState(false);
   const [hasSunday, setHasSunday] = useState(false);
   // ── Step 3: Base schedule (複週対応) ────────────────────────────────────────
-  const WEEK_LABELS_S = ["A週", "B週", "C週", "D週"];
   const [weekCount, setWeekCount] = useState<1 | 2 | 3 | 4>(1);
   const [activeWeekTab, setActiveWeekTab] = useState(0);
   const makeEmptyScheduleS = () => {
@@ -325,7 +334,7 @@ export function SettingsDialog({ open, onClose }: Props) {
     const normalized = normalizeClassName(raw);
     if (!normalized) return;
     if (generatedClasses.includes(normalized) || extraClasses.includes(normalized)) {
-      setCustomClassError("すでに存在するクラス名です");
+      setCustomClassError(t("set.dupClassError"));
       return;
     }
     setExtraClasses(prev => [...prev, normalized]);
@@ -367,12 +376,12 @@ export function SettingsDialog({ open, onClose }: Props) {
 
   const semesterLabel = (() => {
     if (semesterSystem === "semester") {
-      return semesterNumber === 1 ? "前期" : "後期";
+      return semesterNumber === 1 ? t("set.semHalf1") : t("set.semHalf2");
     }
-    return `${semesterNumber}学期`;
+    return t(`set.semShort${semesterNumber}` as TranslationKey);
   })();
 
-  const title = `${academicYear}年度 ${semesterLabel}${school ? ` (${school})` : ""}`;
+  const title = `${wf(t, "set.yearOption", { y: academicYear })} ${semesterLabel}${school ? ` (${school})` : ""}`;
 
   const canGoNext = () => {
     if (step === 2) return startDate && endDate && startDate <= endDate;
@@ -439,7 +448,7 @@ export function SettingsDialog({ open, onClose }: Props) {
     const from = applyMode === "from" ? applyFromDate : undefined;
     // modeをupdateSettingsに渡してmeta.modeも同時に更新（競合防止）
     updateSettings(newSemester, from, selectedMode);
-    toast.success("設定を適用しました");
+    toast.success(t("set.toastApplied"));
     onClose();
   };
 
@@ -458,7 +467,7 @@ export function SettingsDialog({ open, onClose }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings size={18} />
-            時間割の設定を変更
+            {t("set.dialogTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -468,32 +477,32 @@ export function SettingsDialog({ open, onClose }: Props) {
         {step === 1 && (
           <div className="space-y-5">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
-              学校名・学期制・年度・学期番号・クラス構成を変更できます。
+              {t("set.step1Desc")}
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">学校名 <span className="text-muted-foreground font-normal">(任意)</span></Label>
-              <Input value={school} onChange={e => setSchool(e.target.value)} placeholder="例: ○○小学校" className="h-9" />
+              <Label className="text-sm font-medium">{t("wiz.schoolName")} <span className="text-muted-foreground font-normal">{t("wiz.optional")}</span></Label>
+              <Input value={school} onChange={e => setSchool(e.target.value)} placeholder={t("wiz.schoolNamePh")} className="h-9" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">学期制</Label>
+                <Label className="text-sm font-medium">{t("wiz.semesterSystem")}</Label>
                 <Select value={semesterSystem} onValueChange={v => handleSemesterSystemChange(v as SemesterSystem)}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="trimester">3学期制（1学期・2学期・3学期）</SelectItem>
-                    <SelectItem value="semester">2学期制（前期・後期）</SelectItem>
+                    <SelectItem value="trimester">{t("wiz.trimester")}</SelectItem>
+                    <SelectItem value="semester">{t("wiz.bimester")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">年度</Label>
+                <Label className="text-sm font-medium">{t("set.academicYear")}</Label>
                 <Select value={String(academicYear)} onValueChange={v => handleAcademicYearChange(Number(v))}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent className="max-h-60 overflow-y-auto">
                     {yearOptions.map(y => (
-                      <SelectItem key={y} value={String(y)}>{y}年度</SelectItem>
+                      <SelectItem key={y} value={String(y)}>{wf(t, "set.yearOption", { y })}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -501,20 +510,20 @@ export function SettingsDialog({ open, onClose }: Props) {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">学期</Label>
+              <Label className="text-sm font-medium">{t("wiz.semester")}</Label>
               <Select value={String(semesterNumber)} onValueChange={v => handleSemesterChange(Number(v) as 1 | 2 | 3)}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {semesterSystem === "trimester" ? (
                     <>
-                      <SelectItem value="1">1学期（4月～7月）</SelectItem>
-                      <SelectItem value="2">2学期（9月～12月）</SelectItem>
-                      <SelectItem value="3">3学期（1月～3月）</SelectItem>
+                      <SelectItem value="1">{t("set.term1")}</SelectItem>
+                      <SelectItem value="2">{t("set.term2")}</SelectItem>
+                      <SelectItem value="3">{t("set.term3")}</SelectItem>
                     </>
                   ) : (
                     <>
-                      <SelectItem value="1">前期（4月〜9月）</SelectItem>
-                      <SelectItem value="2">後期（10月〜3月）</SelectItem>
+                      <SelectItem value="1">{t("set.termHalf1")}</SelectItem>
+                      <SelectItem value="2">{t("set.termHalf2")}</SelectItem>
                     </>
                   )}
                 </SelectContent>
@@ -525,19 +534,19 @@ export function SettingsDialog({ open, onClose }: Props) {
             <div className="space-y-3 border-t border-border/50 pt-4">
               <Label className="text-sm font-medium flex items-center gap-1.5">
                 <BookOpen size={14} />
-                使用モード
+                {t("set.useMode")}
               </Label>
               <div className="grid grid-cols-1 gap-2">
                 {[
                   {
                     value: 'single_subject' as TimetableMode,
-                    label: '教科担任モード（従来）',
-                    desc: '各コマにクラスを割り当てる。複数クラスを担当する教科担任向け。',
+                    label: t("set.modeSingle"),
+                    desc: t("set.modeSingleDesc"),
                   },
                   {
                     value: 'homeroom' as TimetableMode,
-                    label: '担任モード',
-                    desc: '担任クラスを固定し、各コマに教科名を表示する。学級担任向け。',
+                    label: t("set.modeHomeroom"),
+                    desc: t("set.modeHomeroomDesc"),
                   },
                 ].map(m => (
                   <div
@@ -565,14 +574,14 @@ export function SettingsDialog({ open, onClose }: Props) {
               {/* Homeroom class selection */}
               {selectedMode === 'homeroom' && (
                 <div className="space-y-1.5 pl-1">
-                  <Label className="text-xs text-muted-foreground">担任クラス <span className="text-destructive">*</span></Label>
+                  <Label className="text-xs text-muted-foreground">{t("wiz.homeroomClass")} <span className="text-destructive">*</span></Label>
                   <Select value={homeroomClass || "__none__"} onValueChange={v => setHomeroomClass(v === "__none__" ? "" : v)}>
                     <SelectTrigger className="h-9">
-                      <SelectValue placeholder="担任クラスを選択..." />
+                      <SelectValue placeholder={t("wiz.homeroomClassSelect")} />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
                       <SelectItem value="__none__">
-                        <span className="text-muted-foreground">— 選択してください —</span>
+                        <span className="text-muted-foreground">{t("set.selectPlaceholder")}</span>
                       </SelectItem>
                       {effectiveClassList.map(c => (
                         <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -580,7 +589,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                     </SelectContent>
                   </Select>
                   {selectedMode === 'homeroom' && !homeroomClass && (
-                    <p className="text-xs text-amber-600">担任クラスを設定してください</p>
+                    <p className="text-xs text-amber-600">{t("set.homeroomRequired")}</p>
                   )}
                 </div>
               )}
@@ -588,10 +597,10 @@ export function SettingsDialog({ open, onClose }: Props) {
 
             {/* Class Config */}
             <div className="space-y-3 border-t border-border/50 pt-4">
-              <Label className="text-sm font-medium">クラス構成</Label>
+              <Label className="text-sm font-medium">{t("set.classComposition")}</Label>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">学校種別</Label>
+                <Label className="text-xs text-muted-foreground">{t("wiz.schoolType")}</Label>
                 <Select value={schoolType} onValueChange={v => handleSchoolTypeChange(v as SchoolType)}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -604,16 +613,16 @@ export function SettingsDialog({ open, onClose }: Props) {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs text-muted-foreground">学年別クラス数</Label>
+                  <Label className="text-xs text-muted-foreground">{t("set.gradeClassCount")}</Label>
                   <div className="flex items-center gap-1">
-                    <span className="text-[11px] text-muted-foreground">一括:</span>
+                    <span className="text-[11px] text-muted-foreground">{t("set.bulkLabel")}</span>
                     {[2, 3, 4, 5].map(n => (
                       <button
                         key={n}
                         onClick={() => setBulkCount(n)}
                         className="text-[10px] px-1.5 py-0.5 rounded border border-border hover:bg-muted transition-colors"
                       >
-                        各{n}組
+                        {wf(t, "set.bulkNClasses", { n })}
                       </button>
                     ))}
                   </div>
@@ -622,9 +631,9 @@ export function SettingsDialog({ open, onClose }: Props) {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-muted/50">
-                        <th className="text-left px-3 py-1.5 text-xs font-medium text-muted-foreground">学年</th>
-                        <th className="text-center px-3 py-1.5 text-xs font-medium text-muted-foreground">クラス数</th>
-                        <th className="text-left px-3 py-1.5 text-xs font-medium text-muted-foreground">クラス一覧</th>
+                        <th className="text-left px-3 py-1.5 text-xs font-medium text-muted-foreground">{t("set.gradeHeader")}</th>
+                        <th className="text-center px-3 py-1.5 text-xs font-medium text-muted-foreground">{t("set.classCountHeader")}</th>
+                        <th className="text-left px-3 py-1.5 text-xs font-medium text-muted-foreground">{t("set.classListHeader")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -634,7 +643,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                         const classes = Array.from({ length: count }, (_, j) => `${gradeNum}年${j + 1}組`);
                         return (
                           <tr key={gradeNum} className="border-t border-border/50">
-                            <td className="px-3 py-2 font-medium text-sm">{gradeNum}年生</td>
+                            <td className="px-3 py-2 font-medium text-sm">{wf(t, "set.gradeN", { n: gradeNum })}</td>
                             <td className="px-3 py-2">
                               <div className="flex items-center justify-center gap-1.5">
                                 <button
@@ -673,17 +682,17 @@ export function SettingsDialog({ open, onClose }: Props) {
 
               {/* Custom classes */}
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">追加クラス（自由記述）</p>
+                <p className="text-xs text-muted-foreground font-medium">{t("set.extraClasses")}</p>
                 <div className="flex gap-2">
                   <Input
                     value={customClassInput}
                     onChange={e => { setCustomClassInput(e.target.value); setCustomClassError(""); }}
                     onKeyDown={e => e.key === "Enter" && addCustomClass()}
-                    placeholder="例: 特別支援学級、英語グループA"
+                    placeholder={t("set.addExtraPlaceholder")}
                     className="h-8 text-sm flex-1"
                   />
                   <Button size="sm" variant="outline" className="gap-1 text-xs h-8" onClick={addCustomClass}>
-                    <Plus size={11} />追加
+                    <Plus size={11} />{t("set.addBtn")}
                   </Button>
                 </div>
                 {customClassError && <p className="text-xs text-red-500">{customClassError}</p>}
@@ -694,7 +703,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                         key={c}
                         className="flex items-center gap-1 text-[11px] bg-orange-100 text-orange-700 rounded px-2 py-0.5 cursor-pointer hover:bg-red-100 hover:text-red-600 transition-colors"
                         onClick={() => setExtraClasses(prev => prev.filter(x => x !== c))}
-                        title="クリックで削除"
+                        title={t("set.clickToDelete")}
                       >
                         {c} ×
                       </span>
@@ -704,10 +713,10 @@ export function SettingsDialog({ open, onClose }: Props) {
               </div>
 
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                <p className="text-xs text-muted-foreground mb-1">変更後のタイトル</p>
+                <p className="text-xs text-muted-foreground mb-1">{t("set.titlePreview")}</p>
                 <p className="text-sm font-semibold text-foreground">{title}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  クラス合計: <span className="font-medium text-foreground">{allClasses.length}</span> クラス
+                  {wf(t, "set.classTotal", { n: allClasses.length })}
                 </p>
               </div>
             </div>
@@ -718,39 +727,39 @@ export function SettingsDialog({ open, onClose }: Props) {
         {step === 2 && (
           <div className="space-y-5">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
-              始業式・終業式の日付と土日授業の設定を変更します。
+              {t("set.step2Desc")}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">始業式 <span className="text-destructive">*</span></Label>
+                <Label className="text-sm font-medium">{t("set.startDate")} <span className="text-destructive">*</span></Label>
                 <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-9" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm font-medium">終業式 <span className="text-destructive">*</span></Label>
+                <Label className="text-sm font-medium">{t("set.endDate")} <span className="text-destructive">*</span></Label>
                 <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-9" />
               </div>
             </div>
 
             {startDate && endDate && startDate > endDate && (
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
-                終業式は始業式より後の日付にしてください
+                {t("set.dateError")}
               </div>
             )}
 
             <div className="space-y-3">
-              <p className="text-sm font-medium">週末授業の設定</p>
+              <p className="text-sm font-medium">{t("set.weekendSection")}</p>
               <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
                 <div>
-                  <p className="text-sm font-medium">土曜授業</p>
-                  <p className="text-xs text-muted-foreground">毎週土曜日を授業日として追加</p>
+                  <p className="text-sm font-medium">{t("set.saturdayClass")}</p>
+                  <p className="text-xs text-muted-foreground">{t("set.saturdayDesc")}</p>
                 </div>
                 <Switch checked={hasSaturday} onCheckedChange={setHasSaturday} />
               </div>
               <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
                 <div>
-                  <p className="text-sm font-medium">日曜授業</p>
-                  <p className="text-xs text-muted-foreground">毎週日曜日を授業日として追加</p>
+                  <p className="text-sm font-medium">{t("set.sundayClass")}</p>
+                  <p className="text-xs text-muted-foreground">{t("set.sundayDesc")}</p>
                 </div>
                 <Switch checked={hasSunday} onCheckedChange={setHasSunday} />
               </div>
@@ -763,15 +772,15 @@ export function SettingsDialog({ open, onClose }: Props) {
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
               {selectedMode === 'homeroom'
-                ? `担任モード: 担任クラス（${homeroomClass || "未設定"}）の基本時間割を設定します。各コマに教科を設定できます（後から変更可能）。`
-                : "基本時間割を変更します。各コマに担当クラスを設定してください。"
+                ? wf(t, "set.step3DescHomeroom", { c: homeroomClass || t("sidebar.notSet") })
+                : t("set.step3Desc")
               }
             </div>
 
             {/* 複週設定: 週数選択 */}
             {selectedMode !== 'homeroom' && (
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
-                <span className="text-sm font-medium shrink-0">週パターン数</span>
+                <span className="text-sm font-medium shrink-0">{t("set.weekPatternCount")}</span>
                 <div className="flex gap-1.5">
                   {([1, 2, 3, 4] as const).map(n => (
                     <button
@@ -784,7 +793,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                           : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
                       )}
                     >
-                      {n === 1 ? "1週（通常）" : `${n}週（${WEEK_LABELS_S.slice(0, n).join("/")}）`}
+                      {n === 1 ? t("wiz.week1Normal") : wf(t, "wiz.weekNPattern", { n, labels: WEEK_LABELS_S.slice(0, n).join("/") })}
                     </button>
                   ))}
                 </div>
@@ -795,8 +804,8 @@ export function SettingsDialog({ open, onClose }: Props) {
             {selectedMode !== 'homeroom' && weekCount > 1 && (
               <div className="flex items-center gap-3 p-3 rounded-lg border border-blue-200 bg-blue-50/50">
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-blue-800 mb-0.5">A週の開始日（基準日）</p>
-                  <p className="text-[11px] text-blue-600/80">A週に当たる月曜日を指定します。空白の場合は学期開始日の週をA週として自動設定します。</p>
+                  <p className="text-xs font-semibold text-blue-800 mb-0.5">{t("wiz.weekAStartDate")}</p>
+                  <p className="text-[11px] text-blue-600/80">{t("wiz.weekAStartDesc")}</p>
                 </div>
                 <input
                   type="date"
@@ -809,7 +818,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                     onClick={() => setWeekCycleStartInput("")}
                     className="text-[11px] text-blue-500 hover:text-blue-700 underline shrink-0"
                   >
-                    自動設定に戻す
+                    {t("set.resetToAutoBtn")}
                   </button>
                 )}
               </div>
@@ -846,7 +855,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                 </div>
                 {/* 他の週からコピーボタン */}
                 <div className="flex items-center gap-1 pr-2 pb-1">
-                  <span className="text-[10px] text-muted-foreground">コピー元:</span>
+                  <span className="text-[10px] text-muted-foreground">{t("set.copySourceLabel")}</span>
                   {WEEK_LABELS_S.slice(0, weekCount)
                     .map((label, srcIdx) => ({ label, srcIdx }))
                     .filter(({ srcIdx }) => srcIdx !== activeWeekTab)
@@ -861,7 +870,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                           });
                         }}
                         className="px-2 py-0.5 text-[11px] font-medium rounded border border-border bg-muted hover:bg-primary/10 hover:border-primary/40 transition-colors"
-                        title={`${label}の内容を現在のタブにコピー`}
+                        title={wf(t, "set.copyTabTitle", { label })}
                       >
                         [{label}]
                       </button>
@@ -883,7 +892,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                 <tbody>
                   {PERIODS.map(period => (
                     <tr key={period}>
-                      <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{period}限</td>
+                      <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{wf(t, "wiz.periodNth", { p: period })}</td>
                       {WEEKDAYS.map(d => {
                         const cls = baseSchedule[d.key]?.[period] ?? null;
                         return (
@@ -911,7 +920,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                                 </SelectTrigger>
                                 <SelectContent className="max-h-48">
                                   <SelectItem value="__empty__">
-                                    <span className="text-muted-foreground">— 空き —</span>
+                                    <span className="text-muted-foreground">{t("wiz.emptyDash")}</span>
                                   </SelectItem>
                                   {allClasses.map(c => (
                                     <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
@@ -930,14 +939,13 @@ export function SettingsDialog({ open, onClose }: Props) {
 
             {selectedMode === 'homeroom' && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
-                担任モードでは、基本時間割のクラスは自動的に担任クラス（{homeroomClass || "未設定"}）に設定されます。
-                教科は週間グリッドの各コマから個別に設定できます。
+                {wf(t, "set.homeroomModeNote", { c: homeroomClass || t("sidebar.notSet") })}
               </div>
             )}
 
             {selectedMode !== 'homeroom' && filledCells > 0 && (
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
-                <span className="font-medium text-primary">{filledCells}</span> コマの授業が設定されています
+                {wf(t, "set.periodsFilledNote", { n: filledCells })}
               </div>
             )}
 
@@ -1062,7 +1070,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                     <tbody>
                       {PERIODS.map(period => (
                         <tr key={period}>
-                          <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{period}限</td>
+                          <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{wf(t, "wiz.periodNth", { p: period })}</td>
                           {WEEKDAYS.map(d => {
                             const currentBase = baseSchedulesArr[activeSubjectTab] ?? makeEmptyScheduleS();
                             const cls = currentBase[d.key]?.[period] ?? null;
@@ -1095,7 +1103,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                                   </SelectTrigger>
                                   <SelectContent className="max-h-48">
                                     <SelectItem value="__empty__">
-                                      <span className="text-muted-foreground">— 未設定 —</span>
+                                      <span className="text-muted-foreground">{t("wiz.unsetDash")}</span>
                                     </SelectItem>
                                     {subjects.map(s => (
                                       <SelectItem key={s.name} value={s.name} className="text-xs">
@@ -1121,12 +1129,12 @@ export function SettingsDialog({ open, onClose }: Props) {
         {step === 4 && (
           <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
-              各コマに教科を割り当てます。設定しなくても次のステップに進めます。
+              {t("set.step4FullDesc")}
             </div>
 
             {subjects.length < 1 && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
-                教科が登録されていません。「教科の管理」から教科を登録してから再度この画面を開いてください。
+                {t("set.step4NoSubjects")}
               </div>
             )}
 
@@ -1135,7 +1143,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                 {/* A週/B週タブ (複数週のときのみ) */}
                 {weekCount > 1 && (
                   <div className="flex items-center gap-2 border-b border-border pb-2">
-                    <span className="text-xs text-muted-foreground font-medium">週選択:</span>
+                    <span className="text-xs text-muted-foreground font-medium">{t("wiz.weekSelect")}</span>
                     <div className="flex gap-1">
                       {WEEK_LABELS_S.slice(0, weekCount).map((label, idx) => (
                         <button
@@ -1167,7 +1175,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                             }}
                             className="text-[10px] px-2 py-0.5 rounded border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
                           >
-                            {label}からコピー
+                            {wf(t, "set.copyFromWeekBtn", { label })}
                           </button>
                         );
                       })}
@@ -1178,13 +1186,13 @@ export function SettingsDialog({ open, onClose }: Props) {
                 {/* 一括設定ツール */}
                 {subjects.length >= 2 && (
                   <div className="flex flex-wrap gap-2 p-2 bg-muted/20 rounded border border-border">
-                    <span className="text-xs text-muted-foreground font-medium self-center">一括:</span>
+                    <span className="text-xs text-muted-foreground font-medium self-center">{t("set.bulkSetLabel")}</span>
                     {Array.from(new Set(allClasses.map(c => {
                       const m = c.match(/(\d+)年/);
                       return m ? parseInt(m[1]) : null;
                     }).filter((g): g is number => g !== null))).sort().map(grade => (
                       <div key={grade} className="flex items-center gap-1">
-                        <span className="text-xs text-muted-foreground">{grade}年:</span>
+                        <span className="text-xs text-muted-foreground">{wf(t, "set.gradeLabel", { n: grade })}</span>
                         {subjects.map(s => (
                           <button
                             key={s.name}
@@ -1212,7 +1220,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                               borderColor: s.color ? `${s.color}50` : '#ccc',
                             }}
                           >
-                            {grade}年→{s.name}
+                            {wf(t, "wiz.gradeArrowSubject", { g: grade, s: s.name })}
                           </button>
                         ))}
                       </div>
@@ -1228,7 +1236,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                       })}
                       className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted transition-colors ml-auto"
                     >
-                      リセット
+                      {t("wiz.reset")}
                     </button>
                   </div>
                 )}
@@ -1247,7 +1255,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                     <tbody>
                       {PERIODS.map(period => (
                         <tr key={period}>
-                          <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{period}限</td>
+                          <td className="text-center text-xs text-muted-foreground font-bold py-1 border-b border-border/50 w-12">{wf(t, "wiz.periodNth", { p: period })}</td>
                           {WEEKDAYS.map(d => {
                             const currentBase = baseSchedulesArr[activeSubjectTab] ?? makeEmptyScheduleS();
                             const cls = currentBase[d.key]?.[period] ?? null;
@@ -1280,7 +1288,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                                   </SelectTrigger>
                                   <SelectContent className="max-h-48">
                                     <SelectItem value="__empty__">
-                                      <span className="text-muted-foreground">— 未設定 —</span>
+                                      <span className="text-muted-foreground">{t("wiz.unsetDash")}</span>
                                     </SelectItem>
                                     {subjects.map(s => (
                                       <SelectItem key={s.name} value={s.name} className="text-xs">
@@ -1306,16 +1314,16 @@ export function SettingsDialog({ open, onClose }: Props) {
         {/* ─── Step 5: Apply Mode ────────────────────────────────────── */}
         {step === 5 && (      <div className="space-y-4">
             <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
-              変更の適用範囲を選択してください。
+              {t("set.step5Desc")}
             </div>
 
             {/* Mode summary */}
             <div className="bg-card border border-border rounded-lg p-3 text-xs">
-              <p className="text-muted-foreground mb-1">適用されるモード</p>
+              <p className="text-muted-foreground mb-1">{t("set.modeApplied")}</p>
               <p className="font-semibold">
-                {selectedMode === 'single_subject' && '教科担任モード（従来）'}
-                {selectedMode === 'homeroom' && `担任モード${homeroomClass ? ` — ${homeroomClass}` : ''}`}
-                {selectedMode === 'multi_subject' && '複数教科モード'}
+                {selectedMode === 'single_subject' && t("set.modeSingle")}
+                {selectedMode === 'homeroom' && (homeroomClass ? wf(t, "set.modeHomeroomWithClass", { c: homeroomClass }) : t("set.modeHomeroom"))}
+                {selectedMode === 'multi_subject' && t("set.modeMultiSubject")}
               </p>
             </div>
 
@@ -1335,9 +1343,9 @@ export function SettingsDialog({ open, onClose }: Props) {
                   applyMode === "all" ? "border-primary bg-primary" : "border-muted-foreground"
                 )} />
                 <div className="flex-1">
-                  <p className="text-sm font-semibold">学期全体に適用</p>
+                  <p className="text-sm font-semibold">{t("set.applyAll")}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    baseデータを全期間で再生成します。既存の個別変更（override）はそのまま保持されます。
+                    {t("set.applyAllDesc")}
                   </p>
                 </div>
               </div>
@@ -1357,14 +1365,13 @@ export function SettingsDialog({ open, onClose }: Props) {
                   applyMode === "from" ? "border-primary bg-primary" : "border-muted-foreground"
                 )} />
                 <div className="flex-1">
-                  <p className="text-sm font-semibold">指定日以降に適用</p>
+                  <p className="text-sm font-semibold">{t("set.applyFrom")}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    担当変更などに対応。指定日以降のbaseデータのみ再生成します。
-                    指定日以降の個別変更は削除されます。
+                    {t("set.applyFromDesc")}
                   </p>
                   {applyMode === "from" && (
                     <div className="mt-3">
-                      <Label className="text-xs text-muted-foreground mb-1 block">適用開始日</Label>
+                      <Label className="text-xs text-muted-foreground mb-1 block">{t("set.applyFromDateLabel")}</Label>
                       <Input
                         type="date"
                         value={applyFromDate}
@@ -1383,8 +1390,7 @@ export function SettingsDialog({ open, onClose }: Props) {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
                   <AlertTriangle size={14} className="text-amber-600 mt-0.5 shrink-0" />
                   <p className="text-xs text-amber-700">
-                    <strong>{applyFromDate}</strong> 以降の個別変更（削除・追加・移動など）は削除されます。
-                    この操作はUndo履歴もリセットされます。
+                    {wf(t, "set.applyFromWarning", { date: applyFromDate })}
                   </p>
                 </div>
               )}
@@ -1401,19 +1407,19 @@ export function SettingsDialog({ open, onClose }: Props) {
             className="gap-1.5"
           >
             <ChevronLeft size={14} />
-            {step > 1 ? "戻る" : "キャンセル"}
+            {step > 1 ? t("wiz.back") : t("wiz.cancel")}
           </Button>
 
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{step} / 5</span>
             {step < 5 ? (
               <Button size="sm" onClick={() => setStep(s => s + 1)} disabled={!canGoNext()} className="gap-1.5">
-                次へ <ChevronRight size={14} />
+                {t("wiz.next")} <ChevronRight size={14} />
               </Button>
             ) : (
               <Button size="sm" onClick={handleApply} className="gap-1.5 bg-primary">
                 <Check size={13} />
-                設定を適用
+                {t("set.applyBtn")}
               </Button>
             )}
           </div>

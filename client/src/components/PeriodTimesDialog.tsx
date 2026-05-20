@@ -2,7 +2,7 @@
 // PeriodTimesDialog: 時程表（各コマの開始・終了時刻）設定ダイアログ
 // 一括設定（全曜日共通）と曜日別設定（曜日ごとに異なる時刻）の両方に対応
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,14 @@ import { Check, Clock, RotateCcw, ChevronDown, Bot } from "lucide-react";
 import { LLMImportDialog } from "@/components/LLMImportDialog";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/contexts/LanguageContext";
+
+function wf(t: (k: TranslationKey) => string, key: TranslationKey, vars: Record<string, string | number>): string {
+  let s = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
 
 interface PeriodTimesDialogProps {
   open: boolean;
@@ -33,15 +41,7 @@ export const DEFAULT_PERIOD_TIMES: Record<number, { start: string; end: string }
 
 export const PERIODS = [1, 2, 3, 4, 5, 6];
 
-const WEEKDAYS_DEF = [
-  { key: "mon", label: "月" },
-  { key: "tue", label: "火" },
-  { key: "wed", label: "水" },
-  { key: "thu", label: "木" },
-  { key: "fri", label: "金" },
-  { key: "sat", label: "土" },
-  { key: "sun", label: "日" },
-];
+const WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 type PeriodTimeMap = Record<number, { start: string; end: string }>;
 type PeriodTimeByDayMap = Record<string, PeriodTimeMap>;
@@ -54,33 +54,34 @@ interface PeriodGridProps {
 }
 
 function PeriodGrid({ times, onChange }: PeriodGridProps) {
+  const { t } = useLanguage();
   const getRowError = (period: number): string | null => {
-    const t = times[period];
-    if (!t?.start || !t?.end) return null;
-    if (t.start >= t.end) return "開始が終了以降になっています";
+    const entry = times[period];
+    if (!entry?.start || !entry?.end) return null;
+    if (entry.start >= entry.end) return t("ptime.timeError");
     return null;
   };
 
   return (
     <div className="space-y-1.5">
       <div className="grid grid-cols-[2.5rem_1fr_1fr] gap-2 px-1">
-        <span className="text-[10px] text-muted-foreground font-medium text-center">コマ</span>
-        <span className="text-[10px] text-muted-foreground font-medium text-center">開始</span>
-        <span className="text-[10px] text-muted-foreground font-medium text-center">終了</span>
+        <span className="text-[10px] text-muted-foreground font-medium text-center">{t("ptime.colPeriod")}</span>
+        <span className="text-[10px] text-muted-foreground font-medium text-center">{t("ptime.colStart")}</span>
+        <span className="text-[10px] text-muted-foreground font-medium text-center">{t("ptime.colEnd")}</span>
       </div>
       {PERIODS.map(period => {
-        const t = times[period] ?? { start: "", end: "" };
+        const entry = times[period] ?? { start: "", end: "" };
         const err = getRowError(period);
         return (
           <div key={period} className="space-y-0.5">
             <div className="grid grid-cols-[2.5rem_1fr_1fr] gap-2 items-center">
               <div className="flex flex-col items-center">
                 <span className="text-sm font-bold text-foreground/70">{period}</span>
-                <span className="text-[9px] text-muted-foreground/50">限</span>
+                <span className="text-[9px] text-muted-foreground/50">{t("ptime.periodSuffix")}</span>
               </div>
               <input
                 type="time"
-                value={t.start}
+                value={entry.start}
                 onChange={e => onChange(period, "start", e.target.value)}
                 className={cn(
                   "w-full h-8 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring",
@@ -89,7 +90,7 @@ function PeriodGrid({ times, onChange }: PeriodGridProps) {
               />
               <input
                 type="time"
-                value={t.end}
+                value={entry.end}
                 onChange={e => onChange(period, "end", e.target.value)}
                 className={cn(
                   "w-full h-8 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring",
@@ -116,6 +117,7 @@ interface CalcHelperPanelProps {
 }
 
 function CalcHelperPanel({ onApply, onClose, defaultStart = "08:50" }: CalcHelperPanelProps) {
+  const { t } = useLanguage();
   const [calcStart, setCalcStart] = useState(defaultStart);
   const [calcPeriodMin, setCalcPeriodMin] = useState(45);
   const [calcBreakMin, setCalcBreakMin] = useState(10);
@@ -160,35 +162,35 @@ function CalcHelperPanel({ onApply, onClose, defaultStart = "08:50" }: CalcHelpe
 
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3 space-y-3">
-      <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">⏱ 逆算入力 — 開始時刻と授業時間から自動計算</p>
+      <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">{t("ptime.calcTitle")}</p>
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
-          <label className="text-[10px] text-muted-foreground">1限開始時刻</label>
+          <label className="text-[10px] text-muted-foreground">{t("ptime.calcStartLabel")}</label>
           <input type="time" value={calcStart} onChange={e => setCalcStart(e.target.value)}
             className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] text-muted-foreground">授業時間（分）</label>
+          <label className="text-[10px] text-muted-foreground">{t("ptime.calcPeriodMinLabel")}</label>
           <input type="number" min={20} max={90} value={calcPeriodMin} onChange={e => setCalcPeriodMin(Number(e.target.value))}
             className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] text-muted-foreground">休憩時間（分）</label>
+          <label className="text-[10px] text-muted-foreground">{t("ptime.calcBreakLabel")}</label>
           <input type="number" min={0} max={60} value={calcBreakMin} onChange={e => setCalcBreakMin(Number(e.target.value))}
             className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] text-muted-foreground">授業コマ数</label>
+          <label className="text-[10px] text-muted-foreground">{t("ptime.calcPeriodCountLabel")}</label>
           <input type="number" min={1} max={10} value={calcPeriodCount} onChange={e => setCalcPeriodCount(Number(e.target.value))}
             className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] text-muted-foreground">給食・昼休み等（n限後）</label>
+          <label className="text-[10px] text-muted-foreground">{t("ptime.calcLunchAfterLabel")}</label>
           <input type="number" min={1} max={calcPeriodCount - 1} value={calcLunchAfter} onChange={e => setCalcLunchAfter(Number(e.target.value))}
             className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] text-muted-foreground">給食・昼休み等の時間（分）</label>
+          <label className="text-[10px] text-muted-foreground">{t("ptime.calcLunchMinLabel")}</label>
           <input type="number" min={0} max={120} value={calcLunchMin} onChange={e => setCalcLunchMin(Number(e.target.value))}
             className="w-full h-7 rounded border border-input bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring" />
         </div>
@@ -196,16 +198,16 @@ function CalcHelperPanel({ onApply, onClose, defaultStart = "08:50" }: CalcHelpe
       {/* 業間休み設定 */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-300">業間休み（通常の休憩より長い休み）</p>
+          <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-300">{t("ptime.calcExtraSection")}</p>
           <button
             onClick={handleAddExtraBreak}
             className="flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-medium rounded border border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-800/40 transition-colors text-amber-800 dark:text-amber-300"
           >
-            <span className="text-xs">+</span> 追加
+            <span className="text-xs">+</span> {t("ptime.calcAddBreak")}
           </button>
         </div>
         {calcExtraBreaks.length === 0 && (
-          <p className="text-[10px] text-muted-foreground">「追加」を押すと業間休みを設定できます（例：2限後に20分の業間休み）</p>
+          <p className="text-[10px] text-muted-foreground">{t("ptime.calcNoBreak")}</p>
         )}
         {calcExtraBreaks.map((b, idx) => (
           <div key={idx} className="flex items-center gap-2 p-2 rounded border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/10">
@@ -215,13 +217,13 @@ function CalcHelperPanel({ onApply, onClose, defaultStart = "08:50" }: CalcHelpe
                 onChange={e => handleExtraBreakChange(idx, "afterPeriod", Number(e.target.value))}
                 className="w-12 h-6 rounded border border-input bg-background px-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-ring"
               />
-              <span className="text-[10px] text-muted-foreground">限後に</span>
+              <span className="text-[10px] text-muted-foreground">{t("ptime.calcBreakAfterPeriod")}</span>
               <input
                 type="number" min={1} max={120} value={b.minutes}
                 onChange={e => handleExtraBreakChange(idx, "minutes", Number(e.target.value))}
                 className="w-14 h-6 rounded border border-input bg-background px-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-ring"
               />
-              <span className="text-[10px] text-muted-foreground">分の業間休み</span>
+              <span className="text-[10px] text-muted-foreground">{t("ptime.calcBreakMinSuffix")}</span>
             </div>
             <button
               onClick={() => handleRemoveExtraBreak(idx)}
@@ -232,9 +234,9 @@ function CalcHelperPanel({ onApply, onClose, defaultStart = "08:50" }: CalcHelpe
       </div>
       <Button size="sm" className="w-full gap-1.5 text-xs h-7" onClick={handleCalcApply}>
         <Check size={12} />
-        この設定で時程を自動入力する
+        {t("ptime.calcApplyBtn")}
       </Button>
-      <p className="text-[10px] text-amber-700 dark:text-amber-400">※ 入力後も各コマの時刻を個別に修正できます</p>
+      <p className="text-[10px] text-amber-700 dark:text-amber-400">{t("ptime.calcNote")}</p>
     </div>
   );
 }
@@ -259,6 +261,13 @@ interface PeriodTimesInnerProps {
 }
 
 function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, onSave, onCancel }: PeriodTimesInnerProps) {
+  const { t } = useLanguage();
+  const weekdayLabels = t("ptime.weekdays").split(",");
+  const WEEKDAYS_DEF = useMemo(
+    () => WEEKDAY_KEYS.map((key, i) => ({ key, label: weekdayLabels[i] })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [weekdayLabels.join(",")]
+  );
   const [useDayMode, setUseDayMode] = useState(false);
   const [sharedTimes, setSharedTimes] = useState<PeriodTimeMap>({ ...DEFAULT_PERIOD_TIMES });
   const [byDayTimes, setByDayTimes] = useState<PeriodTimeByDayMap>({});
@@ -373,8 +382,8 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
       {/* 曜日別モード切り替え */}
       <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
         <div>
-          <p className="text-sm font-medium">曜日ごとに時程が異なる</p>
-          <p className="text-xs text-muted-foreground">水曜日だけ短縮授業など、曜日別に個別設定できます</p>
+          <p className="text-sm font-medium">{t("ptime.dayModeLabel")}</p>
+          <p className="text-xs text-muted-foreground">{t("ptime.dayModeDesc")}</p>
         </div>
         <button
           onClick={() => handleToggleDayMode(!useDayMode)}
@@ -394,15 +403,15 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
         /* 一括設定モード */
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground font-medium">全曜日共通の時程</p>
+            <p className="text-xs text-muted-foreground font-medium">{t("ptime.allDayLabel")}</p>
             <div className="flex gap-1">
               <Button variant="ghost" size="sm" className="text-xs gap-1 h-6" onClick={() => setShowCalcHelper(v => !v)}>
                 <Clock size={10} />
-                逆算入力
+                {t("ptime.calcBtn")}
               </Button>
               <Button variant="ghost" size="sm" className="text-xs gap-1 h-6" onClick={handleResetShared}>
                 <RotateCcw size={10} />
-                デフォルト
+                {t("ptime.resetBtn")}
               </Button>
             </div>
           </div>
@@ -420,10 +429,10 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
         /* 曜日別設定モード */
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground font-medium">曜日を選んで個別設定</p>
+            <p className="text-xs text-muted-foreground font-medium">{t("ptime.daySelectLabel")}</p>
             <Button variant="ghost" size="sm" className="text-xs gap-1 h-6" onClick={handleCopySharedToAll}>
               <RotateCcw size={10} />
-              全曜日に共通設定を適用
+              {t("ptime.copyToAllBtn")}
             </Button>
           </div>
 
@@ -456,20 +465,20 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium">
-                {WEEKDAYS_DEF.find(d => d.key === selectedDay)?.label}曜日の時程
+                {wf(t, "ptime.dayScheduleTitle", { day: WEEKDAYS_DEF.find(d => d.key === selectedDay)?.label ?? selectedDay })}
               </p>
               <div className="flex gap-1">
                 <Button variant="ghost" size="sm" className="text-xs gap-1 h-6" onClick={() => { setShowDayCalcHelper(v => !v); }}>
                   <Clock size={10} />
-                  逆算入力
+                  {t("ptime.calcBtn")}
                 </Button>
                 <Button variant="ghost" size="sm" className="text-xs gap-1 h-6" onClick={() => handleCopySharedToDay(selectedDay)}>
                   <ChevronDown size={10} />
-                  共通設定をコピー
+                  {t("ptime.copyFromSharedBtn")}
                 </Button>
                 <Button variant="ghost" size="sm" className="text-xs gap-1 h-6" onClick={() => handleResetDay(selectedDay)}>
                   <RotateCcw size={10} />
-                  デフォルト
+                  {t("ptime.resetBtn")}
                 </Button>
               </div>
             </div>
@@ -491,14 +500,14 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
           <details className="group">
             <summary className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none list-none">
               <ChevronDown size={12} className="transition-transform group-open:rotate-180" />
-              全曜日共通の基準時程を編集
+              {t("ptime.expandSharedLabel")}
             </summary>
             <div className="mt-2 pl-2 border-l-2 border-border space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] text-muted-foreground">共通時程（各曜日の「共通設定をコピー」の元になります）</p>
+                <p className="text-[10px] text-muted-foreground">{t("ptime.sharedRefNote")}</p>
                 <Button variant="ghost" size="sm" className="text-xs gap-1 h-6" onClick={handleResetShared}>
                   <RotateCcw size={10} />
-                  デフォルト
+                  {t("ptime.resetBtn")}
                 </Button>
               </div>
               <PeriodGrid times={sharedTimes} onChange={handleSharedChange} />
@@ -511,11 +520,11 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
       <div className="flex items-center justify-between pt-3 border-t border-border">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Clock size={11} />
-          <span>ICS書き出しで正確な時刻が反映されます</span>
+          <span>{t("ptime.icsNote")}</span>
         </div>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" className="text-xs" onClick={onCancel}>
-            キャンセル
+            {t("wiz.cancel")}
           </Button>
           <Button
             size="sm"
@@ -524,7 +533,7 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
             disabled={!canSave}
           >
             <Check size={13} />
-            保存
+            {t("common.save")}
           </Button>
         </div>
       </div>
@@ -536,6 +545,8 @@ function PeriodTimesInner({ initialTimes, initialByDay, hasSaturday, hasSunday, 
 
 export function PeriodTimesDialog({ open, onOpenChange }: PeriodTimesDialogProps) {
   const { semester, updateSettings } = useTimetable();
+  const { t } = useLanguage();
+  const [showLLMDialog, setShowLLMDialog] = useState(false);
 
   const handleSave = (times: PeriodTimeMap | undefined, byDay: PeriodTimeByDayMap | undefined) => {
     if (!semester) return;
@@ -545,7 +556,6 @@ export function PeriodTimesDialog({ open, onOpenChange }: PeriodTimesDialogProps
 
   if (!semester) return null;
 
-   const [showLLMDialog, setShowLLMDialog] = useState(false);
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -554,7 +564,7 @@ export function PeriodTimesDialog({ open, onOpenChange }: PeriodTimesDialogProps
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <Clock size={18} className="text-primary" />
-              時程表の設定
+              {t("ptime.dialogTitle")}
             </DialogTitle>
             <Button
               variant="ghost"
@@ -563,11 +573,11 @@ export function PeriodTimesDialog({ open, onOpenChange }: PeriodTimesDialogProps
               onClick={() => setShowLLMDialog(true)}
             >
               <Bot size={12} />
-              LLM読み取り
+              {t("ptime.llmRead")}
             </Button>
           </div>
           <DialogDescription className="text-xs">
-            各コマの開始・終了時刻を設定します。曜日ごとに異なる時程にも対応しています。
+            {t("ptime.dialogDesc")}
           </DialogDescription>
         </DialogHeader>
         <PeriodTimesInner
@@ -597,6 +607,8 @@ interface PeriodTimesDialogStandaloneProps {
 }
 
 export function PeriodTimesDialogStandalone({ open, onOpenChange, value, valueByDay, onChange, hasSaturday, hasSunday }: PeriodTimesDialogStandaloneProps) {
+  const { t } = useLanguage();
+
   const handleSave = (times: PeriodTimeMap | undefined, byDay: PeriodTimeByDayMap | undefined) => {
     onChange(times, byDay);
     onOpenChange(false);
@@ -608,10 +620,10 @@ export function PeriodTimesDialogStandalone({ open, onOpenChange, value, valueBy
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock size={18} className="text-primary" />
-            時程表の設定
+            {t("ptime.dialogTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            各コマの開始・終了時刻を設定します。曜日ごとに異なる時程（水曜短縮など）にも対応しています。
+            {t("ptime.dialogDescAlt")}
           </DialogDescription>
         </DialogHeader>
         {open && (

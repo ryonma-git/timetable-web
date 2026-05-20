@@ -1,7 +1,7 @@
 // Design: Swiss Grid × Japanese Functional Design
 // HolidaySettingsDialog: 祝日自動取得・休校日設定ダイアログ
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Holidays from "date-holidays";
 import {
   Dialog,
@@ -28,22 +28,14 @@ import { useTimetable } from "@/contexts/TimetableContext";
 import type { HolidayEntry } from "@/lib/timetableFile";
 import type { OverrideOp } from "@/lib/timetable";
 import { CalendarX, Plus, Trash2, RefreshCw, Check } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/contexts/LanguageContext";
 
 interface HolidaySettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-// 月名
-const MONTH_NAMES = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-
-// YYYY-MM-DD → 表示用
-function formatDateDisplay(iso: string): string {
-  const [y, m, d] = iso.split("-");
-  const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-  return `${y}年${parseInt(m)}月${parseInt(d)}日（${weekdays[date.getDay()]}）`;
-}
 
 // 学期期間内の祝日を取得する
 function getJapaneseHolidaysInRange(startDate: string, endDate: string): { date: string; name: string }[] {
@@ -73,8 +65,32 @@ function getJapaneseHolidaysInRange(startDate: string, endDate: string): { date:
   return result.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function wf(t: (k: TranslationKey) => string, key: TranslationKey, vars: Record<string, string | number>): string {
+  let s = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
+
 export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDialogProps) {
   const { semester, holidays, updateHolidays, effectiveEntries, applyOps } = useTimetable();
+  const { t, language } = useLanguage();
+
+  const monthNames = t("hol.months").split(",");
+  const weekdayLabels = language === "en"
+    ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    : ["日", "月", "火", "水", "木", "金", "土"];
+
+  const formatDateDisplay = useCallback((iso: string): string => {
+    const [y, m, d] = iso.split("-");
+    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    const wd = weekdayLabels[date.getDay()];
+    if (language === "en") {
+      return `${monthNames[parseInt(m) - 1]} ${parseInt(d)}, ${y} (${wd})`;
+    }
+    return `${y}年${parseInt(m)}月${parseInt(d)}日（${wd}）`;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language]);
+
   // localHolidays は HolidayEntry[] で管理
   const [localHolidays, setLocalHolidays] = useState<HolidayEntry[]>([]);
   const [customDateInput, setCustomDateInput] = useState("");
@@ -137,19 +153,19 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
     const val = customDateInput.trim();
     if (!val) return;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-      setCustomDateError("YYYY-MM-DD 形式で入力してください");
+      setCustomDateError(t("hol.errFormat"));
       return;
     }
     if (semester?.startDate && val < semester.startDate) {
-      setCustomDateError("学期開始日より前の日付です");
+      setCustomDateError(t("hol.errBeforeStart"));
       return;
     }
     if (semester?.endDate && val > semester.endDate) {
-      setCustomDateError("学期終了日より後の日付です");
+      setCustomDateError(t("hol.errAfterEnd"));
       return;
     }
     if (localDates.has(val)) {
-      setCustomDateError("すでに登録済みです");
+      setCustomDateError(t("hol.errAlreadyAdded"));
       return;
     }
     setLocalHolidays(prev => [...prev, { date: val }].sort((a, b) => a.date.localeCompare(b.date)));
@@ -244,13 +260,13 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CalendarX size={18} className="text-red-500" />
-              祝日・休校日の設定
+              {t("hol.title")}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              登録した日付はグリッド上でグレーアウト表示されます。祝日名はCSVのreasonに自動追加されます。
+              {t("hol.desc")}
               {semester?.startDate && semester?.endDate && (
                 <span className="ml-1 text-muted-foreground">
-                  （学期期間: {semester.startDate} 〜 {semester.endDate}）
+                  {wf(t, "hol.semPeriod", { start: semester.startDate, end: semester.endDate })}
                 </span>
               )}
             </DialogDescription>
@@ -261,11 +277,11 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
             <div className="rounded-lg border border-border bg-muted/30 p-3">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <p className="text-sm font-semibold">日本の祝日を自動取得</p>
+                  <p className="text-sm font-semibold">{t("hol.autoSection")}</p>
                   <p className="text-xs text-muted-foreground">
-                    学期期間内の祝日 {autoHolidays.length} 件を検出しました
+                    {wf(t, "hol.autoDetected", { n: autoHolidays.length })}
                     {autoNotYetAdded.length > 0 && (
-                      <span className="text-amber-600 ml-1">（未追加: {autoNotYetAdded.length} 件）</span>
+                      <span className="text-amber-600 ml-1">{wf(t, "hol.notAdded", { n: autoNotYetAdded.length })}</span>
                     )}
                   </p>
                 </div>
@@ -277,7 +293,7 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
                   disabled={autoNotYetAdded.length === 0}
                 >
                   <RefreshCw size={12} />
-                  一括追加
+                  {t("hol.bulkAdd")}
                 </Button>
               </div>
               {autoHolidays.length > 0 && (
@@ -304,7 +320,7 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
 
             {/* カスタム日付追加 */}
             <div>
-              <p className="text-sm font-semibold mb-2">休校日を手動で追加</p>
+              <p className="text-sm font-semibold mb-2">{t("hol.manualSection")}</p>
               <div className="flex gap-2">
                 <div className="flex-1">
                   <input
@@ -325,7 +341,7 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
                 </div>
                 <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={addCustomDate}>
                   <Plus size={12} />
-                  追加
+                  {t("hol.addBtn")}
                 </Button>
               </div>
             </div>
@@ -336,9 +352,9 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold">
-                  登録済み休校日
+                  {t("hol.registeredSection")}
                   <span className="ml-2 text-xs text-muted-foreground font-normal">
-                    {localHolidays.length} 件
+                    {wf(t, "hol.countN", { n: localHolidays.length })}
                   </span>
                 </p>
                 {localHolidays.length > 0 && (
@@ -348,14 +364,14 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
                     className="text-xs text-red-500 hover:text-red-600 h-6 px-2"
                     onClick={() => { setLocalHolidays([]); setIsDirty(true); }}
                   >
-                    すべて削除
+                    {t("hol.deleteAll")}
                   </Button>
                 )}
               </div>
 
               {localHolidays.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground text-sm">
-                  休校日が登録されていません
+                  {t("hol.empty")}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -364,7 +380,7 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
                     return (
                       <div key={monthKey}>
                         <p className="text-xs text-muted-foreground font-medium mb-1.5">
-                          {y}年{MONTH_NAMES[parseInt(m) - 1]}
+                          {wf(t, "hol.monthHeader", { y, month: monthNames[parseInt(m) - 1] })}
                         </p>
                         <div className="space-y-1">
                           {entries.map(entry => (
@@ -401,7 +417,7 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
           {/* Footer */}
           <div className="flex items-center justify-between pt-3 border-t border-border mt-2">
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => onOpenChange(false)}>
-              キャンセル
+              {t("wiz.cancel")}
             </Button>
             <Button
               size="sm"
@@ -410,7 +426,7 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
               disabled={!isDirty}
             >
               <Check size={13} />
-              保存
+              {t("common.save")}
             </Button>
           </div>
         </DialogContent>
@@ -422,13 +438,12 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <CalendarX size={18} className="text-red-500" />
-              授業コマを削除しますか？
+              {t("hol.confirmTitle")}
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-sm">
                 <p>
-                  以下の日付に授業が入っているコマが見つかりました。
-                  祝日・休校日として登録するとともに、<strong>授業コマも削除</strong>しますか？
+                  {t("hol.confirmPre")}<strong>{t("hol.confirmBold")}</strong>{t("hol.confirmPost")}
                 </p>
                 <div className="rounded-md bg-muted/50 px-3 py-2 space-y-0.5 max-h-32 overflow-y-auto">
                   {affectedDates.map(date => {
@@ -437,20 +452,20 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
                     return (
                       <div key={date} className="flex items-center justify-between text-xs">
                         <span>{formatDateDisplay(date)}{name ? `（${name}）` : ""}</span>
-                        <span className="text-muted-foreground">{count}コマ削除</span>
+                        <span className="text-muted-foreground">{wf(t, "hol.nPeriodDelete", { n: count })}</span>
                       </div>
                     );
                   })}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  削除後は「元に戻す」で復元できます。「コマはそのまま」を選ぶと、グレーアウト表示・時数計算の除外のみ行われます。
+                  {t("hol.confirmFooterNote")}
                 </p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setConfirmOpen(false)}>
-              キャンセル
+              {t("wiz.cancel")}
             </AlertDialogCancel>
             <Button
               variant="outline"
@@ -458,13 +473,13 @@ export function HolidaySettingsDialog({ open, onOpenChange }: HolidaySettingsDia
               className="text-xs"
               onClick={handleConfirmWithoutClear}
             >
-              コマはそのまま
+              {t("hol.keepPeriods")}
             </Button>
             <AlertDialogAction
               onClick={handleConfirmWithClear}
               className="bg-red-500 hover:bg-red-600 text-white text-xs"
             >
-              コマも削除する
+              {t("hol.deletePeriods")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
