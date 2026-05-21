@@ -21,16 +21,14 @@ import {
 } from "@/lib/gradeColors";
 import { useGradeColors } from "@/contexts/GradeColorContext";
 import { useTimetable } from "@/contexts/TimetableContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/contexts/LanguageContext";
 
-const GRADE_LABELS: Record<string, string> = {
-  "1": "1年",
-  "2": "2年",
-  "3": "3年",
-  "4": "4年",
-  "5": "5年",
-  "6": "6年",
-  "special": "特別（デフォルト）",
-};
+function wfcs(t: (k: TranslationKey) => string, key: TranslationKey, vars: Record<string, string | number>): string {
+  let s = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
 
 // カスタムクラス（「n年m組」形式でないもの）を判定
 function isCustomClass(className: string): boolean {
@@ -40,6 +38,17 @@ function isCustomClass(className: string): boolean {
 export function ColorSettingsDialog() {
   const { gradeColors, setGradeColors } = useGradeColors();
   const { classList } = useTimetable();
+  const { t } = useLanguage();
+
+  const GRADE_LABELS: Record<string, string> = {
+    "1": t("colorSettings.grade1"),
+    "2": t("colorSettings.grade2"),
+    "3": t("colorSettings.grade3"),
+    "4": t("colorSettings.grade4"),
+    "5": t("colorSettings.grade5"),
+    "6": t("colorSettings.grade6"),
+    "special": t("colorSettings.gradeSpecial"),
+  };
   const [open, setOpen] = useState(false);
   const [localColors, setLocalColors] = useState<Record<string, GradeColorDef>>({ ...gradeColors });
   const [showCustomSection, setShowCustomSection] = useState(true);
@@ -103,8 +112,8 @@ export function ColorSettingsDialog() {
             {label}
           </span>
           <span className="text-xs text-muted-foreground">
-            現在: {current.label}
-            {!hasCustom && fallbackKey && <span className="ml-1 text-muted-foreground/60">（デフォルト色を使用）</span>}
+            {t("colorSettings.currentLabel")} {current.label}
+            {!hasCustom && fallbackKey && <span className="ml-1 text-muted-foreground/60">{t("colorSettings.defaultColor")}</span>}
           </span>
           {hasCustom && fallbackKey && (
             <button
@@ -112,7 +121,7 @@ export function ColorSettingsDialog() {
               onClick={() => handleResetCustom(label)}
               className="text-[10px] text-muted-foreground hover:text-foreground underline"
             >
-              リセット
+              {t("colorSettings.resetBtn")}
             </button>
           )}
         </div>
@@ -180,10 +189,10 @@ export function ColorSettingsDialog() {
                        hover:bg-sidebar-accent text-xs transition-colors duration-100"
           >
             <Palette size={14} />
-            <span>学年カラー設定</span>
+            <span>{t("colorSettings.sidebarLabel")}</span>
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right">学年ごとの表示色を変更</TooltipContent>
+        <TooltipContent side="right">{t("colorSettings.sidebarTooltip")}</TooltipContent>
       </Tooltip>
 
       <Dialog open={open} onOpenChange={handleClose}>
@@ -191,18 +200,18 @@ export function ColorSettingsDialog() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Palette size={18} />
-              カラー設定
+              {t("colorSettings.title")}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5 py-2">
             <p className="text-xs text-muted-foreground">
-              各学年・クラスの表示色を選択してください。選択した色はこのブラウザに保存されます。
+              {t("colorSettings.desc")}
             </p>
 
-            {/* 学年色セクション */}
+            {/* Grade color section */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">学年カラー</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">{t("colorSettings.gradeSectionTitle")}</p>
               <div className="space-y-5">
                 {Object.entries(GRADE_LABELS).map(([grade, label]) =>
                   renderColorRow(grade, label)
@@ -210,7 +219,7 @@ export function ColorSettingsDialog() {
               </div>
             </div>
 
-            {/* カスタムクラス個別色セクション */}
+            {/* Custom class colors section */}
             {customClasses.length > 0 && (
               <div className="border-t border-border pt-4">
                 <button
@@ -219,13 +228,13 @@ export function ColorSettingsDialog() {
                   className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 hover:text-foreground transition-colors"
                 >
                   {showCustomSection ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                  特別クラスの個別カラー
-                  <span className="font-normal text-muted-foreground/60">（{customClasses.length} クラス）</span>
+                  {t("colorSettings.customSectionTitle")}
+                  <span className="font-normal text-muted-foreground/60">（{wfcs(t, "colorSettings.customCount", { n: customClasses.length })}）</span>
                 </button>
                 {showCustomSection && (
                   <div className="space-y-5">
                     <p className="text-xs text-muted-foreground -mt-1">
-                      個別色を設定しない場合は「特別（デフォルト）」の色が使われます。
+                      {t("colorSettings.customSectionNote")}
                     </p>
                     {customClasses.map(cls =>
                       renderColorRow(`custom:${cls}`, cls, "special")
@@ -238,7 +247,7 @@ export function ColorSettingsDialog() {
 
           {/* Preview */}
           <div className="border rounded-md p-3 bg-muted/30 mt-2">
-            <p className="text-xs text-muted-foreground mb-2">プレビュー</p>
+            <p className="text-xs text-muted-foreground mb-2">{t("colorSettings.previewLabel")}</p>
             <div className="flex flex-wrap gap-1.5">
               {Object.entries(GRADE_LABELS).map(([grade, label]) => {
                 const c = localColors[grade] ?? DEFAULT_GRADE_COLORS[grade];
@@ -271,14 +280,14 @@ export function ColorSettingsDialog() {
           <div className="flex justify-between pt-2">
             <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1.5">
               <RotateCcw size={13} />
-              学年色をリセット
+              {t("colorSettings.resetGradeBtn")}
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-                キャンセル
+                {t("colorSettings.cancelBtn")}
               </Button>
               <Button size="sm" onClick={handleApply}>
-                適用
+                {t("colorSettings.applyBtn")}
               </Button>
             </div>
           </div>

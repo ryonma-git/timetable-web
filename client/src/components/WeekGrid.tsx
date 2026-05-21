@@ -749,7 +749,7 @@ export function WeekGrid() {
                 onClick={() => setShowLessonPlan(v => !v)}
               >
                 <BookOpen size={11} />
-                指導計画
+                {t("weekGrid.teachingPlanBtn")}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">

@@ -40,7 +40,7 @@ export default function Home() {
   } = useTimetable();
 
   const { syncStatus, lastSyncedAt } = useGoogleDrive();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // 未保存時間計測（最後のファイル保存 or Drive同期からの経過時間）
   const [unsavedMinutes, setUnsavedMinutes] = useState(0);
@@ -189,7 +189,12 @@ export default function Home() {
             )}
             {currentFile?.meta.year && (
               <span className="text-xs bg-muted text-muted-foreground rounded px-1.5 py-0.5 shrink-0">
-                {currentFile.meta.year}
+                {(() => {
+                  const raw = currentFile.meta.year;
+                  if (language === "ja") return raw;
+                  const m = raw.match(/(\d{4})/);
+                  return m ? `AY ${m[1]}` : raw;
+                })()}
               </span>
             )}
             {/* 未保存バッジ：Drive同期完了後は非表示 */}
