@@ -9,6 +9,14 @@ import { listBackupFiles, downloadFromDrive, deleteDriveFile, isTokenValid } fro
 import { useGoogleDrive } from "@/contexts/GoogleDriveContext";
 import { useTimetable } from "@/contexts/TimetableContext";
 import type { TimetableFile } from "@/lib/timetableFile";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/contexts/LanguageContext";
+
+function wfb(t: (k: TranslationKey) => string, key: TranslationKey, vars: Record<string, string | number>): string {
+  let s = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
 
 interface BackupFile {
   id: string;
@@ -24,6 +32,7 @@ interface Props {
 export function DriveBackupDialog({ open, onClose }: Props) {
   const { isLoggedIn, login } = useGoogleDrive();
   const { loadTimetableFile } = useTimetable();
+  const { t } = useLanguage();
 
   const [files, setFiles] = useState<BackupFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -101,20 +110,20 @@ export function DriveBackupDialog({ open, onClose }: Props) {
         <DialogHeader className="px-5 pt-4 pb-3 border-b border-border shrink-0">
           <DialogTitle className="text-base font-bold flex items-center gap-2">
             <HardDrive size={15} className="text-amber-400" />
-            Driveバックアップ一覧
+            {t("backup.dialogTitle")}
           </DialogTitle>
         </DialogHeader>
 
         <div className="px-5 py-4 flex-1 overflow-y-auto max-h-[60vh]">
           {!isLoggedIn ? (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
-              <p className="text-sm text-muted-foreground">Googleにログインするとバックアップ一覧を表示できます</p>
-              <Button size="sm" onClick={login} className="gap-1.5">Googleでログイン</Button>
+              <p className="text-sm text-muted-foreground">{t("backup.loginHint")}</p>
+              <Button size="sm" onClick={login} className="gap-1.5">{t("backup.loginBtn")}</Button>
             </div>
           ) : loading ? (
             <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground text-sm">
               <Loader2 size={16} className="animate-spin" />
-              読み込み中...
+              {t("backup.loading")}
             </div>
           ) : error ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center">
@@ -122,25 +131,25 @@ export function DriveBackupDialog({ open, onClose }: Props) {
               <p className="text-sm text-red-400">{error}</p>
               <Button size="sm" variant="outline" onClick={fetchFiles} className="gap-1.5 mt-1">
                 <RefreshCw size={13} />
-                再試行
+                {t("backup.retry")}
               </Button>
             </div>
           ) : files.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-10 text-center text-muted-foreground">
               <FileText size={24} className="opacity-40" />
-              <p className="text-sm">バックアップファイルがありません</p>
-              <p className="text-xs">サイドバーの「マイドライブにバックアップ」でバックアップを作成できます</p>
+              <p className="text-sm">{t("backup.noFiles")}</p>
+              <p className="text-xs">{t("backup.noFilesHint")}</p>
             </div>
           ) : (
             <div className="space-y-1">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-muted-foreground">{files.length}件のバックアップ</p>
+                <p className="text-xs text-muted-foreground">{wfb(t, "backup.count", { n: files.length })}</p>
                 <button
                   onClick={fetchFiles}
                   className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                 >
                   <RefreshCw size={11} />
-                  更新
+                  {t("backup.refresh")}
                 </button>
               </div>
               {files.map(file => (
@@ -156,29 +165,29 @@ export function DriveBackupDialog({ open, onClose }: Props) {
                     {restored === file.id ? (
                       <span className="flex items-center gap-1 text-xs text-green-500">
                         <CheckCircle2 size={12} />
-                        復元済み
+                        {t("backup.restored")}
                       </span>
                     ) : restoring === file.id ? (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Loader2 size={12} className="animate-spin" />
-                        復元中...
+                        {t("backup.restoring")}
                       </span>
                     ) : confirmRestore?.id === file.id ? (
                       <>
-                        <span className="text-xs text-amber-400">現在のデータが上書きされます</span>
+                        <span className="text-xs text-amber-400">{t("backup.confirmRestore")}</span>
                         <Button
                           size="sm"
                           variant="destructive"
                           onClick={() => handleRestore(file)}
                           className="h-6 text-xs px-2"
                         >
-                          復元する
+                          {t("backup.doRestore")}
                         </Button>
                         <button
                           onClick={() => setConfirmRestore(null)}
                           className="text-xs text-muted-foreground hover:text-foreground underline"
                         >
-                          キャンセル
+                          {t("backup.cancelBtn")}
                         </button>
                       </>
                     ) : (
@@ -191,37 +200,37 @@ export function DriveBackupDialog({ open, onClose }: Props) {
                           className="h-6 text-xs px-2 gap-1"
                         >
                           <RotateCcw size={11} />
-                          復元
+                          {t("backup.restoreBtn")}
                         </Button>
                         {confirmDelete?.id === file.id ? (
                           <>
-                            <span className="text-xs text-red-400">削除しますか？</span>
+                            <span className="text-xs text-red-400">{t("backup.confirmDelete")}</span>
                             <Button
                               size="sm"
                               variant="destructive"
                               onClick={() => handleDelete(file)}
                               className="h-6 text-xs px-2"
                             >
-                              削除
+                              {t("backup.deleteBtn")}
                             </Button>
                             <button
                               onClick={() => setConfirmDelete(null)}
                               className="text-xs text-muted-foreground hover:text-foreground underline"
                             >
-                              キャンセル
+                              {t("backup.cancelBtn")}
                             </button>
                           </>
                         ) : deleting === file.id ? (
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Loader2 size={11} className="animate-spin" />
-                            削除中...
+                            {t("backup.deleting")}
                           </span>
                         ) : (
                           <button
                             onClick={() => setConfirmDelete(file)}
                             disabled={!!restoring || !!deleting}
                             className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-red-400 transition-colors disabled:opacity-40"
-                            title="このバックアップを削除"
+                            title={t("backup.deleteTip")}
                           >
                             <Trash2 size={12} />
                           </button>
@@ -236,7 +245,7 @@ export function DriveBackupDialog({ open, onClose }: Props) {
         </div>
 
         <div className="px-5 py-3 border-t border-border bg-background shrink-0 flex justify-end">
-          <Button variant="outline" size="sm" onClick={onClose}>閉じる</Button>
+          <Button variant="outline" size="sm" onClick={onClose}>{t("backup.closeBtn")}</Button>
         </div>
       </DialogContent>
     </Dialog>

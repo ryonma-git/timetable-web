@@ -28,6 +28,14 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Printer, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { TranslationKey } from "@/contexts/LanguageContext";
+
+function wfp(t: (k: TranslationKey) => string, key: TranslationKey, vars: Record<string, string | number>): string {
+  let s = t(key);
+  for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+}
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -55,8 +63,12 @@ function isoToDate(iso: string): Date {
   return new Date(iso + "T00:00:00");
 }
 
-function getMonthLabel(monday: Date): string {
+function getMonthLabelJa(monday: Date): string {
   return `${monday.getFullYear()}年${monday.getMonth() + 1}月`;
+}
+
+function getMonthLabelEn(monday: Date): string {
+  return monday.toLocaleString("en-US", { month: "long", year: "numeric" });
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -71,6 +83,7 @@ export function PrintPreviewDialog({ open, onClose }: Props) {
     currentFile,
   } = useTimetable();
   const { gradeColors } = useGradeColors();
+  const { t, language } = useLanguage();
 
   // ── Options ─────────────────────────────────────────────────
   const [orientation, setOrientation] = useState<"landscape" | "portrait">("landscape");
@@ -105,7 +118,9 @@ export function PrintPreviewDialog({ open, onClose }: Props) {
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 7)) {
       const mondayStr = formatDate(d);
       const fri = addDays(d, 4);
-      const label = `${d.getFullYear()}年 ${d.getMonth() + 1}/${d.getDate()}（月）〜 ${fri.getMonth() + 1}/${fri.getDate()}（金）`;
+      const label = language === "ja"
+        ? `${d.getFullYear()}年 ${d.getMonth() + 1}/${d.getDate()}（月）〜 ${fri.getMonth() + 1}/${fri.getDate()}（金）`
+        : `${d.getMonth() + 1}/${d.getDate()} (Mon) – ${fri.getMonth() + 1}/${fri.getDate()} (Fri)`;
       weeks.push({ value: mondayStr, label });
     }
     return weeks;
@@ -120,7 +135,7 @@ export function PrintPreviewDialog({ open, onClose }: Props) {
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!seen.has(key)) {
         seen.add(key);
-        months.push({ value: key, label: `${d.getFullYear()}年${d.getMonth() + 1}月` });
+        months.push({ value: key, label: language === "ja" ? getMonthLabelJa(d) : getMonthLabelEn(d) });
       }
     }
     return months;
@@ -197,11 +212,13 @@ export function PrintPreviewDialog({ open, onClose }: Props) {
   const semLabel = useMemo(() => {
     if (!semester) return "";
     const sem = semester;
-    const termLabel = sem.semesterSystem === "semester"
-      ? (sem.semesterNumber === 1 ? "前期" : "後期")
-      : `${sem.semesterNumber}学期`;
-    return termLabel;
-  }, [semester]);
+    if (sem.semesterSystem === "semester") {
+      return language === "ja"
+        ? (sem.semesterNumber === 1 ? "前期" : "後期")
+        : (sem.semesterNumber === 1 ? "1st sem." : "2nd sem.");
+    }
+    return language === "ja" ? `${sem.semesterNumber}学期` : `Term ${sem.semesterNumber}`;
+  }, [semester, language]);
 
   // ── Print handler ────────────────────────────────────────────
   const handlePrint = () => {
@@ -216,7 +233,7 @@ export function PrintPreviewDialog({ open, onClose }: Props) {
 <html>
 <head>
 <meta charset="utf-8" />
-<title>${currentFile?.meta.title ?? "時間割"} 印刷</title>
+<title>${currentFile?.meta.title ?? t("print.titleFallback")} ${t("print.printBtn")}</title>
 <style>
 @page { size: A4 ${isLandscape ? "landscape" : "portrait"}; margin: 10mm; }
 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -252,7 +269,7 @@ ${printContent.innerHTML}
 
   // ── Render range label ───────────────────────────────────────
   const rangeLabel = useMemo(() => {
-    if (weeksToPrint.length === 0) return "（範囲なし）";
+    if (weeksToPrint.length === 0) return t("print.noRange");
     if (weeksToPrint.length === 1) {
       const w = allWeeks.find(x => x.value === weeksToPrint[0]);
       return w?.label ?? weeksToPrint[0];
@@ -260,7 +277,10 @@ ${printContent.innerHTML}
     const first = isoToDate(weeksToPrint[0]);
     const lastMonday = isoToDate(weeksToPrint[weeksToPrint.length - 1]);
     const lastFri = addDays(lastMonday, 4);
-    return `${first.getFullYear()}年 ${first.getMonth() + 1}/${first.getDate()} 〜 ${lastFri.getMonth() + 1}/${lastFri.getDate()}（${weeksToPrint.length}週）`;
+    if (language === "ja") {
+      return `${first.getFullYear()}年 ${first.getMonth() + 1}/${first.getDate()} 〜 ${lastFri.getMonth() + 1}/${lastFri.getDate()}（${weeksToPrint.length}週）`;
+    }
+    return `${first.getMonth() + 1}/${first.getDate()} – ${lastFri.getMonth() + 1}/${lastFri.getDate()} (${weeksToPrint.length} wk)`;
   }, [weeksToPrint, allWeeks]);
 
   // ── Render ───────────────────────────────────────────────────
@@ -270,7 +290,7 @@ ${printContent.innerHTML}
         <DialogHeader className="px-5 py-4 border-b border-border shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Printer size={17} />
-            印刷プレビュー
+            {t("print.dialogTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -279,14 +299,14 @@ ${printContent.innerHTML}
           {/* Row 1: Range mode */}
           <div className="flex flex-wrap items-end gap-4">
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">印刷範囲</Label>
+              <Label className="text-xs text-muted-foreground">{t("print.rangeLabel")}</Label>
               <div className="flex flex-wrap gap-1">
                 {([
-                  { id: "single", label: "単週" },
-                  { id: "month", label: "月単位" },
-                  { id: "semester", label: "学期全体" },
-                  { id: "from_today_n", label: "今週から先n週" },
-                  { id: "from_today_all", label: "今週から先全て" },
+                  { id: "single", label: t("print.rangeSingle") },
+                  { id: "month", label: t("print.rangeMonth") },
+                  { id: "semester", label: t("print.rangeSemester") },
+                  { id: "from_today_n", label: t("print.rangeFromN") },
+                  { id: "from_today_all", label: t("print.rangeFromAll") },
                 ] as { id: RangeMode; label: string }[]).map(m => (
                   <button
                     key={m.id}
@@ -307,11 +327,11 @@ ${printContent.innerHTML}
             {/* Range-specific controls */}
             {rangeMode === "single" && (
               <div className="space-y-1 min-w-[280px]">
-                <Label className="text-xs text-muted-foreground">週の選択</Label>
+                <Label className="text-xs text-muted-foreground">{t("print.weekLabel")}</Label>
                 {allWeeks.length > 0 ? (
                   <Select value={selectedWeekMonday} onValueChange={setSelectedWeekMonday}>
                     <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="週を選択..." />
+                      <SelectValue placeholder={t("print.weekPh")} />
                     </SelectTrigger>
                     <SelectContent className="max-h-64 overflow-y-auto">
                       {allWeeks.map(w => (
@@ -322,18 +342,18 @@ ${printContent.innerHTML}
                     </SelectContent>
                   </Select>
                 ) : (
-                  <p className="text-xs text-muted-foreground">学期データが読み込まれていません</p>
+                  <p className="text-xs text-muted-foreground">{t("print.noData")}</p>
                 )}
               </div>
             )}
 
             {rangeMode === "month" && (
               <div className="space-y-1 min-w-[180px]">
-                <Label className="text-xs text-muted-foreground">月の選択</Label>
+                <Label className="text-xs text-muted-foreground">{t("print.monthLabel")}</Label>
                 {allMonths.length > 0 ? (
                   <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                     <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="月を選択..." />
+                      <SelectValue placeholder={t("print.monthPh")} />
                     </SelectTrigger>
                     <SelectContent>
                       {allMonths.map(m => (
@@ -344,14 +364,14 @@ ${printContent.innerHTML}
                     </SelectContent>
                   </Select>
                 ) : (
-                  <p className="text-xs text-muted-foreground">学期データが読み込まれていません</p>
+                  <p className="text-xs text-muted-foreground">{t("print.noData")}</p>
                 )}
               </div>
             )}
 
             {rangeMode === "from_today_n" && (
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">週数</Label>
+                <Label className="text-xs text-muted-foreground">{t("print.nWeeksLabel")}</Label>
                 <div className="flex items-center gap-1.5">
                   <Input
                     type="number"
@@ -361,7 +381,7 @@ ${printContent.innerHTML}
                     onChange={e => setFromTodayN(Math.max(1, Math.min(40, parseInt(e.target.value) || 1)))}
                     className="h-8 w-20 text-xs"
                   />
-                  <span className="text-xs text-muted-foreground">週</span>
+                  <span className="text-xs text-muted-foreground">{t("print.weeksSuffix")}</span>
                 </div>
               </div>
             )}
@@ -371,13 +391,13 @@ ${printContent.innerHTML}
           <div className="flex flex-wrap items-end gap-4">
             {/* Class filter */}
             <div className="space-y-1 min-w-[160px]">
-              <Label className="text-xs text-muted-foreground">クラスで絞り込み</Label>
+              <Label className="text-xs text-muted-foreground">{t("print.classFilter")}</Label>
               <Select value={filterClass} onValueChange={setFilterClass}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-64 overflow-y-auto">
-                  <SelectItem value="__all__" className="text-xs">すべて表示</SelectItem>
+                  <SelectItem value="__all__" className="text-xs">{t("print.classAll")}</SelectItem>
                   {classList.map(c => (
                     <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>
                   ))}
@@ -387,7 +407,7 @@ ${printContent.innerHTML}
 
             {/* Orientation */}
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">用紙向き</Label>
+              <Label className="text-xs text-muted-foreground">{t("print.orientation")}</Label>
               <div className="flex gap-1">
                 {(["landscape", "portrait"] as const).map(o => (
                   <button
@@ -400,7 +420,7 @@ ${printContent.innerHTML}
                         : "bg-background border-border hover:bg-muted"
                     )}
                   >
-                    {o === "landscape" ? "横（A4）" : "縦（A4）"}
+                    {o === "landscape" ? t("print.landscape") : t("print.portrait")}
                   </button>
                 ))}
               </div>
@@ -410,17 +430,17 @@ ${printContent.innerHTML}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">
                 <Switch id="show-empty" checked={showEmptyCells} onCheckedChange={setShowEmptyCells} className="scale-75" />
-                <Label htmlFor="show-empty" className="text-xs text-muted-foreground cursor-pointer">空きコマ表示</Label>
+                <Label htmlFor="show-empty" className="text-xs text-muted-foreground cursor-pointer">{t("print.showEmpty")}</Label>
               </div>
               <div className="flex items-center gap-1.5">
                 <Switch id="show-reason" checked={showReason} onCheckedChange={setShowReason} className="scale-75" />
-                <Label htmlFor="show-reason" className="text-xs text-muted-foreground cursor-pointer">備考表示</Label>
+                <Label htmlFor="show-reason" className="text-xs text-muted-foreground cursor-pointer">{t("print.showReason")}</Label>
               </div>
             </div>
 
             {/* Range summary */}
             <div className="ml-auto text-xs text-muted-foreground">
-              印刷範囲: <span className="font-medium text-foreground">{rangeLabel}</span>
+              {t("print.rangeDisplay")} <span className="font-medium text-foreground">{rangeLabel}</span>
             </div>
           </div>
         </div>
@@ -437,14 +457,16 @@ ${printContent.innerHTML}
             <div ref={printRef}>
               {weeksToPrint.length === 0 ? (
                 <div className="text-center py-16 text-sm text-muted-foreground">
-                  学期データを読み込むと印刷プレビューが表示されます
+                  {t("print.noPreview")}
                 </div>
               ) : (
                 weeksToPrint.map((mondayStr, wIdx) => {
                   const monday = isoToDate(mondayStr);
                   const fri = addDays(monday, 4);
                   const weekDates = getWeekDates(monday, { includeSaturday: showSaturday, includeSunday: showSunday });
-                  const weekLabel = `${monday.getFullYear()}年 ${monday.getMonth() + 1}月${monday.getDate()}日（月）〜 ${fri.getMonth() + 1}月${fri.getDate()}日（金）`;
+                  const weekLabel = language === "ja"
+                    ? `${monday.getFullYear()}年 ${monday.getMonth() + 1}月${monday.getDate()}日（月）〜 ${fri.getMonth() + 1}月${fri.getDate()}日（金）`
+                    : `${monday.getMonth() + 1}/${monday.getDate()} (Mon) – ${fri.getMonth() + 1}/${fri.getDate()} (Fri) ${monday.getFullYear()}`;
 
                   return (
                     <div key={mondayStr} className={cn("week-block", wIdx < weeksToPrint.length - 1 && "mb-8")}>
@@ -452,7 +474,7 @@ ${printContent.innerHTML}
                       <div className="week-header flex items-baseline justify-between border-b-2 border-gray-800 pb-1 mb-2">
                         <div>
                           <span className="week-title text-sm font-bold">
-                            {currentFile?.meta.title ?? "時間割"}
+                            {currentFile?.meta.title ?? t("print.titleFallback")}
                             {filterClass !== "__all__" && ` — ${filterClass}`}
                           </span>
                           <span className="week-subtitle text-xs text-muted-foreground ml-3">
@@ -461,7 +483,7 @@ ${printContent.innerHTML}
                           </span>
                         </div>
                         <span className="text-[9px] text-muted-foreground/50">
-                          {wIdx + 1}/{weeksToPrint.length}ページ
+                          {wfp(t, "print.pageCount", { n: `${wIdx + 1}/${weeksToPrint.length}` })}
                         </span>
                       </div>
 
@@ -470,7 +492,7 @@ ${printContent.innerHTML}
                         <thead>
                           <tr>
                             <th className="period-col border border-gray-300 py-1 w-9 text-center text-[9px] text-gray-500 bg-gray-100">
-                              時限
+                              {t("print.periodHeader")}
                             </th>
                             {weekDates.map(date => {
                               const isHoliday = holidayDates.has(date);
@@ -486,7 +508,7 @@ ${printContent.innerHTML}
                                     <span className="text-[10px] font-bold">{formatDateJP(date)}</span>
                                     {isHoliday && (
                                       <span className="holiday-badge text-[7px] bg-red-100 text-red-600 rounded px-1">
-                                        {holidayNameMap.get(date) ?? "休校"}
+                                        {holidayNameMap.get(date) ?? t("print.holidayDefault")}
                                       </span>
                                     )}
                                   </div>
@@ -502,7 +524,7 @@ ${printContent.innerHTML}
                                 <td className="period-col border border-gray-300 text-center py-1 bg-gray-50">
                                   <div className="flex flex-col items-center">
                                     <span className="font-bold text-[10px] text-gray-700">{period}</span>
-                                    <span className="text-[7px] text-gray-400">限</span>
+                                    {t("print.periodSuffix") && <span className="text-[7px] text-gray-400">{t("print.periodSuffix")}</span>}
                                   </div>
                                 </td>
                                 {weekDates.map(date => {
@@ -566,13 +588,13 @@ ${printContent.innerHTML}
         <div className="px-5 py-3 border-t border-border bg-background shrink-0 flex items-center justify-between">
           <Button variant="outline" size="sm" onClick={onClose} className="gap-1.5">
             <X size={13} />
-            閉じる
+            {t("print.closeBtn")}
           </Button>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{weeksToPrint.length}ページ</span>
+            <span className="text-xs text-muted-foreground">{wfp(t, "print.pageCount", { n: weeksToPrint.length })}</span>
             <Button size="sm" onClick={handlePrint} disabled={weeksToPrint.length === 0} className="gap-1.5">
               <Printer size={13} />
-              印刷する
+              {t("print.printBtn")}
             </Button>
           </div>
         </div>

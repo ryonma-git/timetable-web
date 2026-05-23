@@ -20,6 +20,7 @@ import { SubjectDef } from "@/lib/timetableFile";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, GripVertical, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Props {
   open: boolean;
@@ -39,6 +40,7 @@ const PRESET_SUBJECTS = [
 export function SubjectSettingsDialog({ open, onClose }: Props) {
   const { subjects, addSubject, updateSubject, removeSubject } = useTimetable();
   const { subjectColors, updateSubjectColor, removeSubjectColor } = useGradeColors();
+  const { t } = useLanguage();
 
   const [newName, setNewName] = useState("");
   const [newShort, setNewShort] = useState("");
@@ -117,7 +119,7 @@ export function SubjectSettingsDialog({ open, onClose }: Props) {
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-5 pt-5 pb-3 border-b border-border shrink-0">
-          <DialogTitle className="text-base font-semibold">教科管理</DialogTitle>
+          <DialogTitle className="text-base font-semibold">{t("subjectMgr.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
@@ -214,7 +216,7 @@ export function SubjectSettingsDialog({ open, onClose }: Props) {
                       {/* Color picker */}
                       {isShowingColorPicker && (
                         <div className="px-3 pb-3 border-t border-border bg-muted/30">
-                          <p className="text-[10px] text-muted-foreground mt-2 mb-1.5">色を選択</p>
+                          <p className="text-[10px] text-muted-foreground mt-2 mb-1.5">{t("subjectMgr.selectColor")}</p>
                           <div className="flex flex-wrap gap-1.5">
                             {COLOR_PALETTE.map((c, i) => (
                               <button

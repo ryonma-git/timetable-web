@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Share } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const STORAGE_KEY = "install_banner_dismissed_at";
 const DISMISS_DAYS = 7;
@@ -41,6 +42,7 @@ function wasDismissedRecently(): boolean {
 
 export function InstallBanner() {
   const [visible, setVisible] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     // iOS Safari かつ スタンドアロンでない かつ 最近閉じていない場合に表示
@@ -83,8 +85,8 @@ export function InstallBanner() {
               </svg>
             </div>
             <div>
-              <p className="font-bold text-gray-900 text-sm leading-tight">時間割管理をホーム画面に追加</p>
-              <p className="text-xs text-gray-500 mt-0.5">アプリとして快適に使えます</p>
+              <p className="font-bold text-gray-900 text-sm leading-tight">{t("install.title")}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{t("install.subtitle")}</p>
             </div>
           </div>
           <button
@@ -101,23 +103,21 @@ export function InstallBanner() {
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">1</div>
             <div className="flex items-center gap-1.5 text-sm text-gray-700">
-              <span>画面下の</span>
+              <span>{t("install.step1")}</span>
               <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-white border border-gray-300 rounded text-xs font-medium">
                 <Share size={11} className="text-blue-500" />
-                <span>共有</span>
+                <span>{t("install.share")}</span>
               </span>
-              <span>をタップ</span>
+              <span>{t("install.step1end")}</span>
             </div>
           </div>
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">2</div>
-            <p className="text-sm text-gray-700">
-              <span className="font-medium">「ホーム画面に追加」</span>を選択
-            </p>
+            <p className="text-sm text-gray-700">{t("install.step2")}</p>
           </div>
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">3</div>
-            <p className="text-sm text-gray-700">右上の<span className="font-medium">「追加」</span>をタップして完了</p>
+            <p className="text-sm text-gray-700">{t("install.step3")}</p>
           </div>
         </div>
       </div>
