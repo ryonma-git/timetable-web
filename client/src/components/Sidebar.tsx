@@ -49,10 +49,11 @@ import { ExportDialog } from "@/components/ExportDialog";
 import { SubjectSettingsDialog } from "@/components/SubjectSettingsDialog";
 import { SamplePickerDialog } from "@/components/SamplePickerDialog";
 import { DriveBackupDialog } from "@/components/DriveBackupDialog";
+import { ShareTemplateDialog } from "@/components/ShareTemplateDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 import { useSidebarStyle, type SidebarStyle } from "@/hooks/useSidebarStyle";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Smartphone } from "lucide-react";
+import { Share2, Smartphone } from "lucide-react";
 
 export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBottomSheet?: boolean } = {}) {
   const {
@@ -104,6 +105,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
   const [showSubjectSettings, setShowSubjectSettings] = useState(false);
   const [showSamplePicker, setShowSamplePicker] = useState(false);
   const [showDriveBackup, setShowDriveBackup] = useState(false);
+  const [showShareTemplate, setShowShareTemplate] = useState(false);
 
   // Keyboard shortcut: Ctrl/Cmd+S to save
   useEffect(() => {
@@ -789,6 +791,14 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
                 {t("sidebar.subjectManagement")}
               </button>
             )}
+            <button
+              onClick={() => setShowShareTemplate(true)}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px]
+                         text-emerald-500/80 hover:text-emerald-500 hover:bg-sidebar-accent transition-colors"
+            >
+              <Share2 size={12} />
+              {language === "ja" ? "テンプレートを書き出す" : "Export Template"}
+            </button>
           </>
         )}
         <ColorSettingsDialog />
@@ -858,6 +868,8 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
       <SamplePickerDialog open={showSamplePicker} onClose={() => setShowSamplePicker(false)} />
       {/* Drive Backup Dialog */}
       <DriveBackupDialog open={showDriveBackup} onClose={() => setShowDriveBackup(false)} />
+      {/* Share Template Dialog */}
+      <ShareTemplateDialog open={showShareTemplate} onClose={() => setShowShareTemplate(false)} />
     </aside>
   );
 }
