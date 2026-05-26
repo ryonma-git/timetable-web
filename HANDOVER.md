@@ -226,6 +226,29 @@ const SCOPES = [
 | **v86** | WeekGridツールバーに「指導計画」トグルボタンを追加（teachingPlansが1件以上ある場合のみ表示）。ON時はセルに授業番号・単元名・内容予定を表示（高さ80pxに拡張）。useMemoでclass×subject×date×periodのルックアップMapを事前計算。Claude Code 実装。未検証 |
 | **v87** | 指導計画UIを全面刷新。時間割データから学年×教科コンボを自動抽出し左サイドバーに一覧表示（「新規作成」ダイアログ廃止）。未編集コンボにphantom planを生成しPlanTableを即時描画。activeClassesのオペレーター優先順位バグ(`?? > ?:`)を修正。Claude Code 実装。未検証 |
 | **v88** | LessonPlanEntryに`isSkip?`フラグ追加。UnitCellコンポーネント（クリックでselectが開きunitIdを割り当て）、LessonRowのNo.セルでスキップトグル・ホバーで行挿入削除ボタン表示、PlanTableでunitPeriodを動的再計算（skip行除外）を実装。割り込み（行事等）対応の基盤。Claude Code 実装。未検証 |
+| **v89** | 単元計画コマ数による自動レイアウト割り振り。Claude Code 実装 |
+| **v90** | クラス別進捗ハイライト・WeekGrid指導計画表示を改善。Claude Code 実装 |
+| **v91** | 日次予定欄を追加（コマ影響と独立した素直なスケジュール）。Claude Code 実装 |
+| **v92** | 予定欄を時間割の一行に統合・カテゴリ再編。Claude Code 実装 |
+| **v93** | 予定カテゴリにカスタムタグを追加可能に。Claude Code 実装 |
+| **v94** | 単元マスター（内容予定）の双方向編集を追加。Claude Code 実装 |
+| **v95** | 予定行のデザインを強化（時間割テーブル内1行追加）。Claude Code 実装 |
+| **v96** | 指導計画のホバーバグ修正・行操作とisSkipトグルを廃止。Claude Code 実装 |
+| **v97** | クラス別「進まなかった」マーク・メモ機能（プロトタイプ）。Claude Code 実装 |
+| **v98** | isSkip機能を廃止（コメントアウトで保持）。Claude Code 実装 |
+| **v99** | クラス別進度マッピング（遅延の繰越シフト）+ Popover幅修正。Claude Code 実装 |
+| **v100** | 「進みすぎた」前倒し対応 + 繰越超過の可視化。Claude Code 実装 |
+| **v101-102** | 進まなかった日の併記表示 + Phase2クラス別内容上書き。Claude Code 実装 |
+| **v103** | クラス別集計に教科フィルタを追加。Codex 実装 |
+| **v104** | 学級担任用 教科一瞥ビュー。Claude Code 実装 |
+| **v105** | 指導計画の教科非表示フラグ（教科単位・ファイル保存）。Claude Code 実装 |
+| **v106** | 年間予定LLM取込の分岐（スコープ/モード/重複チェック）。Claude Code 実装 |
+| **v107** | Phase E-J まとめ（バグ修正＋UI改善6件）。Claude Code 実装 |
+| **v108** | 文言修正4件（軽微）。Claude Code 実装 |
+| **v109** | 複数選択パネルのスクロール＆Cmd/Ctrl飛び飛び選択を修正。Claude Code 実装 |
+| **v110** | 変更確認ダイアログを高さ制限＋スクロール化。Claude Code 実装 |
+| **i18n Phase 1〜7b** | WeekGrid・Inspector・DayEventsBar・LLMImportDialog・StatsView・NewFileWizard・各ダイアログを全て日英対応。`t()` 関数による翻訳、DEFAULT_SUBJECTS の言語対応。Codex 実装。**安定版（`524f0da`）** |
+| **テンプレート書き出し** | テンプレート書き出し機能を追加（同僚へのデータ共有）。Claude Code 実装。**現在の main/stable 最新（`8919f40`）** |
 
 ---
 
@@ -256,8 +279,8 @@ const SCOPES = [
 6. **v75 Googleログイン永続化の実機検証**
    v75 でトークン取得時に 55 分後のサイレント更新タイマーと Google One Tap を実装済み。ただし利用者確認前のため未検証扱い。HTTPS 環境で One Tap、サイレント復元、55分更新、再認証、ログアウト時のタイマー解除を確認してから安定版に昇格する。
 
-7. **v76〜v78 言語切替の全画面展開**
-   v76 では `client/src/contexts/LanguageContext.tsx` を追加し、サイドバーとトップバーの主要文言だけを段階的に英語化した。v77 で週間グリッド、自動復元、変更確認、学期タブ、v78 で統計・履歴・適用ログ画面まで拡張済み。日本語画面をデフォルトとして維持し、各ダイアログ、トースト、PDF/Excel/ICS内の固定文言は同じ `t()` 方式で順次移行する。
+7. **i18n 全UI対応（v76〜i18n Phase 7b）**
+   v76〜v78 で段階的に言語切替を実装し、i18n Phase 1〜7b（`524f0da`）で全UIの日英対応が完了。WeekGrid・Inspector・DayEventsBar・LLMImportDialog・StatsView・NewFileWizard・各ダイアログ・DEFAULT_SUBJECTS まで `t()` 関数で翻訳済み。日本語がデフォルト。
 
 ---
 
