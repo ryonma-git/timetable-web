@@ -138,8 +138,13 @@ interface TimetableContextValue {
 
   // Settings
   updateSettings: (newSemester: SemesterMeta, applyFrom?: string, newMode?: TimetableMode) => void;
-  /** 特定週のA週/B週を手勑上書きする。mondayStr: YYYY-MM-DD, idx: 0=A週 1=B週... nullで上書きをリセット */
+  /** 特定週のA週/B週を手動上書きする。mondayStr: YYYY-MM-DD, idx: 0=A週 1=B週... nullで上書きをリセット */
   updateWeekPatternOverride: (mondayStr: string, idx: number | null) => void;
+  /**
+   * 時間割を変えずに週サイクル情報だけを設定する。
+   * base/ops は一切変更しない。weekCount=1 の場合は baseSchedules を削除する。
+   */
+  setWeekCycleOnly: (weekCount: number, weekCycleStart?: string) => void;
 
   // Custom classes
   customClasses: string[];
@@ -512,6 +517,42 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setIsDirty(true);
   }, [currentFile, baseEntries, allOps, activeSemesterIndex]);
 
+  // ─── Week cycle only (時間割を変えず週サイクル情報だけ設定) ─────────
+  const setWeekCycleOnly = useCallback((weekCount: number, weekCycleStart?: string) => {
+    if (!currentFile) return;
+    const sem = currentFile.semester ?? currentFile.semesters?.[activeSemesterIndex]?.semester;
+    if (!sem) return;
+
+    const CYCLE_LABELS = ["A週", "B週", "C週", "D週"];
+    const updatedSemester: SemesterMeta = {
+      ...sem,
+      baseSchedules: weekCount > 1
+        ? Array.from({ length: weekCount }, (_, i) => ({
+            label: CYCLE_LABELS[i],
+            schedule: {} as Record<string, Record<number, string | null>>,
+          }))
+        : undefined,
+      weekCycleStart: weekCount > 1 ? weekCycleStart : undefined,
+    };
+
+    // semesters 配列も同期
+    let updatedSemesters = currentFile.semesters;
+    if (updatedSemesters && updatedSemesters.length > 0) {
+      updatedSemesters = updatedSemesters.map((s, i) =>
+        i === activeSemesterIndex ? { ...s, semester: updatedSemester } : s
+      );
+    }
+
+    const updatedFile: TimetableFile = {
+      ...currentFile,
+      semester: updatedSemester,
+      ...(updatedSemesters ? { semesters: updatedSemesters } : {}),
+      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
+    };
+    setCurrentFile(updatedFile);
+    setIsDirty(true);
+  }, [currentFile, activeSemesterIndex]);
+
   // ─── Mode management ────────────────────────────────────────
   const mode: TimetableMode = currentFile?.meta.mode ?? 'single_subject';
 
@@ -835,6 +876,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       applyOps,
       exportEffective, exportOverride, exportCSV,
       updateSettings,
+      setWeekCycleOnly,
       updateWeekPatternOverride,
       customClasses,
       classList,

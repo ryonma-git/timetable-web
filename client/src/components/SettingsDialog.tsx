@@ -130,8 +130,8 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 
 export function SettingsDialog({ open, onClose }: Props) {
-  const { t } = useLanguage();
-  const { currentFile, semester: semesterFromCtx, updateSettings, isLoaded, mode, setMode, classList, subjects, activeSemesterIndex } = useTimetable();
+  const { t, language } = useLanguage();
+  const { currentFile, semester: semesterFromCtx, updateSettings, setWeekCycleOnly, isLoaded, mode, setMode, classList, subjects, activeSemesterIndex } = useTimetable();
   // semesters配列形式の場合はアクティブ学期のデータを使用（単一学期の場合はレガシーフィールドを使用）
   const semester = currentFile?.semesters && currentFile.semesters.length > 0
     ? currentFile.semesters[activeSemesterIndex]?.semester ?? semesterFromCtx
@@ -429,6 +429,9 @@ export function SettingsDialog({ open, onClose }: Props) {
       effectiveSubjectSchedule = hasSubj ? ss : undefined;
     }
     const newSemester: SemesterMeta = {
+      // 既存セメスターの全フィールドを引き継ぎ（holidays・periodTimes等を消さないため）
+      ...(semester ?? {}),
+      // 今回変更したフィールドで上書き
       semesterNumber,
       semesterSystem,
       startDate,
@@ -821,6 +824,49 @@ export function SettingsDialog({ open, onClose }: Props) {
                     {t("set.resetToAutoBtn")}
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* 週サイクルのみ設定（時間割を変えない） */}
+            {selectedMode !== 'homeroom' && weekCount > 1 && (
+              <div className="flex items-start gap-3 p-3 rounded-lg border border-emerald-200 bg-emerald-50/50">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-emerald-800">
+                    {language === "ja" ? "週サイクルのみ設定（時間割を変えない）" : "Set week cycle only (keep timetable)"}
+                  </p>
+                  <p className="text-[11px] text-emerald-700/80 mt-0.5">
+                    {language === "ja"
+                      ? "A/B週のラベルと基準日だけを登録します。既存の時間割・変更履歴は一切変わりません。"
+                      : "Registers week labels and start date only. Existing timetable and overrides are unchanged."}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    // 基準日を月曜日に丸める
+                    let cycleStart: string | undefined;
+                    if (weekCycleStartInput) {
+                      const d = new Date(weekCycleStartInput + "T00:00:00");
+                      const dow = d.getDay();
+                      const diff = dow === 0 ? -6 : 1 - dow;
+                      const mon = new Date(d);
+                      mon.setDate(mon.getDate() + diff);
+                      cycleStart = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+                    } else if (startDate) {
+                      const d = new Date(startDate + "T00:00:00");
+                      const dow = d.getDay();
+                      const diff = dow === 0 ? -6 : 1 - dow;
+                      const mon = new Date(d);
+                      mon.setDate(mon.getDate() + diff);
+                      cycleStart = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+                    }
+                    setWeekCycleOnly(weekCount, cycleStart);
+                    toast.success(language === "ja" ? "週サイクルを設定しました" : "Week cycle updated");
+                    onClose();
+                  }}
+                  className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded border border-emerald-400 text-emerald-700 bg-white hover:bg-emerald-50 transition-colors"
+                >
+                  {language === "ja" ? "この設定のみ保存" : "Save labels only"}
+                </button>
               </div>
             )}
 
