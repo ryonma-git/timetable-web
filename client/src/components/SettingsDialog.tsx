@@ -4,8 +4,6 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   Settings,
-  ChevronRight,
-  ChevronLeft,
   Check,
   School,
   Calendar,
@@ -84,45 +82,34 @@ function getSemesterDefaults(year: number, semester: 1 | 2 | 3, system: Semester
   }
 }
 
-// Step indicator
-function StepIndicator({ current, total }: { current: number; total: number }) {
+// Tab navigation (replaces the old step-by-step wizard indicator)
+function TabNav({ current, onSelect }: { current: number; onSelect: (n: number) => void }) {
   const { t } = useLanguage();
-  const steps = [
-    { icon: <School size={13} />, label: t("set.stepInfo") },
-    { icon: <Calendar size={13} />, label: t("set.stepDates") },
-    { icon: <Grid3X3 size={13} />, label: t("set.stepGrid") },
-    { icon: <BookOpen size={13} />, label: t("set.stepSubjects") },
-    { icon: <Check size={13} />, label: t("set.stepConfirm") },
+  const tabs = [
+    { icon: <School size={14} />, label: t("set.stepInfo") },
+    { icon: <Calendar size={14} />, label: t("set.stepDates") },
+    { icon: <Grid3X3 size={14} />, label: t("set.stepGrid") },
+    { icon: <BookOpen size={14} />, label: t("set.stepSubjects") },
   ];
   return (
-    <div className="flex items-center gap-0 mb-6">
-      {steps.map((step, i) => {
-        const stepNum = i + 1;
-        const isActive = stepNum === current;
-        const isDone = stepNum < current;
+    <div className="flex items-center gap-0.5 border-b border-border mb-5 overflow-x-auto">
+      {tabs.map((tab, i) => {
+        const n = i + 1;
+        const isActive = n === current;
         return (
-          <div key={i} className="flex items-center">
-            <div className="flex flex-col items-center gap-1">
-              <div className={cn(
-                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all",
-                isActive && "bg-primary text-primary-foreground border-primary",
-                isDone && "bg-primary/20 text-primary border-primary/50",
-                !isActive && !isDone && "bg-muted text-muted-foreground border-border"
-              )}>
-                {isDone ? <Check size={11} /> : step.icon}
-              </div>
-              <span className={cn(
-                "text-[9px] font-medium whitespace-nowrap",
-                isActive ? "text-primary" : "text-muted-foreground"
-              )}>{step.label}</span>
-            </div>
-            {i < steps.length - 1 && (
-              <div className={cn(
-                "h-0.5 w-7 mx-1 mb-4 transition-all",
-                stepNum < current ? "bg-primary/50" : "bg-border"
-              )} />
+          <button
+            key={i}
+            onClick={() => onSelect(n)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-all",
+              isActive
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
             )}
-          </div>
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+          </button>
         );
       })}
     </div>
@@ -130,7 +117,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 
 export function SettingsDialog({ open, onClose }: Props) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { currentFile, semester: semesterFromCtx, updateSettings, setWeekCycleOnly, isLoaded, mode, setMode, classList, subjects, activeSemesterIndex } = useTimetable();
   // semesters配列形式の場合はアクティブ学期のデータを使用（単一学期の場合はレガシーフィールドを使用）
   const semester = currentFile?.semesters && currentFile.semesters.length > 0
@@ -217,6 +204,10 @@ export function SettingsDialog({ open, onClose }: Props) {
   // ── Step 4: Apply mode ──────────────────────────────────────────────
   const [applyMode, setApplyMode] = useState<"all" | "from">("all");
   const [applyFromDate, setApplyFromDate] = useState("");
+  // 個別変更(override)を保持するか。範囲切替時に各既定へ揃える（全体=保持/指定日以降=削除）
+  const [keepOps, setKeepOps] = useState(true);
+  const selectApplyAll = () => { setApplyMode("all"); setKeepOps(true); };
+  const selectApplyFrom = () => { setApplyMode("from"); setKeepOps(false); };
 
   // Derived: current school type info
   const schoolTypeInfo = SCHOOL_TYPES.find(s => s.value === schoolType) ?? SCHOOL_TYPES[0];
@@ -306,6 +297,7 @@ export function SettingsDialog({ open, onClose }: Props) {
       }
       setStep(1);
       setApplyMode("all");
+      setKeepOps(true);
       setApplyFromDate(semester.startDate);
     }
   }, [open, semester, currentFile, activeSemesterIndex]);
@@ -383,12 +375,6 @@ export function SettingsDialog({ open, onClose }: Props) {
 
   const title = `${wf(t, "set.yearOption", { y: academicYear })} ${semesterLabel}${school ? ` (${school})` : ""}`;
 
-  const canGoNext = () => {
-    if (step === 2) return startDate && endDate && startDate <= endDate;
-    if (step === 4) return true; // 教科設定はスキップ可能
-    return true;
-  };
-
   const handleApply = () => {
     // 複週対応: weekCount > 1の場合はbaseSchedulesを構範
     let effectiveBaseSchedule: Record<string, Record<number, string | null>> | undefined;
@@ -449,8 +435,8 @@ export function SettingsDialog({ open, onClose }: Props) {
       homeroomClass: selectedMode === 'homeroom' ? (homeroomClass || undefined) : undefined,
     };
     const from = applyMode === "from" ? applyFromDate : undefined;
-    // modeをupdateSettingsに渡してmeta.modeも同時に更新（競合防止）
-    updateSettings(newSemester, from, selectedMode);
+    // modeをupdateSettingsに渡してmeta.modeも同時に更新（競合防止）。keepOpsで個別変更の保持を制御
+    updateSettings(newSemester, from, selectedMode, keepOps);
     toast.success(t("set.toastApplied"));
     onClose();
   };
@@ -474,7 +460,7 @@ export function SettingsDialog({ open, onClose }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <StepIndicator current={step} total={5} />
+        <TabNav current={step} onSelect={setStep} />
 
         {/* ─── Step 1: Basic Info + Class Config ──────────────── */}
         {step === 1 && (
@@ -803,70 +789,66 @@ export function SettingsDialog({ open, onClose }: Props) {
               </div>
             )}
 
-            {/* A週/B週基準日手動入力（2週以上の場合のみ表示） */}
+            {/* A週/B週基準日（手動入力）＋ 週サイクルのみ設定（時間割を変えない）を内包 */}
             {selectedMode !== 'homeroom' && weekCount > 1 && (
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-blue-200 bg-blue-50/50">
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-blue-800 mb-0.5">{t("wiz.weekAStartDate")}</p>
-                  <p className="text-[11px] text-blue-600/80">{t("wiz.weekAStartDesc")}</p>
+              <div className="p-3 rounded-lg border border-blue-200 bg-blue-50/50 space-y-3">
+                {/* 基準日入力 */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-blue-800 mb-0.5">{t("wiz.weekAStartDate")}</p>
+                    <p className="text-[11px] text-blue-600/80">{t("wiz.weekAStartDesc")}</p>
+                  </div>
+                  <input
+                    type="date"
+                    value={weekCycleStartInput}
+                    onChange={e => setWeekCycleStartInput(e.target.value)}
+                    className="text-xs bg-white border border-blue-300 rounded px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  />
+                  {weekCycleStartInput && (
+                    <button
+                      onClick={() => setWeekCycleStartInput("")}
+                      className="text-[11px] text-blue-500 hover:text-blue-700 underline shrink-0"
+                    >
+                      {t("set.resetToAutoBtn")}
+                    </button>
+                  )}
                 </div>
-                <input
-                  type="date"
-                  value={weekCycleStartInput}
-                  onChange={e => setWeekCycleStartInput(e.target.value)}
-                  className="text-xs bg-white border border-blue-300 rounded px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
-                />
-                {weekCycleStartInput && (
-                  <button
-                    onClick={() => setWeekCycleStartInput("")}
-                    className="text-[11px] text-blue-500 hover:text-blue-700 underline shrink-0"
-                  >
-                    {t("set.resetToAutoBtn")}
-                  </button>
-                )}
-              </div>
-            )}
 
-            {/* 週サイクルのみ設定（時間割を変えない） */}
-            {selectedMode !== 'homeroom' && weekCount > 1 && (
-              <div className="flex items-start gap-3 p-3 rounded-lg border border-emerald-200 bg-emerald-50/50">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-emerald-800">
-                    {language === "ja" ? "週サイクルのみ設定（時間割を変えない）" : "Set week cycle only (keep timetable)"}
-                  </p>
-                  <p className="text-[11px] text-emerald-700/80 mt-0.5">
-                    {language === "ja"
-                      ? "A/B週のラベルと基準日だけを登録します。既存の時間割・変更履歴は一切変わりません。"
-                      : "Registers week labels and start date only. Existing timetable and overrides are unchanged."}
-                  </p>
+                {/* 内包: 週ラベルのみ設定（時間割を変えない） */}
+                <div className="flex items-center gap-3 pt-3 border-t border-blue-200/70">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] text-blue-700/90">
+                      {t("set.weekCycleInlineDesc")}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      // 基準日を月曜日に丸める
+                      let cycleStart: string | undefined;
+                      if (weekCycleStartInput) {
+                        const d = new Date(weekCycleStartInput + "T00:00:00");
+                        const dow = d.getDay();
+                        const diff = dow === 0 ? -6 : 1 - dow;
+                        const mon = new Date(d);
+                        mon.setDate(mon.getDate() + diff);
+                        cycleStart = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+                      } else if (startDate) {
+                        const d = new Date(startDate + "T00:00:00");
+                        const dow = d.getDay();
+                        const diff = dow === 0 ? -6 : 1 - dow;
+                        const mon = new Date(d);
+                        mon.setDate(mon.getDate() + diff);
+                        cycleStart = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
+                      }
+                      setWeekCycleOnly(weekCount, cycleStart);
+                      toast.success(t("set.weekCycleToast"));
+                      onClose();
+                    }}
+                    className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded border border-blue-400 text-blue-700 bg-white hover:bg-blue-100 transition-colors"
+                  >
+                    {t("set.weekCycleSaveBtn")}
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    // 基準日を月曜日に丸める
-                    let cycleStart: string | undefined;
-                    if (weekCycleStartInput) {
-                      const d = new Date(weekCycleStartInput + "T00:00:00");
-                      const dow = d.getDay();
-                      const diff = dow === 0 ? -6 : 1 - dow;
-                      const mon = new Date(d);
-                      mon.setDate(mon.getDate() + diff);
-                      cycleStart = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
-                    } else if (startDate) {
-                      const d = new Date(startDate + "T00:00:00");
-                      const dow = d.getDay();
-                      const diff = dow === 0 ? -6 : 1 - dow;
-                      const mon = new Date(d);
-                      mon.setDate(mon.getDate() + diff);
-                      cycleStart = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
-                    }
-                    setWeekCycleOnly(weekCount, cycleStart);
-                    toast.success(language === "ja" ? "週サイクルを設定しました" : "Week cycle updated");
-                    onClose();
-                  }}
-                  className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded border border-emerald-400 text-emerald-700 bg-white hover:bg-emerald-50 transition-colors"
-                >
-                  {language === "ja" ? "この設定のみ保存" : "Save labels only"}
-                </button>
               </div>
             )}
 
@@ -1357,117 +1339,92 @@ export function SettingsDialog({ open, onClose }: Props) {
           </div>
         )}
 
-        {/* ─── Step 5: Apply Mode ────────────────────────────────────── */}
-        {step === 5 && (      <div className="space-y-4">
-            <div className="bg-muted/30 rounded-lg p-3 text-sm text-muted-foreground">
-              {t("set.step5Desc")}
+        {/* ─── Footer: 適用範囲を常設（保存ボタンの属性なのでここに置く） ─── */}
+        <div className="pt-4 border-t border-border mt-4 space-y-2.5">
+          {/* 適用範囲セレクタ */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium text-muted-foreground shrink-0">
+              {t("set.applyScopeLabel")}
+            </span>
+            <div className="flex gap-1">
+              <button
+                onClick={selectApplyAll}
+                className={cn(
+                  "px-3 py-1 rounded text-xs font-semibold border transition-all",
+                  applyMode === "all"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                )}
+              >
+                {t("set.applyAll")}
+              </button>
+              <button
+                onClick={selectApplyFrom}
+                className={cn(
+                  "px-3 py-1 rounded text-xs font-semibold border transition-all",
+                  applyMode === "from"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                )}
+              >
+                {t("set.applyFrom")}
+              </button>
             </div>
+            {applyMode === "from" && (
+              <Input
+                type="date"
+                value={applyFromDate}
+                onChange={e => setApplyFromDate(e.target.value)}
+                min={startDate}
+                max={endDate}
+                className="h-8 text-xs w-40"
+              />
+            )}
+          </div>
 
-            {/* Mode summary */}
-            <div className="bg-card border border-border rounded-lg p-3 text-xs">
-              <p className="text-muted-foreground mb-1">{t("set.modeApplied")}</p>
-              <p className="font-semibold">
-                {selectedMode === 'single_subject' && t("set.modeSingle")}
-                {selectedMode === 'homeroom' && (homeroomClass ? wf(t, "set.modeHomeroomWithClass", { c: homeroomClass }) : t("set.modeHomeroom"))}
-                {selectedMode === 'multi_subject' && t("set.modeMultiSubject")}
+          {/* 説明（範囲のみ。個別変更の扱いは下のチェックで決まる） */}
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            {applyMode === "all" ? t("set.applyAllRangeDesc") : t("set.applyFromRangeDesc")}
+          </p>
+
+          {/* 個別変更(override)を残すか */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={keepOps}
+              onChange={e => setKeepOps(e.target.checked)}
+              className="w-3.5 h-3.5 accent-primary cursor-pointer"
+            />
+            <span className="text-[11px] text-foreground">
+              {applyMode === "all" ? t("set.keepOpsAll") : t("set.keepOpsFrom")}
+            </span>
+          </label>
+          {applyMode === "from" && applyFromDate && !keepOps && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 flex items-start gap-2">
+              <AlertTriangle size={13} className="text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-amber-700 leading-snug">
+                {wf(t, "set.applyFromWarning", { date: applyFromDate })}
               </p>
             </div>
-
-            <div className="space-y-3">
-              {/* All */}
-              <div
-                onClick={() => setApplyMode("all")}
-                className={cn(
-                  "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
-                  applyMode === "all"
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/40"
-                )}
-              >
-                <div className={cn(
-                  "w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 transition-all",
-                  applyMode === "all" ? "border-primary bg-primary" : "border-muted-foreground"
-                )} />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{t("set.applyAll")}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {t("set.applyAllDesc")}
-                  </p>
-                </div>
-              </div>
-
-              {/* From date */}
-              <div
-                onClick={() => setApplyMode("from")}
-                className={cn(
-                  "flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
-                  applyMode === "from"
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/40"
-                )}
-              >
-                <div className={cn(
-                  "w-4 h-4 rounded-full border-2 mt-0.5 shrink-0 transition-all",
-                  applyMode === "from" ? "border-primary bg-primary" : "border-muted-foreground"
-                )} />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{t("set.applyFrom")}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {t("set.applyFromDesc")}
-                  </p>
-                  {applyMode === "from" && (
-                    <div className="mt-3">
-                      <Label className="text-xs text-muted-foreground mb-1 block">{t("set.applyFromDateLabel")}</Label>
-                      <Input
-                        type="date"
-                        value={applyFromDate}
-                        onChange={e => setApplyFromDate(e.target.value)}
-                        min={startDate}
-                        max={endDate}
-                        className="h-8 text-sm w-48"
-                        onClick={e => e.stopPropagation()}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {applyMode === "from" && applyFromDate && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-                  <AlertTriangle size={14} className="text-amber-600 mt-0.5 shrink-0" />
-                  <p className="text-xs text-amber-700">
-                    {wf(t, "set.applyFromWarning", { date: applyFromDate })}
-                  </p>
-                </div>
-              )}
+          )}
+          {applyMode === "all" && !keepOps && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 flex items-start gap-2">
+              <AlertTriangle size={13} className="text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-amber-700 leading-snug">
+                {t("set.deleteAllOpsWarning")}
+              </p>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ─── Navigation ─────────────────────────────────────── */}
-        <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => step > 1 ? setStep(s => s - 1) : handleClose()}
-            className="gap-1.5"
-          >
-            <ChevronLeft size={14} />
-            {step > 1 ? t("wiz.back") : t("wiz.cancel")}
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{step} / 5</span>
-            {step < 5 ? (
-              <Button size="sm" onClick={() => setStep(s => s + 1)} disabled={!canGoNext()} className="gap-1.5">
-                {t("wiz.next")} <ChevronRight size={14} />
-              </Button>
-            ) : (
-              <Button size="sm" onClick={handleApply} className="gap-1.5 bg-primary">
-                <Check size={13} />
-                {t("set.applyBtn")}
-              </Button>
-            )}
+          {/* ボタン */}
+          <div className="flex items-center justify-between pt-1">
+            <Button variant="outline" size="sm" onClick={handleClose} className="gap-1.5">
+              {t("wiz.cancel")}
+            </Button>
+            <Button size="sm" onClick={handleApply} className="gap-1.5 bg-primary">
+              <Check size={13} />
+              {t("set.applyBtn")}
+            </Button>
           </div>
         </div>
       </DialogContent>
