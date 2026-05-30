@@ -137,7 +137,7 @@ interface TimetableContextValue {
   exportCSV: () => void;
 
   // Settings
-  updateSettings: (newSemester: SemesterMeta, applyFrom?: string, newMode?: TimetableMode) => void;
+  updateSettings: (newSemester: SemesterMeta, applyFrom?: string, newMode?: TimetableMode, keepOverrides?: boolean) => void;
   /** 特定週のA週/B週を手動上書きする。mondayStr: YYYY-MM-DD, idx: 0=A週 1=B週... nullで上書きをリセット */
   updateWeekPatternOverride: (mondayStr: string, idx: number | null) => void;
   /**
@@ -455,7 +455,7 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   }, [effectiveEntries, currentFile]);
 
   // ─── Update Settings (base rebuild) ─────────────────────────
-  const updateSettings = useCallback((newSemester: SemesterMeta, applyFrom?: string, newMode?: TimetableMode) => {
+  const updateSettings = useCallback((newSemester: SemesterMeta, applyFrom?: string, newMode?: TimetableMode, keepOverrides?: boolean) => {
     if (!currentFile) return;
 
     let newBase: TimetableEntry[];
@@ -471,7 +471,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
         baseSchedules: newSemester.baseSchedules,
         weekCycleStart: newSemester.weekCycleStart,
       });
-      newOps = allOps; // keep existing ops
+      // keepOverrides 未指定なら従来通り全保持。明示的に false のときだけ全削除
+      newOps = keepOverrides === false ? [] : allOps;
     } else {
       // Apply from date: rebuild entries from applyFrom onwards
       const beforeEntries = baseEntries.filter(e => e.date < applyFrom);
@@ -484,8 +485,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
         weekCycleStart: newSemester.weekCycleStart,
       });
       newBase = [...beforeEntries, ...newEntries];
-      // Remove ops that are on or after applyFrom
-      newOps = allOps.filter(op => op.date < applyFrom);
+      // keepOverrides が true のときは指定日以降の ops も保持。未指定/false は従来通り削除
+      newOps = keepOverrides === true ? allOps : allOps.filter(op => op.date < applyFrom);
     }
 
     // semesters配列も同期させる（複数学期対応）
