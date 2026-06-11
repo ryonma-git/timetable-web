@@ -1,12 +1,12 @@
 // Service Worker for 時間割管理 PWA
-const CACHE_NAME = 'timetable-v36';
+const CACHE_NAME = 'timetable-v89';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/apple-touch-icon.png'
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './apple-touch-icon.png'
 ];
 
 // インストール時：静的アセットをキャッシュ
@@ -59,7 +59,7 @@ self.addEventListener('fetch', (event) => {
           if (cached) return cached;
           // HTMLリクエストはindex.htmlにフォールバック
           if (event.request.headers.get('accept')?.includes('text/html')) {
-            return caches.match('/index.html');
+            return caches.match('./index.html');
           }
         });
       })
