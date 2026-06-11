@@ -100,6 +100,21 @@ export default function Home() {
   const [showPeriodTimes, setShowPeriodTimes] = useState(false);
   const [showHolidaySettings, setShowHolidaySettings] = useState(false);
 
+  // ネイティブ（Macラッパー）メニューからの操作を受け付けるブリッジ（Home管轄のダイアログ）
+  useEffect(() => {
+    const handler = (e: Event) => {
+      switch ((e as CustomEvent<string>).detail) {
+        case "dialog:print": setShowPrintPreview(true); break;
+        case "dialog:export": setShowExportDialog(true); break;
+        case "dialog:gcal": setShowExportGCal(true); break;
+        case "dialog:patchImport": setShowPatchImport(true); break;
+        case "dialog:periodTimes": setShowPeriodTimes(true); break;
+      }
+    };
+    window.addEventListener("app:menu", handler);
+    return () => window.removeEventListener("app:menu", handler);
+  }, []);
+
   // Update page title
   useEffect(() => {
     const title = currentFile?.meta.title ?? t("home.titleFallback");

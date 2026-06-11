@@ -127,6 +127,41 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     return () => window.removeEventListener("keydown", handler);
   }, [isLoaded, saveFile, canUndo, undo, canRedo, redo]);
 
+  // ネイティブ（Macラッパー）メニューからの操作を受け付けるブリッジ
+  // 例: window.dispatchEvent(new CustomEvent("app:menu", { detail: "tab:stats" }))
+  useEffect(() => {
+    const TAB_ACTIONS = {
+      "tab:grid": "grid",
+      "tab:stats": "stats",
+      "tab:teachingPlan": "teachingPlan",
+      "tab:history": "history",
+      "tab:audit": "audit",
+    } as const;
+    const handler = (e: Event) => {
+      const action = (e as CustomEvent<string>).detail;
+      if (action in TAB_ACTIONS) {
+        setActiveTab(TAB_ACTIONS[action as keyof typeof TAB_ACTIONS]);
+        return;
+      }
+      switch (action) {
+        case "week:prev": navigateWeek(-1); break;
+        case "week:next": navigateWeek(1); break;
+        case "week:today": goToToday(); break;
+        case "file:new": setShowNewDialog(true); break;
+        case "file:open": fileInputRef.current?.click(); break;
+        case "file:save": if (isLoaded) saveFile(); break;
+        case "file:samples": setShowSamplePicker(true); break;
+        case "dialog:settings": setShowSettings(true); break;
+        case "dialog:subjects": setShowSubjectSettings(true); break;
+        case "dialog:holidays": setShowHolidaySettings(true); break;
+        case "dialog:shareTemplate": setShowShareTemplate(true); break;
+        case "dialog:driveBackup": setShowDriveBackup(true); break;
+      }
+    };
+    window.addEventListener("app:menu", handler);
+    return () => window.removeEventListener("app:menu", handler);
+  }, [isLoaded, saveFile, setActiveTab, navigateWeek, goToToday]);
+
   // 自動同期: isDirty が false になった（ローカル保存完了）タイミングで Drive に自動アップロード
   const prevIsDirtyRef = useRef(isDirty);
   useEffect(() => {

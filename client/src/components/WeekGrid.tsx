@@ -95,6 +95,18 @@ export function WeekGrid() {
   const [showPeriodTimesLocal, setShowPeriodTimesLocal] = useState(false);
   const [showLLMImportLocal, setShowLLMImportLocal] = useState(false);
   const [llmImportMode, setLlmImportMode] = useState<"timetable" | "period_times" | "schedule">("timetable");
+
+  // ネイティブ（Macラッパー）メニューからAI(LLM)読み取りを開くブリッジ
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const action = (e as CustomEvent<string>).detail;
+      if (action === "dialog:llm:timetable") { setLlmImportMode("timetable"); setShowLLMImportLocal(true); }
+      else if (action === "dialog:llm:periodTimes") { setLlmImportMode("period_times"); setShowLLMImportLocal(true); }
+      else if (action === "dialog:llm:schedule") { setLlmImportMode("schedule"); setShowLLMImportLocal(true); }
+    };
+    window.addEventListener("app:menu", handler);
+    return () => window.removeEventListener("app:menu", handler);
+  }, []);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
   const [showLessonPlan, setShowLessonPlan] = useState(false);
