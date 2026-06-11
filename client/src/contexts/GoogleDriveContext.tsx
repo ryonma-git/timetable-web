@@ -21,6 +21,7 @@ import {
   requestAccessToken,
   revokeToken,
   isTokenValid,
+  getTokenExpiresAt,
   fetchUserEmail,
   findDriveFile,
   uploadToDrive,
@@ -120,14 +121,20 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       initGoogleAuth(
         (token) => {
           if (token) {
-            // Clear previous auto-refresh timer and set a new one for 55 min
+            // トークンの実期限に合わせて自動更新を予約（失敗しても騒がない:
+            // 期限切れ後の Drive 操作時に driveRequest 側が自動再取得する）
             if (tokenRefreshTimerRef.current) {
               clearTimeout(tokenRefreshTimerRef.current);
             }
+            const msUntilRefresh = Math.max(getTokenExpiresAt() - Date.now(), 60 * 1000);
             tokenRefreshTimerRef.current = setTimeout(() => {
               const savedEmail = localStorage.getItem(USER_EMAIL_KEY) ?? undefined;
-              requestAccessToken("", savedEmail);
-            }, 55 * 60 * 1000);
+              try {
+                requestAccessToken("", savedEmail);
+              } catch {
+                /* 次のDrive操作時に自動再取得される */
+              }
+            }, msUntilRefresh);
 
             setIsLoggedIn(true);
             setIsRestoringLogin(false);
@@ -165,32 +172,51 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-restore login state: if user was logged in before, silently request token
+  // Auto-restore login state:
+  //   1) localStorage に有効なトークンがあれば即復元（ネットワーク・GIS不要、Safariでも確実）
+  //   2) なければサイレント再取得を一度だけ試行（Chrome系で成功しやすい）
+  //   3) 失敗しても脅さない — 次の保存・同期時に driveRequest が自動再接続する
   useEffect(() => {
     if (!gisReady) return;
     const wasLoggedIn = localStorage.getItem(LOGGED_IN_KEY) === "1";
-    if (wasLoggedIn && !isTokenValid()) {
+
+    if (isTokenValid()) {
+      // 永続化されたトークンが有効 → 無音で即ログイン状態に
+      setIsLoggedIn(true);
+      setIsRestoringLogin(false);
+      setSilentRestoreFailed(false);
+      // 期限に合わせて自動更新を予約
+      if (tokenRefreshTimerRef.current) clearTimeout(tokenRefreshTimerRef.current);
+      const msUntilRefresh = Math.max(getTokenExpiresAt() - Date.now(), 60 * 1000);
+      tokenRefreshTimerRef.current = setTimeout(() => {
+        const savedEmail = localStorage.getItem(USER_EMAIL_KEY) ?? undefined;
+        try {
+          requestAccessToken("", savedEmail);
+        } catch {
+          /* 次のDrive操作時に自動再取得される */
+        }
+      }, msUntilRefresh);
+      return;
+    }
+
+    if (wasLoggedIn) {
       // Silent token refresh — login_hint でアカウントを特定し成功率を上げる
       setIsRestoringLogin(true);
       try {
         const savedEmail = localStorage.getItem(USER_EMAIL_KEY) ?? undefined;
         requestAccessToken("", savedEmail);
-        // isRestoringLogin will be cleared when token callback fires (setIsLoggedIn(true))
-        // or after a timeout fallback
         setTimeout(() => {
           if (!isTokenValid()) {
             setIsRestoringLogin(false);
             setSilentRestoreFailed(true);
-            toast.warning(
-              "Googleログインが切れました。再ログインが必要です。",
-              {
-                duration: 8000,
-                action: {
-                  label: "再ログイン",
-                  onClick: () => requestAccessToken("consent"),
-                },
-              }
-            );
+            // 自動再接続があるため警告ではなく案内に留める
+            toast.info("Googleには次回の保存・同期時に自動で再接続します。", {
+              duration: 5000,
+              action: {
+                label: "今すぐ再接続",
+                onClick: () => requestAccessToken(""),
+              },
+            });
           } else {
             setIsRestoringLogin(false);
           }
@@ -203,6 +229,23 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       setIsRestoringLogin(false);
     }
   }, [gisReady]); // runs once when GIS is ready
+
+  // タブ復帰時にトークン期限を確認し、切れていれば静かにサイレント更新を試みる
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const wasLoggedIn = localStorage.getItem(LOGGED_IN_KEY) === "1";
+      if (!wasLoggedIn || isTokenValid() || !gisReadyRef.current) return;
+      try {
+        const savedEmail = localStorage.getItem(USER_EMAIL_KEY) ?? undefined;
+        requestAccessToken("", savedEmail);
+      } catch {
+        /* 失敗しても次のDrive操作時に自動再取得 */
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   const login = useCallback(() => {
     if (!gisReadyRef.current) {

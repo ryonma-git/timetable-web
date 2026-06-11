@@ -44,7 +44,7 @@ interface GISAccounts {
     initTokenClient: (config: {
       client_id: string;
       scope: string;
-      callback: (response: { access_token?: string; error?: string }) => void;
+      callback: (response: { access_token?: string; expires_in?: number | string; error?: string }) => void;
     }) => TokenClient;
   };
   id: {
@@ -72,10 +72,38 @@ function getGIS(): { accounts: GISAccounts } | undefined {
 }
 
 // ─── Token management ────────────────────────────────────────────────────────
+// アクセストークンは localStorage に永続化する。GISトークンは約1時間有効なので、
+// 有効期限内のリロード・再訪はネットワーク往復なしで即復元できる（再ログイン不要）。
+
+const TOKEN_KEY = "gdrive_access_token";
+const TOKEN_EXP_KEY = "gdrive_token_expires_at";
 
 let accessToken: string | null = null;
 let tokenClient: TokenClient | null = null;
 let tokenExpiresAt = 0;
+
+// モジュール読み込み時に保存済みトークンを復元
+try {
+  const savedExp = Number(localStorage.getItem(TOKEN_EXP_KEY) ?? 0);
+  const savedToken = localStorage.getItem(TOKEN_KEY);
+  if (savedToken && Date.now() < savedExp) {
+    accessToken = savedToken;
+    tokenExpiresAt = savedExp;
+  }
+} catch {
+  // localStorage 不可の環境では従来通りメモリのみ
+}
+
+function persistToken(token: string, expiresAt: number): void {
+  accessToken = token;
+  tokenExpiresAt = expiresAt;
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(TOKEN_EXP_KEY, String(expiresAt));
+  } catch {
+    /* ignore */
+  }
+}
 
 export function getAccessToken(): string | null {
   if (accessToken && Date.now() < tokenExpiresAt) return accessToken;
@@ -84,6 +112,11 @@ export function getAccessToken(): string | null {
 
 export function isTokenValid(): boolean {
   return !!accessToken && Date.now() < tokenExpiresAt;
+}
+
+/** トークンの有効期限(ms epoch)。未ログイン時は0 */
+export function getTokenExpiresAt(): number {
+  return accessToken ? tokenExpiresAt : 0;
 }
 
 // ─── Initialize GIS token client ─────────────────────────────────────────────
@@ -100,15 +133,18 @@ export function initGoogleAuth(
   tokenClient = gis.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
     scope: SCOPES,
-    callback: (response: { access_token?: string; error?: string }) => {
+    callback: (response: { access_token?: string; expires_in?: number | string; error?: string }) => {
       if (response.error) {
+        flushTokenWaiters(false);
         onError(response.error);
         return;
       }
       if (response.access_token) {
-        accessToken = response.access_token;
-        // GIS tokens expire in 3600s; set expiry 5 min early for safety
-        tokenExpiresAt = Date.now() + 55 * 60 * 1000;
+        // 実際の有効期限(expires_in 秒)から5分手前を期限とする（既定3600秒）
+        const expiresInSec = Number(response.expires_in ?? 3600);
+        const expiresAt = Date.now() + Math.max(expiresInSec - 300, 60) * 1000;
+        persistToken(response.access_token, expiresAt);
+        flushTokenWaiters(true);
         onTokenReceived(response.access_token);
       }
     },
@@ -120,9 +156,65 @@ export function requestAccessToken(prompt = "", loginHint?: string): void {
   tokenClient.requestAccessToken(loginHint ? { prompt, login_hint: loginHint } : { prompt });
 }
 
+// ─── ジェスチャー時のトークン自動更新 ────────────────────────────────────────
+// Drive API 呼び出し直前に期限を確認し、切れていればその場でサイレント再取得する。
+// ユーザー操作（保存ボタン等）の文脈内で呼ばれるため、ポップアップブロックを回避できる。
+
+let tokenWaiters: Array<(ok: boolean) => void> = [];
+
+function flushTokenWaiters(ok: boolean): void {
+  const ws = tokenWaiters;
+  tokenWaiters = [];
+  ws.forEach((w) => w(ok));
+}
+
+/**
+ * 有効なトークンを保証する。期限切れならサイレント再取得を試み、結果を待つ。
+ * @returns true=有効なトークンあり / false=再取得失敗（要手動ログイン）
+ */
+export async function ensureFreshToken(timeoutMs = 15000): Promise<boolean> {
+  if (isTokenValid()) return true;
+  if (!tokenClient) return false;
+  const wasLoggedIn = (() => {
+    try {
+      return localStorage.getItem("gdrive_logged_in") === "1";
+    } catch {
+      return false;
+    }
+  })();
+  if (!wasLoggedIn) return false; // 一度もログインしていない場合は静かに失敗
+
+  return new Promise<boolean>((resolve) => {
+    tokenWaiters.push(resolve);
+    const timer = setTimeout(() => {
+      tokenWaiters = tokenWaiters.filter((w) => w !== resolve);
+      resolve(false);
+    }, timeoutMs);
+    const wrapped = (ok: boolean) => {
+      clearTimeout(timer);
+      resolve(ok);
+    };
+    tokenWaiters[tokenWaiters.length - 1] = wrapped;
+    try {
+      const hint = localStorage.getItem("gdrive_user_email") ?? undefined;
+      requestAccessToken("", hint);
+    } catch {
+      clearTimeout(timer);
+      tokenWaiters = tokenWaiters.filter((w) => w !== wrapped);
+      resolve(false);
+    }
+  });
+}
+
 export function revokeToken(): void {
   accessToken = null;
   tokenExpiresAt = 0;
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXP_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 export async function fetchUserEmail(token: string): Promise<string | null> {
@@ -147,6 +239,10 @@ async function driveRequest(
   body?: string,
   contentType?: string
 ): Promise<Response> {
+  // 期限切れならこの場で（ユーザー操作の文脈内で）サイレント再取得
+  if (!isTokenValid()) {
+    await ensureFreshToken();
+  }
   const token = getAccessToken();
   if (!token) throw new Error("アクセストークンがありません。再ログインしてください。");
 
@@ -160,11 +256,23 @@ async function driveRequest(
   };
   if (contentType) headers["Content-Type"] = contentType;
 
-  const res = await fetch(url.toString(), {
+  let res = await fetch(url.toString(), {
     method,
     headers,
     body,
   });
+
+  // トークンが早期失効していた場合（401）は一度だけ再取得してリトライ
+  if (res.status === 401) {
+    revokeToken();
+    if (await ensureFreshToken()) {
+      const fresh = getAccessToken();
+      if (fresh) {
+        headers["Authorization"] = `Bearer ${fresh}`;
+        res = await fetch(url.toString(), { method, headers, body });
+      }
+    }
+  }
 
   if (!res.ok) {
     const text = await res.text();
