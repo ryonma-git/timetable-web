@@ -1,7 +1,7 @@
 // TeachingPlanView.tsx
 // 指導計画画面：時間割から学年×教科を自動抽出し、一覧+テーブルで管理
 
-import { useState, useMemo, useCallback, useEffect, type ReactNode } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { nanoid } from "nanoid";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { GradeSubjectPlan, TeachingUnit, LessonPlanEntry, ClassLessonOverride } from "@/lib/timetableFile";
@@ -11,8 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Trash2, BookOpen, ChevronDown, ChevronRight, Pencil, Check, X, GripVertical, FileText, Ban, AlertTriangle, Eye, EyeOff,
+  Plus, Trash2, BookOpen, ChevronDown, ChevronRight, Pencil, Check, X, GripVertical, FileText, Ban, AlertTriangle, Eye, EyeOff, FileSpreadsheet, Upload,
 } from "lucide-react";
+import { toast } from "sonner";
+import { exportTeachingPlansToExcel, importTeachingPlansFromExcel } from "@/lib/teachingPlanExcel";
 import {
   Dialog,
   DialogContent,
@@ -1559,8 +1561,50 @@ export function TeachingPlanView() {
     toggleTeachingPlanHiddenCombo,
     isLoaded,
     mode,
+    currentFile,
   } = useTimetable();
   const { t } = useLanguage();
+
+  // ── Excel 書き出し / 読み込み ──────────────────────────────
+  const excelInputRef = useRef<HTMLInputElement>(null);
+  const [excelBusy, setExcelBusy] = useState(false);
+
+  const handleExcelExport = useCallback(async () => {
+    if (teachingPlans.length === 0) {
+      toast.warning(t("tp.excelNoPlans"));
+      return;
+    }
+    setExcelBusy(true);
+    try {
+      await exportTeachingPlansToExcel(teachingPlans, currentFile?.meta.title ?? "");
+      toast.success(t("tp.excelExported"));
+    } catch (e) {
+      toast.error(`Excel書き出しに失敗しました: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setExcelBusy(false);
+    }
+  }, [teachingPlans, currentFile, t]);
+
+  const handleExcelImport = useCallback(async (file: File) => {
+    setExcelBusy(true);
+    try {
+      const { plans, skippedSheets } = await importTeachingPlansFromExcel(file, teachingPlans);
+      if (plans.length === 0) {
+        toast.error(t("tp.excelNoValidSheets"));
+        return;
+      }
+      plans.forEach((p) => upsertTeachingPlan(p));
+      toast.success(
+        tpf(t, "tp.excelImported", { n: plans.length }) +
+          (skippedSheets.length > 0 ? `（スキップ: ${skippedSheets.join(", ")}）` : "")
+      );
+    } catch (e) {
+      toast.error(`Excel読み込みに失敗しました: ${e instanceof Error ? e.message : e}`);
+    } finally {
+      setExcelBusy(false);
+      if (excelInputRef.current) excelInputRef.current.value = "";
+    }
+  }, [teachingPlans, upsertTeachingPlan, t]);
 
   const hiddenSubjectSet = useMemo(
     () => new Set(teachingPlanHiddenSubjects),
@@ -1677,6 +1721,42 @@ export function TeachingPlanView() {
         >
           <FileText size={13} />{t("tp.tabSubject")}
         </button>
+
+        {/* Excel 書き出し / 読み込み */}
+        <div className="ml-auto flex items-center gap-1.5 pb-1.5">
+          <input
+            ref={excelInputRef}
+            type="file"
+            accept=".xlsx"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleExcelImport(f);
+            }}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            disabled={excelBusy}
+            onClick={handleExcelExport}
+            title={t("tp.excelExportTitle")}
+          >
+            <FileSpreadsheet size={13} className="text-emerald-600" />
+            {t("tp.excelExportBtn")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            disabled={excelBusy}
+            onClick={() => excelInputRef.current?.click()}
+            title={t("tp.excelImportTitle")}
+          >
+            <Upload size={13} className="text-indigo-600" />
+            {t("tp.excelImportBtn")}
+          </Button>
+        </div>
       </div>
 
       {mainView === "homeroom" ? (

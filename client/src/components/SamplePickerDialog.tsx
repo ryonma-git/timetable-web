@@ -12,7 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Music, FlaskConical, Loader2, RefreshCw } from "lucide-react";
+import { BookOpen, Music, FlaskConical, Loader2, RefreshCw, Languages } from "lucide-react";
 import { toast } from "sonner";
 import { useTimetable } from "@/contexts/TimetableContext";
 import { deserializeTimetableFile } from "@/lib/timetableFile";
@@ -105,6 +105,22 @@ function getSamples(t: (k: TranslationKey) => string): SampleDef[] {
       ],
     },
     {
+      id: "senka",
+      title: t("sample.senka.title"),
+      description: t("sample.senka.desc"),
+      mode: "multi_subject",
+      modeLabel: t("sample.modeMulti"),
+      modeColor: "bg-indigo-500/15 text-indigo-600 border-indigo-200",
+      icon: <Languages size={20} className="text-indigo-500" />,
+      filename: "/samples/sample_senka.timetable",
+      details: [
+        t("sample.senka.d1"),
+        t("sample.senka.d2"),
+        t("sample.senka.d3"),
+        t("sample.sharedAutoJump"),
+      ],
+    },
+    {
       id: "ab_week",
       title: t("sample.abWeek.title"),
       description: t("sample.abWeek.desc"),
@@ -138,7 +154,9 @@ export function SamplePickerDialog({ open, onClose }: Props) {
   const handleLoad = async (sample: SampleDef) => {
     setLoading(sample.id);
     try {
-      const res = await fetch(sample.filename, { cache: "no-cache" });
+      // サブパス配信(/timetable-web/)対応: BASE_URLを前置（絶対パスのままだと404になる）
+      const url = import.meta.env.BASE_URL.replace(/\/$/, "") + sample.filename;
+      const res = await fetch(url, { cache: "no-cache" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       const result = deserializeTimetableFile(text);
