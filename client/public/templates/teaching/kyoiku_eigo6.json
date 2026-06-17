@@ -1,0 +1,134 @@
+{
+  "id": "kyoiku_eigo6",
+  "source": "教育出版",
+  "sourceKind": "publisher",
+  "grade": "6年",
+  "subject": "英語",
+  "year": 2024,
+  "edition": "令和6年度版",
+  "retrievedAt": "2026-06-18",
+  "units": [
+    {
+      "name": "Let's Start Together",
+      "lessons": [
+        "アルファベット",
+        "語彙：食べ物 / 国名 / 建物 / 職業 / 乗り物など"
+      ]
+    },
+    {
+      "name": "Lesson 1",
+      "lessons": [
+        "・Let’s (be friends).",
+        "・Where are you from?",
+        "・I'm from (America).",
+        "・I like (basketball). / I can (jump high). / I’m good at (cooking).",
+        "・My birthday is (February 12th).",
+        "・My favorite place is (the music room).",
+        "・This is (our new friend, Michael)."
+      ]
+    },
+    {
+      "name": "Lesson 2",
+      "lessons": [
+        "・My town is (wonderful).",
+        "・Welcome to (my town).",
+        "・We have (a cake shop).",
+        "・We can (enjoy fishing).",
+        "・I want (a movie theater) in my town.",
+        "・What is your favorite place?",
+        "・My favorite place is (the music hall)."
+      ]
+    },
+    {
+      "name": "Lesson 3",
+      "lessons": [
+        "・Welcome to Japan.",
+        "・You can (enjoy hanami) (in April).",
+        "・It’s (fun).",
+        "・Do you like (hanami)?",
+        "― Yes, I do.  (I can eat bento.) / No, I don’t.",
+        "・What do you like about Japan?",
+        "・I like (cherry blossoms)."
+      ]
+    },
+    {
+      "name": "Let's Read and Act ①",
+      "lessons": [
+        "・Let’s (go to the park)."
+      ]
+    },
+    {
+      "name": "Lesson 4",
+      "lessons": [
+        "・What did you do?",
+        "・I (went to a library).",
+        "・It was (fun).",
+        "・語彙： 動詞の過去形(enjoyed / ate / saw / went to) / 形容詞(fun / delicious / big / exciting / great / cool) / 月・日",
+        "・語順",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "Lesson 5",
+      "lessons": [
+        "・Where do you want to go?",
+        "・I want to go to (Brazil).  You can (see the",
+        "carnival).",
+        "・Do you want to go to (Brazil)?",
+        "・It’s (exciting).",
+        "・語彙：国・地域名 / できること",
+        ""
+      ]
+    },
+    {
+      "name": "Let’s Read and Act ②",
+      "lessons": [
+        "・Why? ― (I wrote a letter).",
+        "・Can you (go to Toad’s house)?",
+        "・Let’s (wait for a letter together).",
+        "・手紙で使う表現"
+      ]
+    },
+    {
+      "name": "Lesson 6",
+      "lessons": [
+        "・What’s your best memory?",
+        "・My best memory is (the school trip).",
+        "・We (saw Mt. Fuji).",
+        "・It was (beautiful).",
+        "・語彙：動詞の過去形 / 学校行事 / 形容詞"
+      ]
+    },
+    {
+      "name": "Lesson 7",
+      "lessons": [
+        "・What do you want to be?",
+        "・I want to be a (scientist).",
+        "・Why? ― (I like science classes).",
+        "・Perfect job for you! / Fantastic! / Nice dream! / Go for it! / Good luck!",
+        "・It’s my dream.",
+        "・語彙：職業 / 職業に関連した表現",
+        ""
+      ]
+    },
+    {
+      "name": "Lesson 8",
+      "lessons": [
+        "・What club do you want to join?",
+        "・I want to join (the kendo club).",
+        "・What event do you want to enjoy?",
+        "・I want to enjoy (the culture festival).",
+        "・I want to study (Japanese).",
+        "・I like (running).",
+        "・I can (run fast)."
+      ]
+    },
+    {
+      "name": "Let’s Look at the World ②",
+      "lessons": [
+        "絶滅のおそれのある動物"
+      ]
+    }
+  ]
+}

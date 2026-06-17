@@ -1,0 +1,139 @@
+{
+  "id": "kyoiku_eigo5",
+  "source": "教育出版",
+  "sourceKind": "publisher",
+  "grade": "5年",
+  "subject": "英語",
+  "year": 2024,
+  "edition": "令和6年度版",
+  "retrievedAt": "2026-06-18",
+  "units": [
+    {
+      "name": "Let's Start Together",
+      "lessons": [
+        "アルファベット",
+        "語彙：学校 / 食べ物 / 動物 / 身のまわりのもの"
+      ]
+    },
+    {
+      "name": "Lesson 1",
+      "lessons": [
+        "・Nice to meet you. ― Nice to meet you, too.",
+        "・Hello, I'm (Ayaka).  Please call me (Aya).",
+        "・My name is (Sonoda Akie).",
+        "・Do you like (yellow)? ― Yes, I do. / No, I don't.",
+        "・I like (dogs).  I don't like (cats).",
+        "・What (color) do you like?",
+        "・I have (a towel).  I don't have (a bag)."
+      ]
+    },
+    {
+      "name": "Lesson 2",
+      "lessons": [
+        "・When is your birthday?",
+        "・My birthday is (January 8th).",
+        "・I like (December).",
+        "・Do you like (December)?",
+        "・What do you want for your birthday?",
+        "・I want (shoes).",
+        "・語彙： 月 / 数(1 ～ 31) / 序数(日付) / 身のまわりのもの"
+      ]
+    },
+    {
+      "name": "Lesson 3",
+      "lessons": [
+        "・What do you have on (Tuesday)?",
+        "・I have (math, English, and music) on (Tuesday).",
+        "・I study (P.E.) with (Hachimura Rui).",
+        "・What day is it?",
+        "・Good idea!",
+        "・語彙： 教科 / 曜日",
+        ""
+      ]
+    },
+    {
+      "name": "Let's Read and Act ①",
+      "lessons": [
+        "・Greet your friends."
+      ]
+    },
+    {
+      "name": "Lesson 4",
+      "lessons": [
+        "・What time is it in (Boston)?",
+        "・It's (seven o'clock in the morning).",
+        "・What time do you (get up)?",
+        "・I (get up) at (six).",
+        "・I (always) (wash the dishes).",
+        "・What do you do in the morning [afternoon]?",
+        "・I (catch insects) in the morning [afternoon]."
+      ]
+    },
+    {
+      "name": "Lesson 5",
+      "lessons": [
+        "・I can (play the recorder).  I can't (run fast).",
+        "・Who can (ski)?",
+        "・He [She] can (swim well).",
+        "・What can you do?",
+        "・語彙：できること / 副詞(well / high / fast)",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "Lesson 6",
+      "lessons": [
+        "・Where do you want to go?",
+        "・I want to go to (Okinawa).",
+        "・I want to see (the Okinawa Eisa Festival) (in summer).",
+        "・You can (eat Ishikari nabe) in (Hokkaido).",
+        "・I want to (see) (beautiful lavender fields).",
+        "・We can (enjoy onsen).",
+        "・語彙： 形容詞 (beautiful / delicious / exciting / fun / great) / 四季"
+      ]
+    },
+    {
+      "name": "Lesson 7",
+      "lessons": [
+        "・What would you like?",
+        "・I'd like (pizza and salad).",
+        "・How much?",
+        "・That's (900 yen).",
+        "・語彙： 家族 / 食べ物、飲み物 / 数(110～900)",
+        "",
+        ""
+      ]
+    },
+    {
+      "name": "Let's Read and Act ②",
+      "lessons": [
+        "Go back! / I'm sorry. / Don't worry. など"
+      ]
+    },
+    {
+      "name": "Lesson 8",
+      "lessons": [
+        "・Where is (the station)?",
+        "・Go straight.",
+        "・Turn right [left] at the (first) corner.",
+        "・Cross (the street).",
+        "・It's on your left[right].",
+        "・語彙： 町や学校内の施設 / 前置詞(on / in / under / by)",
+        ""
+      ]
+    },
+    {
+      "name": "Lesson 9",
+      "lessons": [
+        "・Who is your dream friend[hero]?",
+        "・This is my dream friend[hero].",
+        "・He[She] can (swim very fast).",
+        "・He[She] is (cool).",
+        "・What are you good at?",
+        "・I'm good at (cooking).",
+        "・He[She] is good at (pitching)."
+      ]
+    }
+  ]
+}
