@@ -5,6 +5,31 @@
    "id": "builtin-std",
    "name": "標準（学習指導要領ベース）",
    "kind": "builtin"
+  },
+  {
+   "id": "大日本図書",
+   "name": "大日本図書",
+   "kind": "publisher"
+  },
+  {
+   "id": "学校図書",
+   "name": "学校図書",
+   "kind": "publisher"
+  },
+  {
+   "id": "啓林館",
+   "name": "啓林館",
+   "kind": "publisher"
+  },
+  {
+   "id": "教育出版",
+   "name": "教育出版",
+   "kind": "publisher"
+  },
+  {
+   "id": "信州教育出版社",
+   "name": "信州教育出版社",
+   "kind": "publisher"
   }
  ],
  "templates": [
@@ -139,6 +164,226 @@
    "units": 6,
    "periods": 32,
    "file": "std_6_english.json"
+  },
+  {
+   "id": "dainippon_rika3",
+   "source": "大日本図書",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 15,
+   "periods": 86,
+   "file": "dainippon_rika3.json"
+  },
+  {
+   "id": "dainippon_rika4",
+   "source": "大日本図書",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 18,
+   "periods": 100,
+   "file": "dainippon_rika4.json"
+  },
+  {
+   "id": "dainippon_rika5",
+   "source": "大日本図書",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 10,
+   "periods": 91,
+   "file": "dainippon_rika5.json"
+  },
+  {
+   "id": "dainippon_rika6",
+   "source": "大日本図書",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 11,
+   "periods": 94,
+   "file": "dainippon_rika6.json"
+  },
+  {
+   "id": "gakuto_rika3",
+   "source": "学校図書",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 12,
+   "periods": 77,
+   "file": "gakuto_rika3.json"
+  },
+  {
+   "id": "gakuto_rika4",
+   "source": "学校図書",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 11,
+   "periods": 89,
+   "file": "gakuto_rika4.json"
+  },
+  {
+   "id": "gakuto_rika5",
+   "source": "学校図書",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 9,
+   "periods": 85,
+   "file": "gakuto_rika5.json"
+  },
+  {
+   "id": "gakuto_rika6",
+   "source": "学校図書",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 10,
+   "periods": 89,
+   "file": "gakuto_rika6.json"
+  },
+  {
+   "id": "keirinkan_rika3",
+   "source": "啓林館",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 18,
+   "periods": 80,
+   "file": "keirinkan_rika3.json"
+  },
+  {
+   "id": "keirinkan_rika4",
+   "source": "啓林館",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 21,
+   "periods": 94,
+   "file": "keirinkan_rika4.json"
+  },
+  {
+   "id": "keirinkan_rika5",
+   "source": "啓林館",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 15,
+   "periods": 95,
+   "file": "keirinkan_rika5.json"
+  },
+  {
+   "id": "keirinkan_rika6",
+   "source": "啓林館",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 14,
+   "periods": 95,
+   "file": "keirinkan_rika6.json"
+  },
+  {
+   "id": "kyoikushuppan_rika3",
+   "source": "教育出版",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 14,
+   "periods": 79,
+   "file": "kyoikushuppan_rika3.json"
+  },
+  {
+   "id": "kyoikushuppan_rika4",
+   "source": "教育出版",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 17,
+   "periods": 89,
+   "file": "kyoikushuppan_rika4.json"
+  },
+  {
+   "id": "kyoikushuppan_rika5",
+   "source": "教育出版",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 12,
+   "periods": 91,
+   "file": "kyoikushuppan_rika5.json"
+  },
+  {
+   "id": "kyoikushuppan_rika6",
+   "source": "教育出版",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 11,
+   "periods": 89,
+   "file": "kyoikushuppan_rika6.json"
+  },
+  {
+   "id": "shinkyo_rika3",
+   "source": "信州教育出版社",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 16,
+   "periods": 82,
+   "file": "shinkyo_rika3.json"
+  },
+  {
+   "id": "shinkyo_rika4",
+   "source": "信州教育出版社",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 18,
+   "periods": 93,
+   "file": "shinkyo_rika4.json"
+  },
+  {
+   "id": "shinkyo_rika5",
+   "source": "信州教育出版社",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 13,
+   "periods": 91,
+   "file": "shinkyo_rika5.json"
+  },
+  {
+   "id": "shinkyo_rika6",
+   "source": "信州教育出版社",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 13,
+   "periods": 99,
+   "file": "shinkyo_rika6.json"
   }
  ]
 }
