@@ -32,6 +32,11 @@
    "kind": "publisher"
   },
   {
+   "id": "光村図書",
+   "name": "光村図書",
+   "kind": "publisher"
+  },
+  {
    "id": "標準（学習指導要領ベース）",
    "name": "標準（学習指導要領ベース）",
    "kind": "builtin"
@@ -612,6 +617,78 @@
    "units": 12,
    "periods": 62,
    "file": "kyoiku_eigo6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_kokugo1",
+   "source": "光村図書",
+   "grade": "1年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「こくご」",
+   "units": 34,
+   "periods": 130,
+   "file": "mitsumura_kokugo1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_kokugo2",
+   "source": "光村図書",
+   "grade": "2年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「国語」",
+   "units": 28,
+   "periods": 125,
+   "file": "mitsumura_kokugo2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_kokugo3",
+   "source": "光村図書",
+   "grade": "3年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「国語」",
+   "units": 27,
+   "periods": 118,
+   "file": "mitsumura_kokugo3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_kokugo4",
+   "source": "光村図書",
+   "grade": "4年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「国語」",
+   "units": 28,
+   "periods": 128,
+   "file": "mitsumura_kokugo4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_kokugo5",
+   "source": "光村図書",
+   "grade": "5年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「国語」",
+   "units": 49,
+   "periods": 268,
+   "file": "mitsumura_kokugo5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_kokugo6",
+   "source": "光村図書",
+   "grade": "6年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「国語」",
+   "units": 47,
+   "periods": 210,
+   "file": "mitsumura_kokugo6.json",
    "sourceKind": "publisher"
   }
  ]
