@@ -16,7 +16,8 @@ import {
 import { toast } from "sonner";
 import { exportTeachingPlansToExcel, importTeachingPlansFromExcel } from "@/lib/teachingPlanExcel";
 import { TeachingPlanTemplateDialog } from "@/components/TeachingPlanTemplateDialog";
-import { BookMarked } from "lucide-react";
+import { TeachingPlanPublisherImportDialog } from "@/components/TeachingPlanPublisherImportDialog";
+import { BookMarked, Building2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -1572,6 +1573,7 @@ export function TeachingPlanView() {
   const [excelBusy, setExcelBusy] = useState(false);
   // ── テンプレートから取り込む ───────────────────────────────
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [showPublisherDialog, setShowPublisherDialog] = useState(false);
 
   const handleExcelExport = useCallback(async () => {
     if (teachingPlans.length === 0) {
@@ -1738,6 +1740,17 @@ export function TeachingPlanView() {
           >
             <BookMarked size={13} className="text-indigo-600" />
             {t("tpl.button")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            disabled={mainView !== "subject"}
+            onClick={() => setShowPublisherDialog(true)}
+            title={t("pub.buttonTitle")}
+          >
+            <Building2 size={13} className="text-indigo-600" />
+            {t("pub.button")}
           </Button>
           <input
             ref={excelInputRef}
@@ -1969,6 +1982,13 @@ export function TeachingPlanView() {
         onClose={() => setShowTemplateDialog(false)}
         initialGrade={activePlan?.grade}
         initialSubject={activePlan?.subject}
+        getPlan={(id) => planMap.get(id) ?? null}
+        onApply={(plan) => { upsertTeachingPlan(plan); setSelectedId(plan.id); }}
+      />
+
+      <TeachingPlanPublisherImportDialog
+        open={showPublisherDialog}
+        onClose={() => setShowPublisherDialog(false)}
         getPlan={(id) => planMap.get(id) ?? null}
         onApply={(plan) => { upsertTeachingPlan(plan); setSelectedId(plan.id); }}
       />
