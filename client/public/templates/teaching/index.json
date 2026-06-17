@@ -9,6 +9,72 @@
  ],
  "templates": [
   {
+   "id": "std_3_science",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "3年",
+   "subject": "理科",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 7,
+   "periods": 28,
+   "file": "std_3_science.json"
+  },
+  {
+   "id": "std_3_english",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "3年",
+   "subject": "英語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 18,
+   "file": "std_3_english.json"
+  },
+  {
+   "id": "std_4_science",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "4年",
+   "subject": "理科",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 8,
+   "periods": 29,
+   "file": "std_4_science.json"
+  },
+  {
+   "id": "std_4_english",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "4年",
+   "subject": "英語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 18,
+   "file": "std_4_english.json"
+  },
+  {
+   "id": "std_5_japanese",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "5年",
+   "subject": "国語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 23,
+   "file": "std_5_japanese.json"
+  },
+  {
+   "id": "std_5_math",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "5年",
+   "subject": "算数",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 9,
+   "periods": 35,
+   "file": "std_5_math.json"
+  },
+  {
    "id": "std_5_science",
    "source": "標準（学習指導要領ベース）",
    "grade": "5年",
@@ -20,17 +86,6 @@
    "file": "std_5_science.json"
   },
   {
-   "id": "std_6_science",
-   "source": "標準（学習指導要領ベース）",
-   "grade": "6年",
-   "subject": "理科",
-   "year": "2020改訂",
-   "edition": "標準",
-   "units": 9,
-   "periods": 45,
-   "file": "std_6_science.json"
-  },
-  {
    "id": "std_5_english",
    "source": "標準（学習指導要領ベース）",
    "grade": "5年",
@@ -40,6 +95,39 @@
    "units": 6,
    "periods": 32,
    "file": "std_5_english.json"
+  },
+  {
+   "id": "std_6_japanese",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "6年",
+   "subject": "国語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 23,
+   "file": "std_6_japanese.json"
+  },
+  {
+   "id": "std_6_math",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "6年",
+   "subject": "算数",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 10,
+   "periods": 39,
+   "file": "std_6_math.json"
+  },
+  {
+   "id": "std_6_science",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "6年",
+   "subject": "理科",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 9,
+   "periods": 45,
+   "file": "std_6_science.json"
   },
   {
    "id": "std_6_english",
