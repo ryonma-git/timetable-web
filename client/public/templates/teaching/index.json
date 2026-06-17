@@ -690,6 +690,78 @@
    "periods": 210,
    "file": "mitsumura_kokugo6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_dotoku1",
+   "source": "光村図書",
+   "grade": "1年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「道徳」",
+   "units": 4,
+   "periods": 34,
+   "file": "mitsumura_dotoku1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_dotoku2",
+   "source": "光村図書",
+   "grade": "2年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「道徳」",
+   "units": 3,
+   "periods": 35,
+   "file": "mitsumura_dotoku2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_dotoku3",
+   "source": "光村図書",
+   "grade": "3年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「道徳」",
+   "units": 3,
+   "periods": 35,
+   "file": "mitsumura_dotoku3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_dotoku4",
+   "source": "光村図書",
+   "grade": "4年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「道徳」",
+   "units": 3,
+   "periods": 35,
+   "file": "mitsumura_dotoku4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_dotoku5",
+   "source": "光村図書",
+   "grade": "5年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「道徳」",
+   "units": 3,
+   "periods": 35,
+   "file": "mitsumura_dotoku5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_dotoku6",
+   "source": "光村図書",
+   "grade": "6年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「道徳」",
+   "units": 3,
+   "periods": 35,
+   "file": "mitsumura_dotoku6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
