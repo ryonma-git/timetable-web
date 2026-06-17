@@ -1,538 +1,618 @@
 {
-  "version": 1,
-  "sources": [
-    {
-      "id": "builtin-std",
-      "name": "標準（学習指導要領ベース）",
-      "kind": "builtin"
-    },
-    {
-      "id": "大日本図書",
-      "name": "大日本図書",
-      "kind": "publisher"
-    },
-    {
-      "id": "学校図書",
-      "name": "学校図書",
-      "kind": "publisher"
-    },
-    {
-      "id": "啓林館",
-      "name": "啓林館",
-      "kind": "publisher"
-    },
-    {
-      "id": "教育出版",
-      "name": "教育出版",
-      "kind": "publisher"
-    },
-    {
-      "id": "信州教育出版社",
-      "name": "信州教育出版社",
-      "kind": "publisher"
-    },
-    {
-      "id": "開隆堂",
-      "name": "開隆堂",
-      "kind": "publisher"
-    }
-  ],
-  "templates": [
-    {
-      "id": "std_3_science",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "3年",
-      "subject": "理科",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 7,
-      "periods": 28,
-      "file": "std_3_science.json"
-    },
-    {
-      "id": "std_3_english",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "3年",
-      "subject": "英語",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 6,
-      "periods": 18,
-      "file": "std_3_english.json"
-    },
-    {
-      "id": "std_4_science",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "4年",
-      "subject": "理科",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 8,
-      "periods": 29,
-      "file": "std_4_science.json"
-    },
-    {
-      "id": "std_4_english",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "4年",
-      "subject": "英語",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 6,
-      "periods": 18,
-      "file": "std_4_english.json"
-    },
-    {
-      "id": "std_5_japanese",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "5年",
-      "subject": "国語",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 6,
-      "periods": 23,
-      "file": "std_5_japanese.json"
-    },
-    {
-      "id": "std_5_math",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "5年",
-      "subject": "算数",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 9,
-      "periods": 35,
-      "file": "std_5_math.json"
-    },
-    {
-      "id": "std_5_science",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "5年",
-      "subject": "理科",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 8,
-      "periods": 41,
-      "file": "std_5_science.json"
-    },
-    {
-      "id": "std_5_english",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "5年",
-      "subject": "英語",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 6,
-      "periods": 32,
-      "file": "std_5_english.json"
-    },
-    {
-      "id": "std_6_japanese",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "6年",
-      "subject": "国語",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 6,
-      "periods": 23,
-      "file": "std_6_japanese.json"
-    },
-    {
-      "id": "std_6_math",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "6年",
-      "subject": "算数",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 10,
-      "periods": 39,
-      "file": "std_6_math.json"
-    },
-    {
-      "id": "std_6_science",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "6年",
-      "subject": "理科",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 9,
-      "periods": 45,
-      "file": "std_6_science.json"
-    },
-    {
-      "id": "std_6_english",
-      "source": "標準（学習指導要領ベース）",
-      "grade": "6年",
-      "subject": "英語",
-      "year": "2020改訂",
-      "edition": "標準",
-      "units": 6,
-      "periods": 32,
-      "file": "std_6_english.json"
-    },
-    {
-      "id": "dainippon_rika3",
-      "source": "大日本図書",
-      "grade": "3年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 15,
-      "periods": 86,
-      "file": "dainippon_rika3.json"
-    },
-    {
-      "id": "dainippon_rika4",
-      "source": "大日本図書",
-      "grade": "4年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 18,
-      "periods": 100,
-      "file": "dainippon_rika4.json"
-    },
-    {
-      "id": "dainippon_rika5",
-      "source": "大日本図書",
-      "grade": "5年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 10,
-      "periods": 91,
-      "file": "dainippon_rika5.json"
-    },
-    {
-      "id": "dainippon_rika6",
-      "source": "大日本図書",
-      "grade": "6年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 11,
-      "periods": 94,
-      "file": "dainippon_rika6.json"
-    },
-    {
-      "id": "gakuto_rika3",
-      "source": "学校図書",
-      "grade": "3年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 12,
-      "periods": 77,
-      "file": "gakuto_rika3.json"
-    },
-    {
-      "id": "gakuto_rika4",
-      "source": "学校図書",
-      "grade": "4年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 11,
-      "periods": 89,
-      "file": "gakuto_rika4.json"
-    },
-    {
-      "id": "gakuto_rika5",
-      "source": "学校図書",
-      "grade": "5年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 9,
-      "periods": 85,
-      "file": "gakuto_rika5.json"
-    },
-    {
-      "id": "gakuto_rika6",
-      "source": "学校図書",
-      "grade": "6年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 10,
-      "periods": 89,
-      "file": "gakuto_rika6.json"
-    },
-    {
-      "id": "keirinkan_rika3",
-      "source": "啓林館",
-      "grade": "3年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 18,
-      "periods": 80,
-      "file": "keirinkan_rika3.json"
-    },
-    {
-      "id": "keirinkan_rika4",
-      "source": "啓林館",
-      "grade": "4年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 21,
-      "periods": 94,
-      "file": "keirinkan_rika4.json"
-    },
-    {
-      "id": "keirinkan_rika5",
-      "source": "啓林館",
-      "grade": "5年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 15,
-      "periods": 95,
-      "file": "keirinkan_rika5.json"
-    },
-    {
-      "id": "keirinkan_rika6",
-      "source": "啓林館",
-      "grade": "6年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 14,
-      "periods": 95,
-      "file": "keirinkan_rika6.json"
-    },
-    {
-      "id": "kyoikushuppan_rika3",
-      "source": "教育出版",
-      "grade": "3年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 14,
-      "periods": 79,
-      "file": "kyoikushuppan_rika3.json"
-    },
-    {
-      "id": "kyoikushuppan_rika4",
-      "source": "教育出版",
-      "grade": "4年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 17,
-      "periods": 89,
-      "file": "kyoikushuppan_rika4.json"
-    },
-    {
-      "id": "kyoikushuppan_rika5",
-      "source": "教育出版",
-      "grade": "5年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 12,
-      "periods": 91,
-      "file": "kyoikushuppan_rika5.json"
-    },
-    {
-      "id": "kyoikushuppan_rika6",
-      "source": "教育出版",
-      "grade": "6年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 11,
-      "periods": 89,
-      "file": "kyoikushuppan_rika6.json"
-    },
-    {
-      "id": "shinkyo_rika3",
-      "source": "信州教育出版社",
-      "grade": "3年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 16,
-      "periods": 82,
-      "file": "shinkyo_rika3.json"
-    },
-    {
-      "id": "shinkyo_rika4",
-      "source": "信州教育出版社",
-      "grade": "4年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 18,
-      "periods": 93,
-      "file": "shinkyo_rika4.json"
-    },
-    {
-      "id": "shinkyo_rika5",
-      "source": "信州教育出版社",
-      "grade": "5年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 13,
-      "periods": 91,
-      "file": "shinkyo_rika5.json"
-    },
-    {
-      "id": "shinkyo_rika6",
-      "source": "信州教育出版社",
-      "grade": "6年",
-      "subject": "理科",
-      "year": 2024,
-      "edition": "令和6年度版",
-      "units": 13,
-      "periods": 99,
-      "file": "shinkyo_rika6.json"
-    },
-    {
-      "id": "dainippon_sansu3",
-      "grade": "3年",
-      "subject": "算数",
-      "source": "大日本図書",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "dainippon_sansu3.json"
-    },
-    {
-      "id": "dainippon_sansu4",
-      "grade": "4年",
-      "subject": "算数",
-      "source": "大日本図書",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "dainippon_sansu4.json"
-    },
-    {
-      "id": "dainippon_sansu5",
-      "grade": "5年",
-      "subject": "算数",
-      "source": "大日本図書",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "dainippon_sansu5.json"
-    },
-    {
-      "id": "dainippon_sansu6",
-      "grade": "6年",
-      "subject": "算数",
-      "source": "大日本図書",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "dainippon_sansu6.json"
-    },
-    {
-      "id": "gakuto_sansu3",
-      "grade": "3年",
-      "subject": "算数",
-      "source": "学校図書",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "gakuto_sansu3.json"
-    },
-    {
-      "id": "gakuto_sansu4",
-      "grade": "4年",
-      "subject": "算数",
-      "source": "学校図書",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "gakuto_sansu4.json"
-    },
-    {
-      "id": "gakuto_sansu5",
-      "grade": "5年",
-      "subject": "算数",
-      "source": "学校図書",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "gakuto_sansu5.json"
-    },
-    {
-      "id": "gakuto_sansu6",
-      "grade": "6年",
-      "subject": "算数",
-      "source": "学校図書",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "gakuto_sansu6.json"
-    },
-    {
-      "id": "keirinkan_sansu3",
-      "grade": "3年",
-      "subject": "算数",
-      "source": "啓林館",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "keirinkan_sansu3.json"
-    },
-    {
-      "id": "keirinkan_sansu4",
-      "grade": "4年",
-      "subject": "算数",
-      "source": "啓林館",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "keirinkan_sansu4.json"
-    },
-    {
-      "id": "keirinkan_sansu5",
-      "grade": "5年",
-      "subject": "算数",
-      "source": "啓林館",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "keirinkan_sansu5.json"
-    },
-    {
-      "id": "keirinkan_sansu6",
-      "grade": "6年",
-      "subject": "算数",
-      "source": "啓林館",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "keirinkan_sansu6.json"
-    },
-    {
-      "id": "kairyudo_eigo5",
-      "grade": "5年",
-      "subject": "英語",
-      "source": "開隆堂",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "kairyudo_eigo5.json"
-    },
-    {
-      "id": "kairyudo_eigo6",
-      "grade": "6年",
-      "subject": "英語",
-      "source": "開隆堂",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "kairyudo_eigo6.json"
-    },
-    {
-      "id": "kyoiku_eigo5",
-      "grade": "5年",
-      "subject": "英語",
-      "source": "教育出版",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "kyoiku_eigo5.json"
-    },
-    {
-      "id": "kyoiku_eigo6",
-      "grade": "6年",
-      "subject": "英語",
-      "source": "教育出版",
-      "edition": "令和6年度版",
-      "sourceKind": "publisher",
-      "file": "kyoiku_eigo6.json"
-    }
-  ]
+ "version": 1,
+ "sources": [
+  {
+   "id": "大日本図書",
+   "name": "大日本図書",
+   "kind": "publisher"
+  },
+  {
+   "id": "学校図書",
+   "name": "学校図書",
+   "kind": "publisher"
+  },
+  {
+   "id": "開隆堂",
+   "name": "開隆堂",
+   "kind": "publisher"
+  },
+  {
+   "id": "啓林館",
+   "name": "啓林館",
+   "kind": "publisher"
+  },
+  {
+   "id": "教育出版",
+   "name": "教育出版",
+   "kind": "publisher"
+  },
+  {
+   "id": "信州教育出版社",
+   "name": "信州教育出版社",
+   "kind": "publisher"
+  },
+  {
+   "id": "標準（学習指導要領ベース）",
+   "name": "標準（学習指導要領ベース）",
+   "kind": "builtin"
+  }
+ ],
+ "templates": [
+  {
+   "id": "std_3_science",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "3年",
+   "subject": "理科",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 7,
+   "periods": 28,
+   "file": "std_3_science.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_3_english",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "3年",
+   "subject": "英語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 18,
+   "file": "std_3_english.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_4_science",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "4年",
+   "subject": "理科",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 8,
+   "periods": 29,
+   "file": "std_4_science.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_4_english",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "4年",
+   "subject": "英語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 18,
+   "file": "std_4_english.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_5_japanese",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "5年",
+   "subject": "国語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 23,
+   "file": "std_5_japanese.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_5_science",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "5年",
+   "subject": "理科",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 8,
+   "periods": 41,
+   "file": "std_5_science.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_5_math",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "5年",
+   "subject": "算数",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 9,
+   "periods": 35,
+   "file": "std_5_math.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_5_english",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "5年",
+   "subject": "英語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 32,
+   "file": "std_5_english.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_6_japanese",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "6年",
+   "subject": "国語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 23,
+   "file": "std_6_japanese.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_6_science",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "6年",
+   "subject": "理科",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 9,
+   "periods": 45,
+   "file": "std_6_science.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_6_math",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "6年",
+   "subject": "算数",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 10,
+   "periods": 39,
+   "file": "std_6_math.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "std_6_english",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "6年",
+   "subject": "英語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 32,
+   "file": "std_6_english.json",
+   "sourceKind": "builtin"
+  },
+  {
+   "id": "dainippon_rika3",
+   "source": "大日本図書",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 15,
+   "periods": 86,
+   "file": "dainippon_rika3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakuto_rika3",
+   "source": "学校図書",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 12,
+   "periods": 77,
+   "file": "gakuto_rika3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "keirinkan_rika3",
+   "source": "啓林館",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版「わくわく理科」",
+   "units": 17,
+   "periods": 90,
+   "file": "keirinkan_rika3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoikushuppan_rika3",
+   "source": "教育出版",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 14,
+   "periods": 79,
+   "file": "kyoikushuppan_rika3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "shinkyo_rika3",
+   "source": "信州教育出版社",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 16,
+   "periods": 82,
+   "file": "shinkyo_rika3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_sansu3",
+   "source": "大日本図書",
+   "grade": "3年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 19,
+   "periods": 150,
+   "file": "dainippon_sansu3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakuto_sansu3",
+   "source": "学校図書",
+   "grade": "3年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 20,
+   "periods": 146,
+   "file": "gakuto_sansu3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "keirinkan_sansu3",
+   "source": "啓林館",
+   "grade": "3年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 24,
+   "periods": 56,
+   "file": "keirinkan_sansu3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_rika4",
+   "source": "大日本図書",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 18,
+   "periods": 100,
+   "file": "dainippon_rika4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakuto_rika4",
+   "source": "学校図書",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 11,
+   "periods": 89,
+   "file": "gakuto_rika4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "keirinkan_rika4",
+   "source": "啓林館",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版「わくわく理科」",
+   "units": 16,
+   "periods": 105,
+   "file": "keirinkan_rika4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoikushuppan_rika4",
+   "source": "教育出版",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 17,
+   "periods": 89,
+   "file": "kyoikushuppan_rika4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "shinkyo_rika4",
+   "source": "信州教育出版社",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 18,
+   "periods": 93,
+   "file": "shinkyo_rika4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_sansu4",
+   "source": "大日本図書",
+   "grade": "4年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 16,
+   "periods": 159,
+   "file": "dainippon_sansu4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakuto_sansu4",
+   "source": "学校図書",
+   "grade": "4年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 21,
+   "periods": 149,
+   "file": "gakuto_sansu4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "keirinkan_sansu4",
+   "source": "啓林館",
+   "grade": "4年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 22,
+   "periods": 61,
+   "file": "keirinkan_sansu4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_rika5",
+   "source": "大日本図書",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 10,
+   "periods": 91,
+   "file": "dainippon_rika5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakuto_rika5",
+   "source": "学校図書",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 9,
+   "periods": 85,
+   "file": "gakuto_rika5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "keirinkan_rika5",
+   "source": "啓林館",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版「わくわく理科」",
+   "units": 15,
+   "periods": 105,
+   "file": "keirinkan_rika5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoikushuppan_rika5",
+   "source": "教育出版",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 12,
+   "periods": 91,
+   "file": "kyoikushuppan_rika5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "shinkyo_rika5",
+   "source": "信州教育出版社",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 13,
+   "periods": 91,
+   "file": "shinkyo_rika5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_sansu5",
+   "source": "大日本図書",
+   "grade": "5年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 18,
+   "periods": 151,
+   "file": "dainippon_sansu5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakuto_sansu5",
+   "source": "学校図書",
+   "grade": "5年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 21,
+   "periods": 148,
+   "file": "gakuto_sansu5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "keirinkan_sansu5",
+   "source": "啓林館",
+   "grade": "5年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 29,
+   "periods": 62,
+   "file": "keirinkan_sansu5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kairyudo_eigo5",
+   "source": "開隆堂",
+   "grade": "5年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 11,
+   "periods": 70,
+   "file": "kairyudo_eigo5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_eigo5",
+   "source": "教育出版",
+   "grade": "5年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 12,
+   "periods": 67,
+   "file": "kyoiku_eigo5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_rika6",
+   "source": "大日本図書",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 11,
+   "periods": 94,
+   "file": "dainippon_rika6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakuto_rika6",
+   "source": "学校図書",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 10,
+   "periods": 89,
+   "file": "gakuto_rika6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "keirinkan_rika6",
+   "source": "啓林館",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版「わくわく理科」",
+   "units": 14,
+   "periods": 105,
+   "file": "keirinkan_rika6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoikushuppan_rika6",
+   "source": "教育出版",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 11,
+   "periods": 89,
+   "file": "kyoikushuppan_rika6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "shinkyo_rika6",
+   "source": "信州教育出版社",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 13,
+   "periods": 99,
+   "file": "shinkyo_rika6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_sansu6",
+   "source": "大日本図書",
+   "grade": "6年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 13,
+   "periods": 129,
+   "file": "dainippon_sansu6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakuto_sansu6",
+   "source": "学校図書",
+   "grade": "6年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 16,
+   "periods": 123,
+   "file": "gakuto_sansu6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "keirinkan_sansu6",
+   "source": "啓林館",
+   "grade": "6年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 24,
+   "periods": 67,
+   "file": "keirinkan_sansu6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kairyudo_eigo6",
+   "source": "開隆堂",
+   "grade": "6年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 10,
+   "periods": 68,
+   "file": "kairyudo_eigo6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_eigo6",
+   "source": "教育出版",
+   "grade": "6年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版",
+   "units": 12,
+   "periods": 62,
+   "file": "kyoiku_eigo6.json",
+   "sourceKind": "publisher"
+  }
+ ]
 }
