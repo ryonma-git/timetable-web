@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Trash2, BookOpen, ChevronDown, ChevronRight, Pencil, Check, X, GripVertical, FileText, Ban, AlertTriangle, Eye, EyeOff, FileSpreadsheet, Upload,
+  Plus, Trash2, BookOpen, ChevronDown, ChevronRight, ChevronUp, Pencil, Check, X, GripVertical, FileText, Ban, AlertTriangle, Eye, EyeOff, FileSpreadsheet, Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportTeachingPlansToExcel, importTeachingPlansFromExcel } from "@/lib/teachingPlanExcel";
@@ -347,6 +347,14 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
     }));
   };
 
+  const moveUnit = (idx: number, dir: -1 | 1) => {
+    const next = idx + dir;
+    if (next < 0 || next >= units.length) return;
+    const arr = [...units];
+    [arr[idx], arr[next]] = [arr[next], arr[idx]];
+    onChange(arr);
+  };
+
   const totalPlanned = units.reduce((s, u) => s + (u.plannedPeriods || 0), 0);
 
   return (
@@ -389,6 +397,8 @@ function UnitEditor({ units, onChange }: UnitEditorProps) {
                   {filledCount > 0 && (
                     <span className="text-[9px] text-muted-foreground shrink-0">{tpf(t, "tp.filledCount", { n: filledCount })}</span>
                   )}
+                  <button onClick={() => moveUnit(idx, -1)} disabled={idx === 0} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground disabled:opacity-20" title={t("tp.moveUnitUp")}><ChevronUp size={11} /></button>
+                  <button onClick={() => moveUnit(idx, 1)} disabled={idx === units.length - 1} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground disabled:opacity-20" title={t("tp.moveUnitDown")}><ChevronDown size={11} /></button>
                   <button onClick={() => startEdit(u)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"><Pencil size={11} /></button>
                   <button onClick={() => onChange(units.filter(x => x.id !== u.id))} className="opacity-0 group-hover:opacity-100 text-destructive/60 hover:text-destructive"><Trash2 size={11} /></button>
                 </>
