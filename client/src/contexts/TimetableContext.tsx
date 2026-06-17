@@ -785,15 +785,18 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   const teachingPlans: GradeSubjectPlan[] = currentFile?.teachingPlans ?? [];
 
   const upsertTeachingPlan = useCallback((plan: GradeSubjectPlan) => {
-    if (!currentFile) return;
-    const existing = currentFile.teachingPlans ?? [];
-    const idx = existing.findIndex(p => p.id === plan.id);
-    const next = idx >= 0
-      ? existing.map((p, i) => i === idx ? plan : p)
-      : [...existing, plan];
-    setCurrentFile({ ...currentFile, teachingPlans: next, meta: { ...currentFile.meta, updatedAt: new Date().toISOString() } });
+    // 関数型更新: ループで連続呼び出ししても古いstateを上書きせず正しく蓄積する
+    setCurrentFile(prev => {
+      if (!prev) return prev;
+      const existing = prev.teachingPlans ?? [];
+      const idx = existing.findIndex(p => p.id === plan.id);
+      const next = idx >= 0
+        ? existing.map((p, i) => i === idx ? plan : p)
+        : [...existing, plan];
+      return { ...prev, teachingPlans: next, meta: { ...prev.meta, updatedAt: new Date().toISOString() } };
+    });
     setIsDirty(true);
-  }, [currentFile]);
+  }, []);
 
   const removeTeachingPlan = useCallback((id: string) => {
     if (!currentFile) return;

@@ -35,8 +35,9 @@ export function TeachingPlanPublisherImportDialog({ open, onClose, getPlan, onAp
   const [subject, setSubject] = useState("理科");
   const [mode, setMode] = useState<ApplyMode>("replaceAll");
   const [applying, setApplying] = useState(false);
+  const [previewIdx, setPreviewIdx] = useState(0);
 
-  const reset = () => { setResult(null); setRows([]); setFileName(""); };
+  const reset = () => { setResult(null); setRows([]); setFileName(""); setPreviewIdx(0); };
 
   const handleFile = async (file: File) => {
     setParsing(true); reset();
@@ -59,8 +60,7 @@ export function TeachingPlanPublisherImportDialog({ open, onClose, getPlan, onAp
     }
   };
 
-  const previewPlan = result?.plans.find((_, i) => rows[i]?.include) ?? null;
-  const previewIdx = result?.plans.findIndex((_, i) => rows[i]?.include) ?? -1;
+  const previewPlan = result?.plans[previewIdx] ?? null;
 
   const handleImport = () => {
     if (!result) return;
@@ -129,20 +129,32 @@ export function TeachingPlanPublisherImportDialog({ open, onClose, getPlan, onAp
                 </Select>
               </div>
 
-              {/* 取り込む計画（学年ごと） */}
+              {/* 取り込む計画（学年ごと）。行クリックでプレビュー切替 */}
+              {result.plans.length > 1 && (
+                <p className="text-[11px] text-muted-foreground">{t("pub.rowHint")}</p>
+              )}
               <div className="border border-border rounded-lg divide-y divide-border">
                 {result.plans.map((p, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2.5">
+                  <div key={i}
+                    onClick={() => setPreviewIdx(i)}
+                    className={cn(
+                      "flex items-center gap-3 p-2.5 cursor-pointer transition-colors",
+                      previewIdx === i ? "bg-primary/5" : "hover:bg-muted/40"
+                    )}>
                     <input type="checkbox" className="accent-primary"
                       checked={rows[i]?.include ?? false}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => setRows((rs) => rs.map((r, j) => j === i ? { ...r, include: e.target.checked } : r))} />
-                    <Select value={rows[i]?.grade ?? ""} onValueChange={(v) => setRows((rs) => rs.map((r, j) => j === i ? { ...r, grade: v } : r))}>
-                      <SelectTrigger className="h-8 w-24 text-sm"><SelectValue placeholder={t("pub.gradePh")} /></SelectTrigger>
-                      <SelectContent>{GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Select value={rows[i]?.grade ?? ""} onValueChange={(v) => setRows((rs) => rs.map((r, j) => j === i ? { ...r, grade: v } : r))}>
+                        <SelectTrigger className="h-8 w-24 text-sm"><SelectValue placeholder={t("pub.gradePh")} /></SelectTrigger>
+                        <SelectContent>{GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
                     <span className="text-xs text-muted-foreground">
                       {p.units.length}{t("tpl.unitsUnit")} ・ {p.periods}{t("tpl.periodsUnit")}
                     </span>
+                    {previewIdx === i && <span className="ml-auto text-[10px] font-semibold text-primary">{t("pub.previewing")}</span>}
                   </div>
                 ))}
               </div>
