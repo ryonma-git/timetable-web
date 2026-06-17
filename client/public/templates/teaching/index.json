@@ -1,0 +1,56 @@
+{
+ "version": 1,
+ "sources": [
+  {
+   "id": "builtin-std",
+   "name": "標準（学習指導要領ベース）",
+   "kind": "builtin"
+  }
+ ],
+ "templates": [
+  {
+   "id": "std_5_science",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "5年",
+   "subject": "理科",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 8,
+   "periods": 41,
+   "file": "std_5_science.json"
+  },
+  {
+   "id": "std_6_science",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "6年",
+   "subject": "理科",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 9,
+   "periods": 45,
+   "file": "std_6_science.json"
+  },
+  {
+   "id": "std_5_english",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "5年",
+   "subject": "英語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 32,
+   "file": "std_5_english.json"
+  },
+  {
+   "id": "std_6_english",
+   "source": "標準（学習指導要領ベース）",
+   "grade": "6年",
+   "subject": "英語",
+   "year": "2020改訂",
+   "edition": "標準",
+   "units": 6,
+   "periods": 32,
+   "file": "std_6_english.json"
+  }
+ ]
+}

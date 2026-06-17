@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportTeachingPlansToExcel, importTeachingPlansFromExcel } from "@/lib/teachingPlanExcel";
+import { TeachingPlanTemplateDialog } from "@/components/TeachingPlanTemplateDialog";
+import { BookMarked } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -1568,6 +1570,8 @@ export function TeachingPlanView() {
   // ── Excel 書き出し / 読み込み ──────────────────────────────
   const excelInputRef = useRef<HTMLInputElement>(null);
   const [excelBusy, setExcelBusy] = useState(false);
+  // ── テンプレートから取り込む ───────────────────────────────
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
 
   const handleExcelExport = useCallback(async () => {
     if (teachingPlans.length === 0) {
@@ -1722,8 +1726,19 @@ export function TeachingPlanView() {
           <FileText size={13} />{t("tp.tabSubject")}
         </button>
 
-        {/* Excel 書き出し / 読み込み */}
+        {/* テンプレート / Excel 書き出し / 読み込み */}
         <div className="ml-auto flex items-center gap-1.5 pb-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            disabled={mainView !== "subject" || !activePlan}
+            onClick={() => setShowTemplateDialog(true)}
+            title={t("tpl.buttonTitle")}
+          >
+            <BookMarked size={13} className="text-indigo-600" />
+            {t("tpl.button")}
+          </Button>
           <input
             ref={excelInputRef}
             type="file"
@@ -1947,6 +1962,15 @@ export function TeachingPlanView() {
         onClose={() => setShowManualAdd(false)}
         onCreate={(plan) => { upsertTeachingPlan(plan); setSelectedId(plan.id); }}
         existingIds={existingIds}
+      />
+
+      <TeachingPlanTemplateDialog
+        open={showTemplateDialog}
+        onClose={() => setShowTemplateDialog(false)}
+        initialGrade={activePlan?.grade}
+        initialSubject={activePlan?.subject}
+        getPlan={(id) => planMap.get(id) ?? null}
+        onApply={(plan) => { upsertTeachingPlan(plan); setSelectedId(plan.id); }}
       />
 
       <Dialog open={!!confirmDeleteId} onOpenChange={() => setConfirmDeleteId(null)}>

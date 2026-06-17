@@ -1,0 +1,15 @@
+# Netlify 設定（feature/teaching-plan-templates ブランチ専用プレビュー用）
+# main の GitHub Pages とは独立。ルート(/)配信なので VITE_BASE_URL=/ でビルドする。
+[build]
+  command = "pnpm run build"
+  publish = "dist/public"
+
+[build.environment]
+  VITE_BASE_URL = "/"
+  NODE_VERSION = "22"
+
+# SPA: 静的ファイル以外はindex.htmlへフォールバック
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
