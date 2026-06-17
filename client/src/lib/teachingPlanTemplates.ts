@@ -22,6 +22,7 @@ export interface TemplateIndexEntry {
   units: number;
   periods: number;
   file: string;
+  sourceKind?: "builtin" | "publisher" | "extension";
 }
 
 export interface TemplateIndex {
@@ -33,13 +34,72 @@ export interface TemplateIndex {
 export interface TemplateDoc {
   id: string;
   source: string;
-  sourceKind: "builtin" | "imported";
+  sourceKind: "builtin" | "imported" | "extension";
   grade: string;
   subject: string;
   year?: string;
   edition?: string;
   note?: string;
   units: { name: string; lessons: string[] }[];
+}
+
+// ─── 拡張パッケージ（ローカルストレージ） ──────────────────────────
+
+export interface ExtensionPack {
+  packId: string;
+  name: string;
+  importedAt: string;
+  templates: TemplateDoc[];
+}
+
+const EXT_KEY = "tp-ext-packs";
+
+export function getExtensionPacks(): ExtensionPack[] {
+  try {
+    const raw = localStorage.getItem(EXT_KEY);
+    return raw ? (JSON.parse(raw) as ExtensionPack[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveExtensionPack(pack: ExtensionPack): void {
+  const packs = getExtensionPacks().filter((p) => p.packId !== pack.packId);
+  packs.push(pack);
+  localStorage.setItem(EXT_KEY, JSON.stringify(packs));
+}
+
+export function removeExtensionPack(packId: string): void {
+  const packs = getExtensionPacks().filter((p) => p.packId !== packId);
+  localStorage.setItem(EXT_KEY, JSON.stringify(packs));
+}
+
+export function getExtensionTemplateDoc(templateId: string): TemplateDoc | null {
+  for (const pack of getExtensionPacks()) {
+    const doc = pack.templates.find((t) => t.id === templateId);
+    if (doc) return doc;
+  }
+  return null;
+}
+
+export function extensionPacksAsIndexEntries(): TemplateIndexEntry[] {
+  const entries: TemplateIndexEntry[] = [];
+  for (const pack of getExtensionPacks()) {
+    for (const doc of pack.templates) {
+      entries.push({
+        id: doc.id,
+        source: doc.source,
+        grade: doc.grade,
+        subject: doc.subject,
+        edition: doc.edition,
+        units: doc.units.length,
+        periods: doc.units.reduce((s, u) => s + u.lessons.length, 0),
+        file: "",
+        sourceKind: "extension",
+      });
+    }
+  }
+  return entries;
 }
 
 export type ApplyMode = "fillEmpty" | "replaceUnits" | "replaceAll";
