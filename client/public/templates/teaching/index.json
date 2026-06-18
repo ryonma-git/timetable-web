@@ -1031,6 +1031,30 @@
    "periods": 70,
    "file": "tosho_eigo6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_eigo5",
+   "source": "光村図書",
+   "grade": "5年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版「Here We Go!」",
+   "units": 15,
+   "periods": 70,
+   "file": "mitsumura_eigo5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_eigo6",
+   "source": "光村図書",
+   "grade": "6年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版「Here We Go!」",
+   "units": 16,
+   "periods": 70,
+   "file": "mitsumura_eigo6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
