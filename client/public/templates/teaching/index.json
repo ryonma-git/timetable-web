@@ -959,6 +959,54 @@
    "periods": 150,
    "file": "tosho_kokugo6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_rika3",
+   "source": "東京書籍",
+   "grade": "3年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版「新しい理科」",
+   "units": 19,
+   "periods": 90,
+   "file": "tosho_rika3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_rika4",
+   "source": "東京書籍",
+   "grade": "4年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版「新しい理科」",
+   "units": 21,
+   "periods": 102,
+   "file": "tosho_rika4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_rika5",
+   "source": "東京書籍",
+   "grade": "5年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版「新しい理科」",
+   "units": 14,
+   "periods": 105,
+   "file": "tosho_rika5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_rika6",
+   "source": "東京書籍",
+   "grade": "6年",
+   "subject": "理科",
+   "year": 2024,
+   "edition": "令和6年度版「新しい理科」",
+   "units": 16,
+   "periods": 105,
+   "file": "tosho_rika6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
