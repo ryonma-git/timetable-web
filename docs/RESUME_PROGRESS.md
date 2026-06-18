@@ -181,6 +181,22 @@ interface GradeSubjectPlan {
 
 ---
 
+## 2026-06-18 深夜 自律実行 — 東京書籍 主要5教科を一括追加（総82件）
+
+東京書籍は `ten.tokyo-shoseki.co.jp/text/shou/<教科>/keikaku/` にWord/Excelの年間指導計画があり、**いずれも合計時数が標準授業時数と一致/近似**して検証できる優良ソース。取得は `…/<教科>/data/…`（hrefは `../../<教科>/data/` 相対）。docxはzip→`word/document.xml`をElementTree直読み。
+
+- **社会3-6年**（`tosho_shakai*`）`shakai_keikaku_ryakuan_{3-6}.docx`。大単元/小単元/時数の単一表。**標準完全一致(70/90/100/105)**。3-4年8列・5-6年9列。
+- **算数1-6年**（`tosho_sansu*`）`sansu_keikaku_ryakuan_{1-6}_20240131.docx`。表2(上巻)・表3(下巻)に単元/指導時数。**単元計＋予備時数＝標準(136/175)を全学年で検証**。整数時数1..25のセルの直前を単元名とするペア検出（ヘッダ列数とデータ列数がずれるため）。
+- **国語1-6年**（`tosho_kokugo*`）`kokugo_keikaku_{1-6}_*.docx`の5列表(table6)。col1=教材名+「N時間」。**N時間=コマ**。注意: col1は「単元・教材+既習事項」結合列なので**最初のN時間のみ**採用。さらに**単元番号と時数桁の結合**（"漢字を使おう２"+"1時間"="21時間"）を、時数>15なら末尾1桁採用で補正。標準の約8-9割（帯/予備除く配当）。※Excel版`R6kokugo_keikaku_k_*.xlsx`は時数の無い「指導事項関連表」なので不可。
+- **理科3-6年**（`tosho_rika*`）`rika_nenkankeikaku_{3-6}*.docx`。大単元(col3)→節(col5)＋節時数(col4)。時数は「3(4)」形式で**括弧内=発展込み**を採用→標準一致(90/105/105、4年のみ102)。
+- **英語5-6年**（`tosho_eigo*`）`r6_eigo_keikaku_{5,6}nen_*.docx`。Unitごとのブロック表。「単元名」「配当時間」セルの次セルを取得。**合計70時間で標準完全一致**。NEW HORIZON Elementary。
+
+### 残タスク（次の候補）
+- 道徳2社目（光村のみ。東書道徳はkeikaku直下にdocx無し→別URL要調査。教育出版道徳 `kyoiku-shuppan.co.jp/textbook/shou/dotoku/…r6plan.html`）。
+- 国語3社目=教育出版（`ひろがる言葉 小学国語`、kyoiku-shuppan）。社会2社目は要・別ソース（教育出版70表/日文PDFは不可）。
+- 英語の光村(Here We Go!)・啓林館(Blue Sky)。算数の教育出版。
+- 既存の**啓林館算数(sansu3-6)が時数56-67と過少**（配当表の数え方バグの可能性）→要再点検。
+
 ## TypeScript 型チェック
 
 ```bash
