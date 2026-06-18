@@ -1295,6 +1295,54 @@
    "periods": 65,
    "file": "keirinkan_eigo6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_shakai3",
+   "source": "教育出版",
+   "grade": "3年",
+   "subject": "社会",
+   "year": 2024,
+   "edition": "令和6年度版「小学社会」",
+   "units": 4,
+   "periods": 70,
+   "file": "kyoiku_shakai3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_shakai4",
+   "source": "教育出版",
+   "grade": "4年",
+   "subject": "社会",
+   "year": 2024,
+   "edition": "令和6年度版「小学社会」",
+   "units": 6,
+   "periods": 88,
+   "file": "kyoiku_shakai4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_shakai5",
+   "source": "教育出版",
+   "grade": "5年",
+   "subject": "社会",
+   "year": 2024,
+   "edition": "令和6年度版「小学社会」",
+   "units": 5,
+   "periods": 100,
+   "file": "kyoiku_shakai5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_shakai6",
+   "source": "教育出版",
+   "grade": "6年",
+   "subject": "社会",
+   "year": 2024,
+   "edition": "令和6年度版「小学社会」",
+   "units": 3,
+   "periods": 105,
+   "file": "kyoiku_shakai6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
