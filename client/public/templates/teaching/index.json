@@ -1127,6 +1127,78 @@
    "periods": 129,
    "file": "kyoiku_kokugo6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_dotoku1",
+   "source": "教育出版",
+   "grade": "1年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「小学道徳 はばたこう明日へ」",
+   "units": 11,
+   "periods": 34,
+   "file": "kyoiku_dotoku1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_dotoku2",
+   "source": "教育出版",
+   "grade": "2年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「小学道徳 はばたこう明日へ」",
+   "units": 11,
+   "periods": 35,
+   "file": "kyoiku_dotoku2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_dotoku3",
+   "source": "教育出版",
+   "grade": "3年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「小学道徳 はばたこう明日へ」",
+   "units": 11,
+   "periods": 35,
+   "file": "kyoiku_dotoku3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_dotoku4",
+   "source": "教育出版",
+   "grade": "4年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「小学道徳 はばたこう明日へ」",
+   "units": 11,
+   "periods": 35,
+   "file": "kyoiku_dotoku4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_dotoku5",
+   "source": "教育出版",
+   "grade": "5年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「小学道徳 はばたこう明日へ」",
+   "units": 11,
+   "periods": 35,
+   "file": "kyoiku_dotoku5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_dotoku6",
+   "source": "教育出版",
+   "grade": "6年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「小学道徳 はばたこう明日へ」",
+   "units": 11,
+   "periods": 35,
+   "file": "kyoiku_dotoku6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
