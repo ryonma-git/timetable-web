@@ -191,11 +191,16 @@ interface GradeSubjectPlan {
 - **理科3-6年**（`tosho_rika*`）`rika_nenkankeikaku_{3-6}*.docx`。大単元(col3)→節(col5)＋節時数(col4)。時数は「3(4)」形式で**括弧内=発展込み**を採用→標準一致(90/105/105、4年のみ102)。
 - **英語5-6年**（`tosho_eigo*`）`r6_eigo_keikaku_{5,6}nen_*.docx`。Unitごとのブロック表。「単元名」「配当時間」セルの次セルを取得。**合計70時間で標準完全一致**。NEW HORIZON Elementary。
 
-### 残タスク（次の候補）
-- 道徳2社目（光村のみ。東書道徳はkeikaku直下にdocx無し→別URL要調査。教育出版道徳 `kyoiku-shuppan.co.jp/textbook/shou/dotoku/…r6plan.html`）。
-- 国語3社目=教育出版（`ひろがる言葉 小学国語`、kyoiku-shuppan）。社会2社目は要・別ソース（教育出版70表/日文PDFは不可）。
-- 英語の光村(Here We Go!)・啓林館(Blue Sky)。算数の教育出版。
-- 既存の**啓林館算数(sansu3-6)が時数56-67と過少**（配当表の数え方バグの可能性）→要再点検。
+### 2026-06-18 追加実装（松尾さん起床後の依頼）
+- ✅ **光村 英語5-6年「Here We Go!」**（`mitsumura_eigo*`／**本市採用教科書**）。細案docx（`download_file/view/<uuid>/559`、5年`b6bab04c…`/6年`a3a33b64…`）。Unitヘッダ表(配当時間)＋詳細表(時/活動内容)。**70時間で標準完全一致**。※略案xlsxは時数列なしで不可。
+- ✅ **教育出版 国語1-6年**（`kyoiku_kokugo*`、`ひろがる言葉`）。Excel(`/textbook/shou/kokugo/files/r6kokugoN_nenkeihyouka_*.xlsx`)。col3=時数(N/(領域N))→N時間、col4=教材名(教科書手前で切る)、col6=コマ、col7=活動。標準の約8割。
+- ✅ **教育出版 道徳1-6年**（`kyoiku_dotoku*`、`はばたこう明日へ`）。Excel(`/dotoku/files/R6dotokuN_nenkeihyouka_2404.xlsx`)。col3=教材名,col4=時数,月で単元化。**標準34/35と完全一致**。
+- ✅ **啓林館 算数3-6年の時数バグ修正**。出典=配当表`shinko-keirin.co.jp/keirinkan/sho_r6/sansu/file/sansu_guidance_plan0N.xlsx`。**col8「時」は大単元ごとにリセットする時番号→各大単元の最大値が時数**(旧実装は行数計上で過少56-67)。1-4年は上下巻2シート連結。→149/155/157/135時(標準175の77-90%)。
+
+### まだ残っている候補
+- 社会2社目（教育出版70表/日文PDFは不可。要・別アプローチ）。
+- 英語の啓林館(Blue Sky)。算数・理科の教育出版。書写・地図・生活・音楽・図工・家庭。
+- 国語・道徳の他社（学校図書・三省堂・日文・学研・光文書院 等）。
 
 ## TypeScript 型チェック
 
