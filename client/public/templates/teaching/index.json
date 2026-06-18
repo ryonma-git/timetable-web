@@ -283,8 +283,8 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版",
-   "units": 24,
-   "periods": 56,
+   "units": 29,
+   "periods": 149,
    "file": "keirinkan_sansu3.json",
    "sourceKind": "publisher"
   },
@@ -379,8 +379,8 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版",
-   "units": 22,
-   "periods": 61,
+   "units": 29,
+   "periods": 155,
    "file": "keirinkan_sansu4.json",
    "sourceKind": "publisher"
   },
@@ -475,8 +475,8 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版",
-   "units": 29,
-   "periods": 62,
+   "units": 30,
+   "periods": 157,
    "file": "keirinkan_sansu5.json",
    "sourceKind": "publisher"
   },
@@ -595,8 +595,8 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版",
-   "units": 24,
-   "periods": 67,
+   "units": 25,
+   "periods": 135,
    "file": "keirinkan_sansu6.json",
    "sourceKind": "publisher"
   },
