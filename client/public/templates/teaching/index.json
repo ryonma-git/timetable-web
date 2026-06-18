@@ -1271,6 +1271,30 @@
    "periods": 152,
    "file": "kyoiku_sansu6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "keirinkan_eigo5",
+   "source": "啓林館",
+   "grade": "5年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版「Blue Sky elementary」",
+   "units": 12,
+   "periods": 64,
+   "file": "keirinkan_eigo5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "keirinkan_eigo6",
+   "source": "啓林館",
+   "grade": "6年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版「Blue Sky elementary」",
+   "units": 12,
+   "periods": 65,
+   "file": "keirinkan_eigo6.json",
+   "sourceKind": "publisher"
   }
  ]
 }

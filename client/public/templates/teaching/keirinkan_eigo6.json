@@ -1,0 +1,138 @@
+{
+ "id": "keirinkan_eigo6",
+ "source": "啓林館",
+ "sourceKind": "publisher",
+ "grade": "6年",
+ "subject": "英語",
+ "year": 2024,
+ "edition": "令和6年度版「Blue Sky elementary」",
+ "retrievedAt": "2026-06-18",
+ "note": "啓林館『年間指導計画(カリキュラム作成資料)』よりUnit・REVIEW等の配当時数を抽出（各時に単元名を割当）。標準70時間の約9割（Story等を除く配当）。",
+ "units": [
+  {
+   "name": "Pre Unit I can speak English!",
+   "lessons": [
+    "Pre Unit I can speak English!",
+    "Pre Unit I can speak English!",
+    "Pre Unit I can speak English!"
+   ]
+  },
+  {
+   "name": "Unit 1 I’m from Tokyo, Japan.自己紹介",
+   "lessons": [
+    "Unit 1 I’m from Tokyo, Japan.自己紹介",
+    "Unit 1 I’m from Tokyo, Japan.自己紹介",
+    "Unit 1 I’m from Tokyo, Japan.自己紹介",
+    "Unit 1 I’m from Tokyo, Japan.自己紹介",
+    "Unit 1 I’m from Tokyo, Japan.自己紹介",
+    "Unit 1 I’m from Tokyo, Japan.自己紹介",
+    "Unit 1 I’m from Tokyo, Japan.自己紹介"
+   ]
+  },
+  {
+   "name": "Unit 2 Welcome to Japan.日本の紹介",
+   "lessons": [
+    "Unit 2 Welcome to Japan.日本の紹介",
+    "Unit 2 Welcome to Japan.日本の紹介",
+    "Unit 2 Welcome to Japan.日本の紹介",
+    "Unit 2 Welcome to Japan.日本の紹介",
+    "Unit 2 Welcome to Japan.日本の紹介",
+    "Unit 2 Welcome to Japan.日本の紹介",
+    "Unit 2 Welcome to Japan.日本の紹介"
+   ]
+  },
+  {
+   "name": "Unit 3 We need a big park in our town.自分",
+   "lessons": [
+    "Unit 3 We need a big park in our town.自分",
+    "Unit 3 We need a big park in our town.自分",
+    "Unit 3 We need a big park in our town.自分",
+    "Unit 3 We need a big park in our town.自分",
+    "Unit 3 We need a big park in our town.自分",
+    "Unit 3 We need a big park in our town.自分",
+    "Unit 3 We need a big park in our town.自分"
+   ]
+  },
+  {
+   "name": "REVIEW ①",
+   "lessons": [
+    "REVIEW ①",
+    "REVIEW ①"
+   ]
+  },
+  {
+   "name": "Unit 4 I went to the zoo.体験したこと",
+   "lessons": [
+    "Unit 4 I went to the zoo.体験したこと",
+    "Unit 4 I went to the zoo.体験したこと",
+    "Unit 4 I went to the zoo.体験したこと",
+    "Unit 4 I went to the zoo.体験したこと",
+    "Unit 4 I went to the zoo.体験したこと",
+    "Unit 4 I went to the zoo.体験したこと",
+    "Unit 4 I went to the zoo.体験したこと"
+   ]
+  },
+  {
+   "name": "Unit 5 This is my hero.あこがれの人",
+   "lessons": [
+    "Unit 5 This is my hero.あこがれの人",
+    "Unit 5 This is my hero.あこがれの人",
+    "Unit 5 This is my hero.あこがれの人",
+    "Unit 5 This is my hero.あこがれの人",
+    "Unit 5 This is my hero.あこがれの人",
+    "Unit 5 This is my hero.あこがれの人",
+    "Unit 5 This is my hero.あこがれの人"
+   ]
+  },
+  {
+   "name": "Unit 6 My favorite memory is the school ",
+   "lessons": [
+    "Unit 6 My favorite memory is the school ",
+    "Unit 6 My favorite memory is the school ",
+    "Unit 6 My favorite memory is the school ",
+    "Unit 6 My favorite memory is the school ",
+    "Unit 6 My favorite memory is the school ",
+    "Unit 6 My favorite memory is the school ",
+    "Unit 6 My favorite memory is the school "
+   ]
+  },
+  {
+   "name": "REVIEW ②",
+   "lessons": [
+    "REVIEW ②",
+    "REVIEW ②"
+   ]
+  },
+  {
+   "name": "Unit 7 I want to be a fashion designer.将",
+   "lessons": [
+    "Unit 7 I want to be a fashion designer.将",
+    "Unit 7 I want to be a fashion designer.将",
+    "Unit 7 I want to be a fashion designer.将",
+    "Unit 7 I want to be a fashion designer.将",
+    "Unit 7 I want to be a fashion designer.将",
+    "Unit 7 I want to be a fashion designer.将",
+    "Unit 7 I want to be a fashion designer.将"
+   ]
+  },
+  {
+   "name": "Unit 8 I want to join the brass band.中学校",
+   "lessons": [
+    "Unit 8 I want to join the brass band.中学校",
+    "Unit 8 I want to join the brass band.中学校",
+    "Unit 8 I want to join the brass band.中学校",
+    "Unit 8 I want to join the brass band.中学校",
+    "Unit 8 I want to join the brass band.中学校",
+    "Unit 8 I want to join the brass band.中学校",
+    "Unit 8 I want to join the brass band.中学校"
+   ]
+  },
+  {
+   "name": "REVIEW ③",
+   "lessons": [
+    "REVIEW ③",
+    "REVIEW ③"
+   ]
+  }
+ ]
+}
