@@ -197,10 +197,15 @@ interface GradeSubjectPlan {
 - ✅ **教育出版 道徳1-6年**（`kyoiku_dotoku*`、`はばたこう明日へ`）。Excel(`/dotoku/files/R6dotokuN_nenkeihyouka_2404.xlsx`)。col3=教材名,col4=時数,月で単元化。**標準34/35と完全一致**。
 - ✅ **啓林館 算数3-6年の時数バグ修正**。出典=配当表`shinko-keirin.co.jp/keirinkan/sho_r6/sansu/file/sansu_guidance_plan0N.xlsx`。**col8「時」は大単元ごとにリセットする時番号→各大単元の最大値が時数**(旧実装は行数計上で過少56-67)。1-4年は上下巻2シート連結。→149/155/157/135時(標準175の77-90%)。
 
+### 2026-06-18 追加3件（全6教科が2社以上に・総108件）
+- ✅ **教育出版 算数1-6年**（`kyoiku_sansu*`）。Excel(`/textbook/shou/sansu/files/r6sansuN_nenkeihyouka_2404.xlsx`)。**「（N時間）」を含む行＝大単元ヘッダ**(col1=単元名,●○■◎や番号の接頭辞)、明細のcol1整数=小単元時数。標準の約9割。
+- ✅ **啓林館 英語5-6年「Blue Sky」**（`keirinkan_eigo*`）。docx(`/keirinkan/sho_r6/eigo/file/eigo_guidance_plan0{5,6}.docx`)。12列表、col1=配当時数,col2=Unit名。Unit+REVIEWで64/65時(標準70の9割)。
+- ✅ **教育出版 社会3-6年**（`kyoiku_shakai*`）。Word(`/shakai/files/r6shakaiN_nenkeihyouka_*.docx`)。**70表の重複回避法**=「大単元」「配当時間 N時間」を含むヘッダ表のみで大単元・時数を取り、直後の概要表の丸数字中単元を内容に。標準一致/近似(70/88/100/105)。
+
 ### まだ残っている候補
-- 社会2社目（教育出版70表/日文PDFは不可。要・別アプローチ）。
-- 英語の啓林館(Blue Sky)。算数・理科の教育出版。書写・地図・生活・音楽・図工・家庭。
+- 算数・理科の他社残り、書写・地図・生活・音楽・図工・家庭。
 - 国語・道徳の他社（学校図書・三省堂・日文・学研・光文書院 等）。
+- 既存`keirinkan_sansu`は配当表方式に修正済み。
 
 ## TypeScript 型チェック
 
