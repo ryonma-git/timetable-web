@@ -815,6 +815,78 @@
    "periods": 105,
    "file": "tosho_shakai6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_sansu1",
+   "source": "東京書籍",
+   "grade": "1年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい算数」",
+   "units": 24,
+   "periods": 120,
+   "file": "tosho_sansu1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_sansu2",
+   "source": "東京書籍",
+   "grade": "2年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい算数」",
+   "units": 21,
+   "periods": 148,
+   "file": "tosho_sansu2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_sansu3",
+   "source": "東京書籍",
+   "grade": "3年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい算数」",
+   "units": 25,
+   "periods": 149,
+   "file": "tosho_sansu3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_sansu4",
+   "source": "東京書籍",
+   "grade": "4年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい算数」",
+   "units": 23,
+   "periods": 154,
+   "file": "tosho_sansu4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_sansu5",
+   "source": "東京書籍",
+   "grade": "5年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい算数」",
+   "units": 26,
+   "periods": 160,
+   "file": "tosho_sansu5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_sansu6",
+   "source": "東京書籍",
+   "grade": "6年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい算数」",
+   "units": 22,
+   "periods": 151,
+   "file": "tosho_sansu6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
