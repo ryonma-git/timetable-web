@@ -626,8 +626,8 @@
    "subject": "国語",
    "year": 2024,
    "edition": "令和6年度版「こくご」",
-   "units": 34,
-   "periods": 130,
+   "units": 59,
+   "periods": 243,
    "file": "mitsumura_kokugo1.json",
    "sourceKind": "publisher"
   },
@@ -638,8 +638,8 @@
    "subject": "国語",
    "year": 2024,
    "edition": "令和6年度版「国語」",
-   "units": 28,
-   "periods": 125,
+   "units": 52,
+   "periods": 246,
    "file": "mitsumura_kokugo2.json",
    "sourceKind": "publisher"
   },
@@ -650,8 +650,8 @@
    "subject": "国語",
    "year": 2024,
    "edition": "令和6年度版「国語」",
-   "units": 27,
-   "periods": 118,
+   "units": 50,
+   "periods": 201,
    "file": "mitsumura_kokugo3.json",
    "sourceKind": "publisher"
   },
@@ -662,8 +662,8 @@
    "subject": "国語",
    "year": 2024,
    "edition": "令和6年度版「国語」",
-   "units": 28,
-   "periods": 128,
+   "units": 50,
+   "periods": 193,
    "file": "mitsumura_kokugo4.json",
    "sourceKind": "publisher"
   },
@@ -675,7 +675,7 @@
    "year": 2024,
    "edition": "令和6年度版「国語」",
    "units": 49,
-   "periods": 268,
+   "periods": 143,
    "file": "mitsumura_kokugo5.json",
    "sourceKind": "publisher"
   },
@@ -687,7 +687,7 @@
    "year": 2024,
    "edition": "令和6年度版「国語」",
    "units": 47,
-   "periods": 210,
+   "periods": 143,
    "file": "mitsumura_kokugo6.json",
    "sourceKind": "publisher"
   },
