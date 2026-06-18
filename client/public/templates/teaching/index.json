@@ -1007,6 +1007,30 @@
    "periods": 105,
    "file": "tosho_rika6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_eigo5",
+   "source": "東京書籍",
+   "grade": "5年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版「NEW HORIZON Elementary」",
+   "units": 11,
+   "periods": 70,
+   "file": "tosho_eigo5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_eigo6",
+   "source": "東京書籍",
+   "grade": "6年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版「NEW HORIZON Elementary」",
+   "units": 11,
+   "periods": 70,
+   "file": "tosho_eigo6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
