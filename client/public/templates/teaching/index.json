@@ -1055,6 +1055,78 @@
    "periods": 70,
    "file": "mitsumura_eigo6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_kokugo1",
+   "source": "教育出版",
+   "grade": "1年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「ひろがる言葉 小学国語」",
+   "units": 64,
+   "periods": 256,
+   "file": "kyoiku_kokugo1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_kokugo2",
+   "source": "教育出版",
+   "grade": "2年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「ひろがる言葉 小学国語」",
+   "units": 52,
+   "periods": 257,
+   "file": "kyoiku_kokugo2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_kokugo3",
+   "source": "教育出版",
+   "grade": "3年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「ひろがる言葉 小学国語」",
+   "units": 50,
+   "periods": 204,
+   "file": "kyoiku_kokugo3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_kokugo4",
+   "source": "教育出版",
+   "grade": "4年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「ひろがる言葉 小学国語」",
+   "units": 51,
+   "periods": 204,
+   "file": "kyoiku_kokugo4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_kokugo5",
+   "source": "教育出版",
+   "grade": "5年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「ひろがる言葉 小学国語」",
+   "units": 47,
+   "periods": 139,
+   "file": "kyoiku_kokugo5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_kokugo6",
+   "source": "教育出版",
+   "grade": "6年",
+   "subject": "国語",
+   "year": 2024,
+   "edition": "令和6年度版「ひろがる言葉 小学国語」",
+   "units": 47,
+   "periods": 129,
+   "file": "kyoiku_kokugo6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
