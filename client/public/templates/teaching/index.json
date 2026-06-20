@@ -1643,6 +1643,78 @@
    "periods": 50,
    "file": "kairyudo_zukou6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_shosha1",
+   "source": "教育出版",
+   "grade": "1年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版「小学 書写」",
+   "units": 21,
+   "periods": 34,
+   "file": "kyoiku_shosha1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_shosha2",
+   "source": "教育出版",
+   "grade": "2年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版「小学 書写」",
+   "units": 16,
+   "periods": 35,
+   "file": "kyoiku_shosha2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_shosha3",
+   "source": "教育出版",
+   "grade": "3年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版「小学 書写」",
+   "units": 9,
+   "periods": 16,
+   "file": "kyoiku_shosha3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_shosha4",
+   "source": "教育出版",
+   "grade": "4年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版「小学 書写」",
+   "units": 10,
+   "periods": 15,
+   "file": "kyoiku_shosha4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_shosha5",
+   "source": "教育出版",
+   "grade": "5年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版「小学 書写」",
+   "units": 8,
+   "periods": 16,
+   "file": "kyoiku_shosha5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_shosha6",
+   "source": "教育出版",
+   "grade": "6年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版「小学 書写」",
+   "units": 7,
+   "periods": 13,
+   "file": "kyoiku_shosha6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
