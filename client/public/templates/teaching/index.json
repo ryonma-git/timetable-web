@@ -1463,6 +1463,30 @@
    "periods": 8,
    "file": "tosho_hoken6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_seikatsu1",
+   "source": "東京書籍",
+   "grade": "1年",
+   "subject": "生活",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい生活」",
+   "units": 8,
+   "periods": 99,
+   "file": "tosho_seikatsu1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_seikatsu2",
+   "source": "東京書籍",
+   "grade": "2年",
+   "subject": "生活",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい生活」",
+   "units": 9,
+   "periods": 105,
+   "file": "tosho_seikatsu2.json",
+   "sourceKind": "publisher"
   }
  ]
 }
