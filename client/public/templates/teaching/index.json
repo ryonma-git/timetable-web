@@ -1487,6 +1487,18 @@
    "periods": 105,
    "file": "tosho_seikatsu2.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_katei56",
+   "source": "東京書籍",
+   "grade": "5・6年",
+   "subject": "家庭",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい家庭」",
+   "units": 18,
+   "periods": 109,
+   "file": "tosho_katei56.json",
+   "sourceKind": "publisher"
   }
  ]
 }
