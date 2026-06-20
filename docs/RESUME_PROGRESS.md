@@ -207,6 +207,39 @@ interface GradeSubjectPlan {
 - 国語・道徳の他社（学校図書・三省堂・日文・学研・光文書院 等）。
 - 既存`keirinkan_sansu`は配当表方式に修正済み。
 
+## 2026-06-18 深夜2 全教科コンプリート進行（総133件・12教科）
+
+「検定済み全教科書コンプリート」を目標に自律実行中。技能系教科を一気に追加。
+
+### 現在の収録（12教科）
+| 教科 | 社数 | 収録済み会社 |
+|---|---|---|
+| 理科 | 6 | 大日本・学校図書・啓林館・教育出版・信州・東京書籍 |
+| 算数 | 5 | 大日本・学校図書・啓林館・教育出版・東京書籍 |
+| 英語 | 5 | 光村・啓林館・教育出版・東京書籍・開隆堂 |
+| 国語 | 3 | 光村・教育出版・東京書籍 |
+| 社会 | 2 | 教育出版・東京書籍 |
+| 道徳 | 2 | 光村・教育出版 |
+| 書写 | 1 | 東京書籍（`tosho_shosha1-6`） |
+| 保健 | 1 | 東京書籍（`tosho_hoken3-6`、計24時） |
+| 生活 | 1 | 東京書籍（`tosho_seikatsu1-2`、102/105準拠） |
+| 家庭 | 1 | 東京書籍（`tosho_katei56`、5・6合本） |
+| 音楽 | 1 | 教育出版（`kyoiku_ongaku1-6`、随時題材除く） |
+| 図画工作 | 1 | 開隆堂（`kairyudo_zukou1-6`、**全学年標準一致**） |
+
+### 確立した取得元パターン（再利用可）
+- **東京書籍**: `ten.tokyo-shoseki.co.jp/text/shou/<教科>/data/`（hrefは`../../<教科>/data/`相対）。`<教科>_keikaku_ryakuan_N.docx`が標準時数照合できる定番。教科コード: kokugo/sansu/rika/shakai/seikatsu/shosha/hoken/katei/eigo。docxはzip→document.xml直読み。
+- **教育出版**: `kyoiku-shuppan.co.jp/textbook/shou/<教科>/files/r6<教科>N_nenkeihyouka(_nenkei)_*.xlsx`。一覧は`…/document/ducu1/r6plan.html`をgrep。
+- **光村**: `mitsumura-tosho.co.jp/download_file/view/<uuid>/<番号>`。一覧ページをWebFetchでuuid取得。書写=s-shosha,生活=s-seikatsu。
+- **啓林館**: `shinko-keirin.co.jp/keirinkan/sho_r6/<教科>/file/<教科>_guidance_plan0N.xlsx(またはdocx)`。
+- **開隆堂**: `kairyudo.co.jp/contents/04_shiryo/nenkei/sho/data/nenkei_r6<コード>N.xlsx`（図工=shozu,家庭=shoka,英語=shoei）。
+
+### 残り（次セッションで継続）
+- **地図**(帝国書院・東書) … 未着手。
+- 単一社教科の他社追加: 書写(光村`s-shosha`/教育出版/学校図書/日文)、生活(大日本/啓林館/光村/教育出版/日文/学校図書)、音楽(教育芸術社`kyogei.co.jp`=要別ルート)、図工(日文`s-zukou`)、家庭(開隆堂`shoka5/6`)、保健(大日本/文教社/光文書院)。
+- 核教科の他社: 国語(学校図書)、社会(日文=PDFのみ)、道徳(東書/学校図書/日文/学研/光文書院/廣済堂あかつき)、算数(日文)。
+- 注意: docx正規表現で全角数字域は `[0-9０-９]`（`[０-9]`はrangeエラー）。1〜4年が上下巻2シートの社あり（国語/算数）→全シート連結。
+
 ## TypeScript 型チェック
 
 ```bash
