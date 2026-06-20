@@ -1571,6 +1571,78 @@
    "periods": 37,
    "file": "kyoiku_ongaku6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "kairyudo_zukou1",
+   "source": "開隆堂",
+   "grade": "1年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 23,
+   "periods": 68,
+   "file": "kairyudo_zukou1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kairyudo_zukou2",
+   "source": "開隆堂",
+   "grade": "2年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 23,
+   "periods": 70,
+   "file": "kairyudo_zukou2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kairyudo_zukou3",
+   "source": "開隆堂",
+   "grade": "3年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 19,
+   "periods": 60,
+   "file": "kairyudo_zukou3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kairyudo_zukou4",
+   "source": "開隆堂",
+   "grade": "4年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 19,
+   "periods": 60,
+   "file": "kairyudo_zukou4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kairyudo_zukou5",
+   "source": "開隆堂",
+   "grade": "5年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 13,
+   "periods": 50,
+   "file": "kairyudo_zukou5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kairyudo_zukou6",
+   "source": "開隆堂",
+   "grade": "6年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 13,
+   "periods": 50,
+   "file": "kairyudo_zukou6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
