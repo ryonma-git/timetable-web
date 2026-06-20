@@ -1499,6 +1499,78 @@
    "periods": 109,
    "file": "tosho_katei56.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_ongaku1",
+   "source": "教育出版",
+   "grade": "1年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学音楽 音楽のおくりもの」",
+   "units": 11,
+   "periods": 44,
+   "file": "kyoiku_ongaku1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_ongaku2",
+   "source": "教育出版",
+   "grade": "2年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学音楽 音楽のおくりもの」",
+   "units": 15,
+   "periods": 50,
+   "file": "kyoiku_ongaku2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_ongaku3",
+   "source": "教育出版",
+   "grade": "3年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学音楽 音楽のおくりもの」",
+   "units": 16,
+   "periods": 42,
+   "file": "kyoiku_ongaku3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_ongaku4",
+   "source": "教育出版",
+   "grade": "4年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学音楽 音楽のおくりもの」",
+   "units": 16,
+   "periods": 47,
+   "file": "kyoiku_ongaku4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_ongaku5",
+   "source": "教育出版",
+   "grade": "5年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学音楽 音楽のおくりもの」",
+   "units": 14,
+   "periods": 40,
+   "file": "kyoiku_ongaku5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_ongaku6",
+   "source": "教育出版",
+   "grade": "6年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学音楽 音楽のおくりもの」",
+   "units": 12,
+   "periods": 37,
+   "file": "kyoiku_ongaku6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
