@@ -1415,6 +1415,54 @@
    "periods": 48,
    "file": "tosho_shosha6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_hoken3",
+   "source": "東京書籍",
+   "grade": "3年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版「新しい保健」",
+   "units": 1,
+   "periods": 4,
+   "file": "tosho_hoken3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_hoken4",
+   "source": "東京書籍",
+   "grade": "4年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版「新しい保健」",
+   "units": 1,
+   "periods": 4,
+   "file": "tosho_hoken4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_hoken5",
+   "source": "東京書籍",
+   "grade": "5年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版「新しい保健」",
+   "units": 2,
+   "periods": 8,
+   "file": "tosho_hoken5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_hoken6",
+   "source": "東京書籍",
+   "grade": "6年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版「新しい保健」",
+   "units": 1,
+   "periods": 8,
+   "file": "tosho_hoken6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
