@@ -1351,7 +1351,7 @@
    "subject": "書写",
    "year": 2024,
    "edition": "令和6年度版「新しい書写」",
-   "units": 7,
+   "units": 23,
    "periods": 34,
    "file": "tosho_shosha1.json",
    "sourceKind": "publisher"
@@ -1363,7 +1363,7 @@
    "subject": "書写",
    "year": 2024,
    "edition": "令和6年度版「新しい書写」",
-   "units": 7,
+   "units": 17,
    "periods": 35,
    "file": "tosho_shosha2.json",
    "sourceKind": "publisher"
@@ -1375,8 +1375,8 @@
    "subject": "書写",
    "year": 2024,
    "edition": "令和6年度版「新しい書写」",
-   "units": 8,
-   "periods": 53,
+   "units": 15,
+   "periods": 35,
    "file": "tosho_shosha3.json",
    "sourceKind": "publisher"
   },
@@ -1387,8 +1387,8 @@
    "subject": "書写",
    "year": 2024,
    "edition": "令和6年度版「新しい書写」",
-   "units": 7,
-   "periods": 54,
+   "units": 14,
+   "periods": 35,
    "file": "tosho_shosha4.json",
    "sourceKind": "publisher"
   },
@@ -1399,7 +1399,7 @@
    "subject": "書写",
    "year": 2024,
    "edition": "令和6年度版「新しい書写」",
-   "units": 7,
+   "units": 14,
    "periods": 32,
    "file": "tosho_shosha5.json",
    "sourceKind": "publisher"
@@ -1411,8 +1411,8 @@
    "subject": "書写",
    "year": 2024,
    "edition": "令和6年度版「新しい書写」",
-   "units": 6,
-   "periods": 48,
+   "units": 13,
+   "periods": 32,
    "file": "tosho_shosha6.json",
    "sourceKind": "publisher"
   },
@@ -1675,8 +1675,8 @@
    "subject": "書写",
    "year": 2024,
    "edition": "令和6年度版「小学 書写」",
-   "units": 9,
-   "periods": 16,
+   "units": 14,
+   "periods": 30,
    "file": "kyoiku_shosha3.json",
    "sourceKind": "publisher"
   },
@@ -1687,8 +1687,8 @@
    "subject": "書写",
    "year": 2024,
    "edition": "令和6年度版「小学 書写」",
-   "units": 10,
-   "periods": 15,
+   "units": 15,
+   "periods": 30,
    "file": "kyoiku_shosha4.json",
    "sourceKind": "publisher"
   },
@@ -1699,8 +1699,8 @@
    "subject": "書写",
    "year": 2024,
    "edition": "令和6年度版「小学 書写」",
-   "units": 8,
-   "periods": 16,
+   "units": 13,
+   "periods": 30,
    "file": "kyoiku_shosha5.json",
    "sourceKind": "publisher"
   },
@@ -1711,8 +1711,8 @@
    "subject": "書写",
    "year": 2024,
    "edition": "令和6年度版「小学 書写」",
-   "units": 7,
-   "periods": 13,
+   "units": 12,
+   "periods": 30,
    "file": "kyoiku_shosha6.json",
    "sourceKind": "publisher"
   },
