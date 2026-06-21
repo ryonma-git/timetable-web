@@ -1763,6 +1763,54 @@
    "periods": 58,
    "file": "kairyudo_katei6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_hoken3",
+   "source": "大日本図書",
+   "grade": "3年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版「たのしい保健」",
+   "units": 1,
+   "periods": 4,
+   "file": "dainippon_hoken3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_hoken4",
+   "source": "大日本図書",
+   "grade": "4年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版「たのしい保健」",
+   "units": 1,
+   "periods": 4,
+   "file": "dainippon_hoken4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_hoken5",
+   "source": "大日本図書",
+   "grade": "5年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版「たのしい保健」",
+   "units": 2,
+   "periods": 8,
+   "file": "dainippon_hoken5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "dainippon_hoken6",
+   "source": "大日本図書",
+   "grade": "6年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版「たのしい保健」",
+   "units": 1,
+   "periods": 8,
+   "file": "dainippon_hoken6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
