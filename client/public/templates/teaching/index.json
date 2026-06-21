@@ -1739,6 +1739,30 @@
    "periods": 105,
    "file": "kyoiku_seikatsu2.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "kairyudo_katei5",
+   "source": "開隆堂",
+   "grade": "5年",
+   "subject": "家庭",
+   "year": 2024,
+   "edition": "令和6年度版「わたしたちの家庭科」",
+   "units": 11,
+   "periods": 65,
+   "file": "kairyudo_katei5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kairyudo_katei6",
+   "source": "開隆堂",
+   "grade": "6年",
+   "subject": "家庭",
+   "year": 2024,
+   "edition": "令和6年度版「わたしたちの家庭科」",
+   "units": 11,
+   "periods": 58,
+   "file": "kairyudo_katei6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
