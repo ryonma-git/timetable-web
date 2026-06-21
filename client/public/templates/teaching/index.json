@@ -1735,8 +1735,8 @@
    "subject": "生活",
    "year": 2024,
    "edition": "令和6年度版「せいかつ みんな なかよし」",
-   "units": 0,
-   "periods": 0,
+   "units": 7,
+   "periods": 105,
    "file": "kyoiku_seikatsu2.json",
    "sourceKind": "publisher"
   }
