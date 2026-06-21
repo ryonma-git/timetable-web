@@ -32,6 +32,11 @@
    "kind": "publisher"
   },
   {
+   "id": "教育芸術社",
+   "name": "教育芸術社",
+   "kind": "publisher"
+  },
+  {
    "id": "東京書籍",
    "name": "東京書籍",
    "kind": "publisher"
@@ -1834,6 +1839,78 @@
    "units": 6,
    "periods": 103,
    "file": "dainippon_seikatsu2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyogei_ongaku1",
+   "source": "教育芸術社",
+   "grade": "1年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学生の音楽」",
+   "units": 10,
+   "periods": 64,
+   "file": "kyogei_ongaku1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyogei_ongaku2",
+   "source": "教育芸術社",
+   "grade": "2年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学生の音楽」",
+   "units": 10,
+   "periods": 67,
+   "file": "kyogei_ongaku2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyogei_ongaku3",
+   "source": "教育芸術社",
+   "grade": "3年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学生の音楽」",
+   "units": 9,
+   "periods": 60,
+   "file": "kyogei_ongaku3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyogei_ongaku4",
+   "source": "教育芸術社",
+   "grade": "4年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学生の音楽」",
+   "units": 9,
+   "periods": 60,
+   "file": "kyogei_ongaku4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyogei_ongaku5",
+   "source": "教育芸術社",
+   "grade": "5年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学生の音楽」",
+   "units": 8,
+   "periods": 44,
+   "file": "kyogei_ongaku5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyogei_ongaku6",
+   "source": "教育芸術社",
+   "grade": "6年",
+   "subject": "音楽",
+   "year": 2024,
+   "edition": "令和6年度版「小学生の音楽」",
+   "units": 7,
+   "periods": 45,
+   "file": "kyogei_ongaku6.json",
    "sourceKind": "publisher"
   }
  ]
