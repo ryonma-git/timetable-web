@@ -1715,6 +1715,30 @@
    "periods": 13,
    "file": "kyoiku_shosha6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_seikatsu1",
+   "source": "教育出版",
+   "grade": "1年",
+   "subject": "生活",
+   "year": 2024,
+   "edition": "令和6年度版「せいかつ みんな なかよし」",
+   "units": 9,
+   "periods": 102,
+   "file": "kyoiku_seikatsu1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kyoiku_seikatsu2",
+   "source": "教育出版",
+   "grade": "2年",
+   "subject": "生活",
+   "year": 2024,
+   "edition": "令和6年度版「せいかつ みんな なかよし」",
+   "units": 0,
+   "periods": 0,
+   "file": "kyoiku_seikatsu2.json",
+   "sourceKind": "publisher"
   }
  ]
 }
