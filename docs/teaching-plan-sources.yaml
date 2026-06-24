@@ -228,8 +228,9 @@ recipes:
      parse: "『題材NTop』シートの題材名(B1)+扱い時数(C2 N時間)。標準と整合"}
 
   # ---- 未取得（要対応） ----------------------------------------------------
-  - {id: mitsumura_shosha,   publisher: 光村図書, subject: 書写, grades: [1,2,3,4,5,6], status: missing, tier: 1,
-     todo: "光村 download_file 方式。一覧 /kyokasho/s-shosha/keikaku から uuid 取得"}
+  - {id: mitsumura_shosha,   publisher: 光村図書, subject: 書写, grades: [1,2,3,4,5,6], status: blocked, tier: 1,
+     file: "download_file/view/{uuid}/549  # 一覧 /kyokasho/s-shosha/keikaku。1年6784ecec/2年813a5690/3年2855cd91/4年6f58a6e6/5年2bf3e718/6年345e178f",
+     reason: "★ファイルが旧.doc(OLE複合)形式。zip解析不可。macOS textutilでHTML化すると表構造が崩れ、時数合計(硬筆/毛筆+N=各30前後で東書/教出と整合)は取れるが単元別の対応付けが不能。要 LibreOffice(soffice --convert-to docx) でクリーン変換してから docx パーサにかける"}
   - {id: keirinkan_seikatsu, publisher: 啓林館, subject: 生活, grades: [1,2], status: missing, tier: 1,
      todo: "seikatsu_guidance_plan.xlsx あり。ただし横型レイアウトでパーサ要検討"}
   - {id: mitsumura_seikatsu, publisher: 光村図書, subject: 生活, grades: [1,2], status: missing, tier: 1, todo: "/kyokasho/s-seikatsu/keikaku"}
