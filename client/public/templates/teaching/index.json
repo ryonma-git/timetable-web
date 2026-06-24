@@ -32,6 +32,11 @@
    "kind": "publisher"
   },
   {
+   "id": "日本文教出版",
+   "name": "日本文教出版",
+   "kind": "publisher"
+  },
+  {
    "id": "教育芸術社",
    "name": "教育芸術社",
    "kind": "publisher"
@@ -1911,6 +1916,54 @@
    "units": 7,
    "periods": 45,
    "file": "kyogei_ongaku6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_shakai3",
+   "source": "日本文教出版",
+   "grade": "3年",
+   "subject": "社会",
+   "year": 2024,
+   "edition": "令和6年度版「小学社会」",
+   "units": 4,
+   "periods": 70,
+   "file": "nichibun_shakai3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_shakai4",
+   "source": "日本文教出版",
+   "grade": "4年",
+   "subject": "社会",
+   "year": 2024,
+   "edition": "令和6年度版「小学社会」",
+   "units": 5,
+   "periods": 102,
+   "file": "nichibun_shakai4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_shakai5",
+   "source": "日本文教出版",
+   "grade": "5年",
+   "subject": "社会",
+   "year": 2024,
+   "edition": "令和6年度版「小学社会」",
+   "units": 5,
+   "periods": 100,
+   "file": "nichibun_shakai5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_shakai6",
+   "source": "日本文教出版",
+   "grade": "6年",
+   "subject": "社会",
+   "year": 2024,
+   "edition": "令和6年度版「小学社会」",
+   "units": 3,
+   "periods": 104,
+   "file": "nichibun_shakai6.json",
    "sourceKind": "publisher"
   }
  ]
