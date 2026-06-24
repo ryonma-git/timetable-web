@@ -228,9 +228,15 @@ recipes:
      parse: "『題材NTop』シートの題材名(B1)+扱い時数(C2 N時間)。標準と整合"}
 
   # ---- 未取得（要対応） ----------------------------------------------------
-  - {id: mitsumura_shosha,   publisher: 光村図書, subject: 書写, grades: [1,2,3,4,5,6], status: blocked, tier: 1,
+  - {id: mitsumura_shosha,   publisher: 光村図書, subject: 書写, grades: [1,2,3,4,5,6], status: partial, tier: 1,
      file: "download_file/view/{uuid}/549  # 一覧 /kyokasho/s-shosha/keikaku。1年6784ecec/2年813a5690/3年2855cd91/4年6f58a6e6/5年2bf3e718/6年345e178f",
-     reason: "★ファイルが旧.doc(OLE複合)形式。zip解析不可。macOS textutilでHTML化すると表構造が崩れ、時数合計(硬筆/毛筆+N=各30前後で東書/教出と整合)は取れるが単元別の対応付けが不能。要 LibreOffice(soffice --convert-to docx) でクリーン変換してから docx パーサにかける"}
+     reason: |
+       ファイルは旧.doc(OLE)。LibreOffice導入済→`soffice --headless --convert-to docx`でクリーンな表に変換できる
+       (表: 学年/月/ページ/単元名/教材名/学習指導要領/配当時数。配当時数は『毛N』『硬N』『適宜』)。
+       ★ただし表レイアウトが学年で変わる: 1-2年は硬筆のみで時数表記が別形式(現状0件)、4・6年は単元名列の位置がずれ
+       学習活動文を拾ってしまう。3・5年は単元名良好・時数40/26で取れた。
+       要対応: 学年別に単元名列/配当時数列を明示マッピングするパーサ(または各学年を個別調整)。
+       時数合計の参考値: 硬筆/毛筆+N の総和が各学年30前後で東書/教出と整合。"}
   - {id: keirinkan_seikatsu, publisher: 啓林館, subject: 生活, grades: [1,2], status: missing, tier: 1,
      todo: "seikatsu_guidance_plan.xlsx あり。ただし横型レイアウトでパーサ要検討"}
   - {id: mitsumura_seikatsu, publisher: 光村図書, subject: 生活, grades: [1,2], status: missing, tier: 1, todo: "/kyokasho/s-seikatsu/keikaku"}
@@ -252,9 +258,16 @@ recipes:
      file: "textbooks/zuko/download/r6/r6_zuko_nenkei_hyouka.xlsx (全学年単一ファイル)",
      parse: "★『A案（2学期制・3学期制）』シートを使う。第1-6学年が横並びで固定時数。時数列=3,12,21,30,39,48 / 題材名列=6,15,24,33,42,51。『選択』題材は除外。帯別/全学年シートは範囲表記で過大になるため不可",
      validate: "全学年 標準と完全一致(68/70/60/60/50/50)"}
-  - {id: tosho_dotoku,       publisher: 東京書籍, subject: 道徳, grades: [1,2,3,4,5,6], status: todo, tier: 4,
-     discovery: "東書Eネット ten.tokyo-shoseki.co.jp。『道徳 指導計画』で検索→各学年 detail/<id> (5年=118720)『年間指導計画作成資料』。個別ページからDLリンク辿る",
-     note: "他教科のような /data/ 直リンクは無い。Eネット検索UI経由"}
+  - {id: tosho_dotoku,       publisher: 東京書籍, subject: 道徳, grades: [1,2,3,4,5,6], status: in_progress, tier: gated_login,
+     discovery: "東書Eネット ten.tokyo-shoseki.co.jp。『道徳 指導計画』検索→各学年 detail/<id> (5年=118720,6年=118722)。Word=/ten_download/2024/2024069{NNN}.docx (5年=…240)",
+     note: |
+       ★重要: 東書Eネットは【会員登録・ログイン必須】。未ログインだと1年以上前の資料はDL不可(curl空だった理由)。
+       ログイン済みChromeで download URL へ navigate→~/Downloads に保存→Bashで処理、は機能する。
+       ★ただしダウンロードID(2024069NNN)は学年順でなく、細案(主題名/教材名/内容項目/ねらい/時数,表2が7列)と
+       略案(月/学期/教材名/時数/ページ)が混在。連番232-242を取ると【3・4・6年×細案/略案】が来て1・2・5年が漏れた。
+       正しくは各学年の detail/<id> ページを開き、その学年の作成資料リンクを個別に取得すること(IDは非系統的)。
+       確認済: 3年細案=2024069232, 4年細案=236, 6年細案=240 / 5年detail=118720, 6年detail=118722。
+       道徳は既に3社(教出/光村/日文)あり優先度低のため現状保留。
   - {id: kobun_hoken,        publisher: 光文書院, subject: 保健, grades: [3,4,5,6], status: blocked, tier: 4,
      discovery: "kobun.co.jp/teaching-taiiku/ に『学年別年間指導計画例』Excel: /Portals/0/resource/dataroom/plan/dl/r6_taiiku0{1-6}.xlsx",
      reason: "★公開取得OKだが中身は『体育の学習』(運動領域)で、保健領域が単元として分離されていない。保健だけの抽出は別ファイル要確認"}
