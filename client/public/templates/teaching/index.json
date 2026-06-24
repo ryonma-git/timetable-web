@@ -2217,6 +2217,30 @@
    "periods": 35,
    "file": "tosho_dotoku6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_dotoku1",
+   "source": "東京書籍",
+   "grade": "1年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい道徳」",
+   "units": 11,
+   "periods": 34,
+   "file": "tosho_dotoku1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_dotoku2",
+   "source": "東京書籍",
+   "grade": "2年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい道徳」",
+   "units": 11,
+   "periods": 35,
+   "file": "tosho_dotoku2.json",
+   "sourceKind": "publisher"
   }
  ]
 }
