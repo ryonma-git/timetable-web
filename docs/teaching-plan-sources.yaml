@@ -1,0 +1,241 @@
+# ============================================================================
+# 小学校 年間指導計画テンプレート 取得・解析コンフィグ
+# ----------------------------------------------------------------------------
+# 目的: 各教科書発行者の「年間指導計画」をどこから・どの形式で取得し、
+#       どう解析して units[]/lessons[] に落とすかを機械可読に記述する。
+#       教科書改訂時も、このファイルの url / parse 規則を更新すれば
+#       エージェント or バッチが再取得・再生成できることを意図する。
+#
+# 凡例:
+#   roster      … 令和6年度 検定教科書の発行者一覧（教科書協会 06e_textbook より）
+#   tier        … 取得難度 1=直リンク(curl) / 2=PDF / 3=直HTML表 / 4=JS(ブラウザでURL特定→curl)
+#   status      … done / missing / not_published(計画を配布せず) / no_plan(その教科に計画なし=地図)
+#   {g}         … 学年プレースホルダ(1..6)
+#   検証(validate) … 合計時数を標準授業時数と突き合わせて読み取りミスを検出する基準
+#                    （社間比較は scripts/compare_teaching_plans.py を使う）
+# ============================================================================
+
+meta:
+  edition: 令和6年度版 (2024-2027 使用)
+  roster_source: https://www.textbook.or.jp/textbook/06e_textbook.html
+  generated: 2026-06-18
+  qa_tool: scripts/compare_teaching_plans.py   # 社間で総時数のズレ(±25%超)を検出
+  standard_hours:        # 標準授業時数（法定）。検証の基準
+    国語: {1: 306, 2: 315, 3: 245, 4: 245, 5: 175, 6: 175}
+    社会: {3: 70, 4: 90, 5: 100, 6: 105}
+    算数: {1: 136, 2: 175, 3: 175, 4: 175, 5: 175, 6: 175}
+    理科: {3: 90, 4: 105, 5: 105, 6: 105}
+    生活: {1: 102, 2: 105}
+    音楽: {1: 68, 2: 70, 3: 60, 4: 60, 5: 50, 6: 50}
+    図画工作: {1: 68, 2: 70, 3: 60, 4: 60, 5: 50, 6: 50}
+    家庭: {5: 60, 6: 55}
+    道徳: {1: 34, 2: 35, 3: 35, 4: 35, 5: 35, 6: 35}
+    保健: {3: 4, 4: 4, 5: 8, 6: 8}     # 体育の保健領域。3-4年は少なめ
+    英語: {3: 35, 4: 35, 5: 70, 6: 70}
+    書写: null   # 国語に含まれ独立の標準時数なし(各社30前後)。社間比較で代替検証
+
+# ---------------------------------------------------------------------------
+# 共通の取得知見（落とし穴）
+# ---------------------------------------------------------------------------
+common_gotchas:
+  - "正規表現の全角数字域は [0-9０-９]。[０-9] は range エラーになる"
+  - "1〜4年は上下巻=2シート構成の社がある(光村国語/啓林算数)。全シート連結すること"
+  - "docx は zip→word/document.xml を ElementTree で直読み(python-docx不要)"
+  - "ExcelJS/openpyxl で結合セルの扱いが違う。時数の二重計上に注意"
+  - "「N時間=Nコマ」。1コマ内の複数活動を1コマと数えない(時数表記を正とする)"
+  - "ヘッダ列数とデータ列数がずれる docx 表が多い(結合のため)。位置は実データで確認"
+  - "ページ番号や月番号を時数に誤計上しやすい。時数は1〜25程度・該当列に限定"
+  - "「N～M時間」等の範囲表記は下限を採る。年間計が明記される場合はそれ=法定に合わせ随時題材で補完"
+  - "/tmp は揮発する。再取得前提でURLを残す"
+
+# ---------------------------------------------------------------------------
+# 発行者ごとの取得基盤（URLパターン・取得難度）
+# ---------------------------------------------------------------------------
+publishers:
+  東京書籍:
+    tier: 1
+    base: https://ten.tokyo-shoseki.co.jp/text/shou
+    pattern: "{base}/{subj}/data/{subj}_keikaku_ryakuan_{g}.docx   # 『略案』が時数検証できる定番"
+    note: 教科コード kokugo/sansu/rika/shakai/seikatsu/shosha/hoken/katei/eigo。docx直リンク
+  教育出版:
+    tier: 1
+    base: https://www.kyoiku-shuppan.co.jp/textbook/shou
+    pattern: "{base}/{subj}/files/r6{subj}{g}_nenkeihyouka_*.xlsx  (音楽は _nenkei_)"
+    index: "{base}/{subj}/document/ducu1/r6plan.html を grep して実ファイル名確定"
+  光村図書:
+    tier: 1
+    base: https://www.mitsumura-tosho.co.jp
+    pattern: "{base}/download_file/view/{uuid}/{num}   # uuidは一覧ページをWebFetchで取得"
+    note: 一覧 /kyokasho/s-{subj}/keikaku（s-kokugo, s-dotoku, s-eigo, s-shosha, s-seikatsu）
+  啓林館:
+    tier: 1
+    base: https://www.shinko-keirin.co.jp/keirinkan/sho_r6
+    pattern: "{base}/{subj}/file/{subj}_guidance_plan{NN}.xlsx     # 配当表。理科/算数/英語/生活"
+    note: 算数は01..06=学年。理科は guidance_plan_standard+unit_example(内容)
+  開隆堂:
+    tier: 1
+    base: https://www.kairyudo.co.jp/contents/04_shiryo/nenkei/sho/data
+    pattern: "{base}/nenkei_r6{code}{g}.xlsx   # 図工=shozu, 家庭=shoka, 英語=shoei"
+  大日本図書:
+    tier: 1
+    base: https://www.dainippon-tosho.co.jp
+    pattern: "{base}/{subj}/files/r6{subj}SH.xlsx  (保健/生活は学年別シート)"
+  信州教育出版社:
+    tier: 1
+    note: 理科のみ。形式E（既存収録）
+  学校図書:
+    tier: 4
+    base: https://r6-sho.gakuto-plus.jp
+    pattern: "{base}/{subj}  → JS-SPA。実ファイルは {base}/wp-content/uploads/r6_{subj}_*.xlsx"
+    note: "本体 gakuto.co.jp はhttps証明書エラー(curlは -k)。算数/理科は収録済。国語は非発行。生活は横型ガントで読取困難"
+  教育芸術社:
+    tier: 4
+    base: https://www.kyogei.co.jp
+    pattern: "/es/→「指導計画案」→ /textbook/es/document/ のExcelボタン href=/download/{id}/  (要 referer)"
+    note: "音楽のみ。id=26622(1年)..26632(6年) 偶数飛び。題材Topシートに題材名/扱い時数"
+  日本文教出版:
+    tier: not_published
+    note: "教科書ページは検討資料・内容解説・趣意書のみ。年間指導計画を独立ファイルで配布せず(社会/算数/図工/道徳/生活/書写すべて計画ファイル0)"
+  帝国書院:
+    tier: no_plan
+    note: 地図帳。年間指導計画なし
+  三省堂:    {tier: 4, note: 英語(CROWN Jr.)。未取得。JSサイト要ブラウザ}
+  大修館書店: {tier: 4, note: 保健。未取得}
+  文教社:    {tier: 4, note: 保健。未取得}
+  光文書院:  {tier: 4, note: 保健・道徳。未取得}
+  Gakken:    {tier: 4, note: 保健・道徳。未取得}
+
+# ---------------------------------------------------------------------------
+# 取得・解析レシピ（done のものは実装済みパーサの規則）
+# ---------------------------------------------------------------------------
+recipes:
+
+  # ---- 東京書籍 -----------------------------------------------------------
+  - {id: tosho_kokugo,   publisher: 東京書籍, subject: 国語, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "kokugo/data/kokugo_keikaku_{g}_*.docx",
+     parse: "5列表(table6)。col1=教材名+「N時間」。N時間=コマ。col1は既習事項結合列→最初のN時間のみ採用。単元番号と時数桁の結合(漢字を使おう２+1時間=21)は>15なら末尾1桁",
+     validate: "標準の約8-9割(帯/予備除く)"}
+  - {id: tosho_shakai,   publisher: 東京書籍, subject: 社会, grades: [3,4,5,6], status: done, tier: 1,
+     file: "shakai/data/shakai_keikaku_ryakuan_{g}.docx",
+     parse: "単一表。col3=大単元(N．○○ M時間), col4=小単元時数(int), col5=小単元名。3-4年=8列/5-6年=9列",
+     validate: "標準と完全一致(70/90/100/105)"}
+  - {id: tosho_sansu,    publisher: 東京書籍, subject: 算数, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "sansu/data/sansu_keikaku_ryakuan_{g}_20240131.docx",
+     parse: "表2(上巻)/表3(下巻)。整数時数1..25のセルの直前=単元名。小単元区分なし",
+     validate: "単元計+予備時数=標準(136/175)"}
+  - {id: tosho_rika,     publisher: 東京書籍, subject: 理科, grades: [3,4,5,6], status: done, tier: 1,
+     file: "rika/data/rika_nenkankeikaku_{g}*.docx",
+     parse: "大単元(col3)→節(col5)+節時数(col4)。時数「3(4)」は括弧内(発展込)を採用",
+     validate: "標準一致(90/105/105、4年のみ102)"}
+  - {id: tosho_seikatsu, publisher: 東京書籍, subject: 生活, grades: [1,2], status: done, tier: 1,
+     file: "seikatsu/data/seikatsu_keikaku_r_{1|2}_20240131.docx",
+     parse: "社会と同型。大単元(col3)+小単元時数(col4)+小単元名(col5)。r_1=1年/r_2=2年"}
+  - {id: tosho_shosha,   publisher: 東京書籍, subject: 書写, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "shosha/data/shosha_keikaku_ryakuan_{g}.docx",
+     parse: "時数=月(col0)とページ(末尾)を除く1-9の純整数セル。教材=その直前。★ページ番号誤計上に注意",
+     validate: "社間で書写30-35時に整合"}
+  - {id: tosho_hoken,    publisher: 東京書籍, subject: 保健, grades: [3,4,5,6], status: done, tier: 1,
+     file: "hoken/data/hoken_keikaku_ryakuan_{3・4|5・6}.docx",
+     parse: "学年(col0)で分割。大単元(col1 名+時間)+小単元時数(col2)+小単元名(col3)"}
+  - {id: tosho_katei,    publisher: 東京書籍, subject: 家庭, grades: ["5・6"], status: done, tier: 1,
+     file: "katei/data/katei_skeikaku_202401.docx",
+     parse: "大題材名→目標→『目標/時数/学習活動』表の繰り返し。col1=時数,col2=学習活動。5・6合本"}
+
+  # ---- 教育出版 -----------------------------------------------------------
+  - {id: kyoiku_kokugo,   publisher: 教育出版, subject: 国語, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "kokugo/files/r6kokugo{g}_nenkeihyouka_*.xlsx",
+     parse: "col3=時数(N/(領域N))→N時間, col4=教材名(教科書手前で切る), col6=コマ, col7=活動"}
+  - {id: kyoiku_shakai,   publisher: 教育出版, subject: 社会, grades: [3,4,5,6], status: done, tier: 1,
+     file: "shakai/files/r6shakai{g}_nenkeihyouka_*.docx",
+     parse: "★70表で重複あり。『大単元』『配当時間 N時間』を含むヘッダ表のみで大単元・時数。直後の概要表の丸数字中単元を内容に",
+     validate: "標準一致/近似(70/88/100/105)"}
+  - {id: kyoiku_sansu,    publisher: 教育出版, subject: 算数, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "sansu/files/r6sansu{g}_nenkeihyouka_*.xlsx",
+     parse: "『（N時間）』を含む行=大単元ヘッダ(col1=単元名,●○■◎/番号接頭)。明細col1整数=小単元時数"}
+  - {id: kyoiku_ongaku,   publisher: 教育出版, subject: 音楽, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "ongaku/files/r6ongaku{g}_nenkei_*.xlsx",
+     parse: "題材(col3)+扱い時数(col2)。★数値のある全題材を計上(〈にっぽんのうた〉等も時数あり)。『年間計N』との差を『随時・帯教材(毎時扱い)』で補完",
+     validate: "年間計=標準に一致(68/70/60/60/50/50)"}
+  - {id: kyoiku_dotoku,   publisher: 教育出版, subject: 道徳, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "dotoku/files/R6dotoku{g}_nenkeihyouka_2404.xlsx",
+     parse: "col3=教材名,col4=時数。月で単元化。導入「適時」は配当外",
+     validate: "標準34/35と完全一致"}
+  - {id: kyoiku_shosha,   publisher: 教育出版, subject: 書写, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "shosha/files/r6shosha{g}_nenkeihyouka_2404.xlsx",
+     parse: "時数=col2(『N～M時間』は下限), 教材=col4"}
+  - {id: kyoiku_seikatsu, publisher: 教育出版, subject: 生活, grades: [1,2], status: done, tier: 1,
+     file: "seikatsu/files/r6seikatsu{g}_nenkeihyouka_2404.xlsx",
+     parse: "大単元ヘッダ col1 内の『指導時数：N時間』『配当時数：N時間』両対応。小単元=col3",
+     validate: "標準100%(102/105)"}
+
+  # ---- 光村図書 -----------------------------------------------------------
+  - {id: mitsumura_kokugo, publisher: 光村図書, subject: 国語, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "download_file/view/{uuid}/368   # 一覧 /kyokasho/s-kokugo/keikaku",
+     parse: "col2『N時間』=コマ。col3=コマ番号で活動集約。★1〜4年は上下巻2シート→全シート連結"}
+  - {id: mitsumura_dotoku, publisher: 光村図書, subject: 道徳, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "download_file/view/{uuid}/583",
+     parse: "7列行=実教材(col0=重点テーマ,col1=月,col2=主題名・教材名)。『適宜』コラム除外。標準34/35一致"}
+  - {id: mitsumura_eigo,   publisher: 光村図書, subject: 英語, grades: [5,6], status: done, tier: 1,
+     file: "download_file/view/{uuid}/559  (細案docx。略案xlsxは時数列なしで不可)",
+     parse: "各Unitヘッダ表に配当時間。詳細表(時/活動内容)を時ごと集約。70時間一致"}
+
+  # ---- 啓林館 -------------------------------------------------------------
+  - {id: keirinkan_rika,  publisher: 啓林館, subject: 理科, grades: [3,4,5,6], status: done, tier: 1,
+     file: "rika/file/rika_guidance_plan_standard.xlsx + rika_unit_example0{g}.xlsx(内容)",
+     parse: "配当表=単元名・時数のマスター。unit_exampleの【単元の目標】ブロック(次/時/指導計画)を名寄せして各時に問い・観察実験を付与"}
+  - {id: keirinkan_sansu, publisher: 啓林館, subject: 算数, grades: [3,4,5,6], status: done, tier: 1,
+     file: "sansu/file/sansu_guidance_plan{03..06}.xlsx",
+     parse: "★col8『時』は大単元ごとにリセットする時番号→各大単元の最大値=時数(行数ではない)。3-4年は上下巻2シート連結",
+     validate: "標準175の77-90%(予備除く)"}
+  - {id: keirinkan_eigo,  publisher: 啓林館, subject: 英語, grades: [5,6], status: done, tier: 1,
+     file: "eigo/file/eigo_guidance_plan0{5,6}.docx",
+     parse: "12列表。col1=配当時数,col2=Unit名。Unit+REVIEWを計上。標準70の約9割"}
+
+  # ---- 開隆堂 -------------------------------------------------------------
+  - {id: kairyudo_zukou,  publisher: 開隆堂, subject: 図画工作, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "nenkei_r6shozu{1_2,2,3,4,5_2,6_2}.xlsx",
+     parse: "年計シート。題材名(col9)+時数(col7)。shozu3=3・4上=3年, shozu4=4年…",
+     validate: "全学年 標準と完全一致(68/70/60/60/50/50)"}
+  - {id: kairyudo_eigo,   publisher: 開隆堂, subject: 英語, grades: [5,6], status: done, tier: 1,
+     file: "nenkei_r6shoei{5,6}.xlsx", parse: "課/配当時数(既存収録 形式F)"}
+  - {id: kairyudo_katei,  publisher: 開隆堂, subject: 家庭, grades: [5,6], status: done, tier: 1,
+     file: "nenkei_r6shoka{5,6}.xlsx",
+     parse: "題材(col3)/小題材(col4)/時数(col5,0.5刻みは四捨五入)。年計シート"}
+
+  # ---- 大日本図書 ---------------------------------------------------------
+  - {id: dainippon_rika,     publisher: 大日本図書, subject: 理科, grades: [3,4,5,6], status: done, tier: 1, file: "(既存収録 形式A 単元別シート)"}
+  - {id: dainippon_sansu,    publisher: 大日本図書, subject: 算数, grades: [3,4,5,6], status: done, tier: 1, file: "(既存収録)"}
+  - {id: dainippon_hoken,    publisher: 大日本図書, subject: 保健, grades: [3,4,5,6], status: done, tier: 1,
+     file: "taiiku/files/r6hokenSH.xlsx", parse: "学年別シート。単元=シート名,学習項目(col1)/時数(col2)/学習内容(col3)"}
+  - {id: dainippon_seikatsu, publisher: 大日本図書, subject: 生活, grades: [1,2], status: done, tier: 1,
+     file: "seikatsu/files/r6seikatsuSH.xlsx", parse: "R6_上=1年/R6_下=2年。大単元(配当時数)+小単元(col5)+時数(col6)"}
+
+  # ---- 学校図書 / 信州 (既存) ---------------------------------------------
+  - {id: gakuto_rika,  publisher: 学校図書, subject: 理科, grades: [3,4,5,6], status: done, tier: 4, file: "wp-content/uploads/r6_rika_* (形式D)"}
+  - {id: gakuto_sansu, publisher: 学校図書, subject: 算数, grades: [3,4,5,6], status: done, tier: 4, file: "wp-content/uploads/r6_sansu_* (形式J)"}
+  - {id: shinkyo_rika, publisher: 信州教育出版社, subject: 理科, grades: [3,4,5,6], status: done, tier: 1, file: "(形式E)"}
+
+  # ---- 教育芸術社 (ブラウザ方式で取得) ------------------------------------
+  - {id: kyogei_ongaku, publisher: 教育芸術社, subject: 音楽, grades: [1,2,3,4,5,6], status: done, tier: 4,
+     file: "kyogei.co.jp/download/{id}/  (1年26622..6年26632 偶数)。要 referer",
+     parse: "『題材NTop』シートの題材名(B1)+扱い時数(C2 N時間)。標準と整合"}
+
+  # ---- 未取得（要対応） ----------------------------------------------------
+  - {id: mitsumura_shosha,   publisher: 光村図書, subject: 書写, grades: [1,2,3,4,5,6], status: missing, tier: 1,
+     todo: "光村 download_file 方式。一覧 /kyokasho/s-shosha/keikaku から uuid 取得"}
+  - {id: keirinkan_seikatsu, publisher: 啓林館, subject: 生活, grades: [1,2], status: missing, tier: 1,
+     todo: "seikatsu_guidance_plan.xlsx あり。ただし横型レイアウトでパーサ要検討"}
+  - {id: mitsumura_seikatsu, publisher: 光村図書, subject: 生活, grades: [1,2], status: missing, tier: 1, todo: "/kyokasho/s-seikatsu/keikaku"}
+  - {id: gakuto_seikatsu,    publisher: 学校図書, subject: 生活, grades: [1,2], status: blocked, reason: "横型ガント表(列DE超)で信頼読取困難"}
+  - {id: shinkyo_seikatsu,   publisher: 信州教育出版社, subject: 生活, grades: [1,2], status: missing, tier: 1, todo: "要調査"}
+  - {id: nichibun_zukou,     publisher: 日本文教出版, subject: 図画工作, status: not_published, reason: "計画ファイル非配布"}
+  - {id: nichibun_shakai,    publisher: 日本文教出版, subject: 社会, status: not_published}
+  - {id: nichibun_sansu,     publisher: 日本文教出版, subject: 算数, status: not_published}
+  - {id: nichibun_dotoku,    publisher: 日本文教出版, subject: 道徳, status: not_published}
+  - {id: tosho_dotoku,       publisher: 東京書籍, subject: 道徳, status: missing, tier: 4,
+     todo: "dotoku/keikaku直下にdocx無し。別URL要ブラウザ調査"}
+  - {id: kobun_dotoku,       publisher: 光文書院, subject: 道徳, status: missing, tier: 4}
+  - {id: gakken_dotoku,      publisher: Gakken, subject: 道徳, status: missing, tier: 4}
+  - {id: sanseido_eigo,      publisher: 三省堂, subject: 英語, grades: [5,6], status: missing, tier: 4,
+     todo: "CROWN Jr.。JSサイト要ブラウザ"}
+  - {id: hoken_others,       publisher: [大修館書店, 文教社, 光文書院, Gakken], subject: 保健, status: missing, tier: 4}
