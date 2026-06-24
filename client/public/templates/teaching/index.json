@@ -2037,6 +2037,78 @@
    "periods": 35,
    "file": "nichibun_doutoku6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_sansu1",
+   "source": "日本文教出版",
+   "grade": "1年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「小学算数」",
+   "units": 25,
+   "periods": 126,
+   "file": "nichibun_sansu1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_sansu2",
+   "source": "日本文教出版",
+   "grade": "2年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「小学算数」",
+   "units": 23,
+   "periods": 161,
+   "file": "nichibun_sansu2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_sansu3",
+   "source": "日本文教出版",
+   "grade": "3年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「小学算数」",
+   "units": 25,
+   "periods": 157,
+   "file": "nichibun_sansu3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_sansu4",
+   "source": "日本文教出版",
+   "grade": "4年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「小学算数」",
+   "units": 24,
+   "periods": 168,
+   "file": "nichibun_sansu4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_sansu5",
+   "source": "日本文教出版",
+   "grade": "5年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「小学算数」",
+   "units": 25,
+   "periods": 169,
+   "file": "nichibun_sansu5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_sansu6",
+   "source": "日本文教出版",
+   "grade": "6年",
+   "subject": "算数",
+   "year": 2024,
+   "edition": "令和6年度版「小学算数」",
+   "units": 24,
+   "periods": 158,
+   "file": "nichibun_sansu6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
