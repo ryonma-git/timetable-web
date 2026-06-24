@@ -252,10 +252,23 @@ recipes:
      file: "textbooks/zuko/download/r6/r6_zuko_nenkei_hyouka.xlsx (全学年単一ファイル)",
      parse: "★『A案（2学期制・3学期制）』シートを使う。第1-6学年が横並びで固定時数。時数列=3,12,21,30,39,48 / 題材名列=6,15,24,33,42,51。『選択』題材は除外。帯別/全学年シートは範囲表記で過大になるため不可",
      validate: "全学年 標準と完全一致(68/70/60/60/50/50)"}
-  - {id: tosho_dotoku,       publisher: 東京書籍, subject: 道徳, status: missing, tier: 4,
-     todo: "dotoku/keikaku直下にdocx無し。別URL要ブラウザ調査"}
-  - {id: kobun_dotoku,       publisher: 光文書院, subject: 道徳, status: missing, tier: 4}
-  - {id: gakken_dotoku,      publisher: Gakken, subject: 道徳, status: missing, tier: 4}
-  - {id: sanseido_eigo,      publisher: 三省堂, subject: 英語, grades: [5,6], status: missing, tier: 4,
-     todo: "CROWN Jr.。JSサイト要ブラウザ"}
-  - {id: hoken_others,       publisher: [大修館書店, 文教社, 光文書院, Gakken], subject: 保健, status: missing, tier: 4}
+  - {id: tosho_dotoku,       publisher: 東京書籍, subject: 道徳, grades: [1,2,3,4,5,6], status: todo, tier: 4,
+     discovery: "東書Eネット ten.tokyo-shoseki.co.jp。『道徳 指導計画』で検索→各学年 detail/<id> (5年=118720)『年間指導計画作成資料』。個別ページからDLリンク辿る",
+     note: "他教科のような /data/ 直リンクは無い。Eネット検索UI経由"}
+  - {id: kobun_hoken,        publisher: 光文書院, subject: 保健, grades: [3,4,5,6], status: blocked, tier: 4,
+     discovery: "kobun.co.jp/teaching-taiiku/ に『学年別年間指導計画例』Excel: /Portals/0/resource/dataroom/plan/dl/r6_taiiku0{1-6}.xlsx",
+     reason: "★公開取得OKだが中身は『体育の学習』(運動領域)で、保健領域が単元として分離されていない。保健だけの抽出は別ファイル要確認"}
+  - {id: kobun_dotoku,       publisher: 光文書院, subject: 道徳, status: todo, tier: 4,
+     discovery: "kobun.co.jp/textbook/doutoku/ から指導資料ページへ。未調査"}
+  - {id: gakken_dotoku,      publisher: Gakken, subject: 道徳, status: todo, tier: 4, note: "未調査"}
+  - {id: sanseido_eigo,      publisher: 三省堂, subject: 英語, grades: [5,6], status: blocked, tier: gated,
+     reason: "★年間指導計画は『ことまな学校サポートサイト』のログイン必須(指導書購入＋学校別ID/パスワード)。公開DL不可=エージェント取得不能。採用校の認証が要る"}
+  - {id: hoken_others,       publisher: [大修館書店, 文教社, Gakken], subject: 保健, status: todo, tier: 4, note: "未調査。大修館taishukan/Gakkenは要ブラウザ"}
+
+# ---------------------------------------------------------------------------
+# 再調査の教訓（2026-06-18）: 「教科書ページ」に無くても『サポート資料/指導者用/useful/
+#   teaching-/dataroom』等の別ページに年間指導計画があることが多い(日文・教芸・光文書院で確認)。
+#   各社必ず『指導資料』『サポート』『年間指導計画例』のリンクを辿ること。
+#   ただし (a)三省堂=ログイン必須 (b)光村書写=.doc要LibreOffice (c)光文書院保健=体育全体で保健分離不可
+#   (d)学校図書生活=横型ガント、は現状ブロック。
+# ---------------------------------------------------------------------------
