@@ -2109,6 +2109,78 @@
    "periods": 158,
    "file": "nichibun_sansu6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_zuko1",
+   "source": "日本文教出版",
+   "grade": "1年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 23,
+   "periods": 68,
+   "file": "nichibun_zuko1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_zuko2",
+   "source": "日本文教出版",
+   "grade": "2年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 21,
+   "periods": 70,
+   "file": "nichibun_zuko2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_zuko3",
+   "source": "日本文教出版",
+   "grade": "3年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 20,
+   "periods": 60,
+   "file": "nichibun_zuko3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_zuko4",
+   "source": "日本文教出版",
+   "grade": "4年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 17,
+   "periods": 60,
+   "file": "nichibun_zuko4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_zuko5",
+   "source": "日本文教出版",
+   "grade": "5年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 14,
+   "periods": 50,
+   "file": "nichibun_zuko5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "nichibun_zuko6",
+   "source": "日本文教出版",
+   "grade": "6年",
+   "subject": "図画工作",
+   "year": 2024,
+   "edition": "令和6年度版「図画工作」",
+   "units": 13,
+   "periods": 50,
+   "file": "nichibun_zuko6.json",
+   "sourceKind": "publisher"
   }
  ]
 }
