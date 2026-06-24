@@ -258,7 +258,7 @@ recipes:
      file: "textbooks/zuko/download/r6/r6_zuko_nenkei_hyouka.xlsx (全学年単一ファイル)",
      parse: "★『A案（2学期制・3学期制）』シートを使う。第1-6学年が横並びで固定時数。時数列=3,12,21,30,39,48 / 題材名列=6,15,24,33,42,51。『選択』題材は除外。帯別/全学年シートは範囲表記で過大になるため不可",
      validate: "全学年 標準と完全一致(68/70/60/60/50/50)"}
-  - {id: tosho_dotoku,       publisher: 東京書籍, subject: 道徳, grades: [1,2,3,4,5,6], status: in_progress, tier: gated_login,
+  - {id: tosho_dotoku,       publisher: 東京書籍, subject: 道徳, grades_done: [3,4,6], grades_pending: [1,2,5], status: partial, tier: gated_login,
      discovery: "東書Eネット ten.tokyo-shoseki.co.jp。『道徳 指導計画』検索→各学年 detail/<id> (5年=118720,6年=118722)。Word=/ten_download/2024/2024069{NNN}.docx (5年=…240)",
      note: |
        ★重要: 東書Eネットは【会員登録・ログイン必須】。未ログインだと1年以上前の資料はDL不可(curl空だった理由)。
