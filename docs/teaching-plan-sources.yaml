@@ -94,8 +94,15 @@ publishers:
     pattern: "/es/→「指導計画案」→ /textbook/es/document/ のExcelボタン href=/download/{id}/  (要 referer)"
     note: "音楽のみ。id=26622(1年)..26632(6年) 偶数飛び。題材Topシートに題材名/扱い時数"
   日本文教出版:
-    tier: not_published
-    note: "教科書ページは検討資料・内容解説・趣意書のみ。年間指導計画を独立ファイルで配布せず(社会/算数/図工/道徳/生活/書写すべて計画ファイル0)"
+    tier: 4   # 教科ページ(/textbook/)には無く、サポート資料ページ /useful/ にある(JS描画)
+    base: https://www.nichibun-g.co.jp/textbooks
+    pattern: "{base}/{code}/download/r6/r6_{fc}_nenkei_{g}.xlsx"
+    discovery: "{base}/{code}/useful/ をブラウザで開き『年間指導計画案』のExcelリンクhrefを取得"
+    note: |
+      ★重要: 教科書ページ /textbook/ には検討資料・内容解説しか無いが、
+      『サポート資料』ページ /useful/ に年間指導計画案(Word/Excel/PDF)がある。
+      教科コードは不統一: 社会=s-shakai, 道徳=s-doutoku, 算数=sansu, 図工=zuko。
+      ファイル名 fc も不統一: shakai/doutoku/sansu/zuko。図工は学年別でなく r6_zuko_nenkei_hyouka.xlsx 単一。
   帝国書院:
     tier: no_plan
     note: 地図帳。年間指導計画なし
@@ -228,10 +235,22 @@ recipes:
   - {id: mitsumura_seikatsu, publisher: 光村図書, subject: 生活, grades: [1,2], status: missing, tier: 1, todo: "/kyokasho/s-seikatsu/keikaku"}
   - {id: gakuto_seikatsu,    publisher: 学校図書, subject: 生活, grades: [1,2], status: blocked, reason: "横型ガント表(列DE超)で信頼読取困難"}
   - {id: shinkyo_seikatsu,   publisher: 信州教育出版社, subject: 生活, grades: [1,2], status: missing, tier: 1, todo: "要調査"}
-  - {id: nichibun_zukou,     publisher: 日本文教出版, subject: 図画工作, status: not_published, reason: "計画ファイル非配布"}
-  - {id: nichibun_shakai,    publisher: 日本文教出版, subject: 社会, status: not_published}
-  - {id: nichibun_sansu,     publisher: 日本文教出版, subject: 算数, status: not_published}
-  - {id: nichibun_dotoku,    publisher: 日本文教出版, subject: 道徳, status: not_published}
+  # ---- 日本文教出版 (/useful/ 配下。ブラウザでURL特定→curl) -----------------
+  - {id: nichibun_shakai,  publisher: 日本文教出版, subject: 社会, grades: [3,4,5,6], status: done, tier: 4,
+     file: "textbooks/s-shakai/download/r6/r6_shakai_nenkei_{g}.xlsx",
+     parse: "小単元別シート。各シート r1=大単元/r2=小単元/配当時間『全N時間』。★選択単元シート(『選択』含む名)は重複ぶん除外",
+     validate: "3/5年 標準一致(70/100)、4年は選択重複で+12要調整"}
+  - {id: nichibun_sansu,   publisher: 日本文教出版, subject: 算数, grades: [1,2,3,4,5,6], status: done, tier: 4,
+     file: "textbooks/sansu/download/r6/r6_sansu_nenkei_{g}.xlsx",
+     parse: "各シートに大単元(●/番号)＋『［N時間］』。単元名直後の［N時間］を時数に",
+     validate: "標準の90-97%"}
+  - {id: nichibun_doutoku, publisher: 日本文教出版, subject: 道徳, grades: [1,2,3,4,5,6], status: done, tier: 4,
+     file: "textbooks/s-doutoku/download/r6/r6_doutoku_nenkei_{g}.xlsx",
+     parse: "学年1シート。col2=番号,col3=教材名,col1=月。1教材=1時。月で単元化。標準34/35一致"}
+  - {id: nichibun_zuko,    publisher: 日本文教出版, subject: 図画工作, grades: [1,2,3,4,5,6], status: done, tier: 4,
+     file: "textbooks/zuko/download/r6/r6_zuko_nenkei_hyouka.xlsx (全学年単一ファイル)",
+     parse: "★『A案（2学期制・3学期制）』シートを使う。第1-6学年が横並びで固定時数。時数列=3,12,21,30,39,48 / 題材名列=6,15,24,33,42,51。『選択』題材は除外。帯別/全学年シートは範囲表記で過大になるため不可",
+     validate: "全学年 標準と完全一致(68/70/60/60/50/50)"}
   - {id: tosho_dotoku,       publisher: 東京書籍, subject: 道徳, status: missing, tier: 4,
      todo: "dotoku/keikaku直下にdocx無し。別URL要ブラウザ調査"}
   - {id: kobun_dotoku,       publisher: 光文書院, subject: 道徳, status: missing, tier: 4}

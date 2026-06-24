@@ -79,6 +79,11 @@ def src_url(tid, subj, g):
     if tid.startswith("dainippon_hoken"): return f"{DAI}/taiiku/files/r6hokenSH.xlsx"
     if tid.startswith("dainippon_seikatsu"): return f"{DAI}/seikatsu/files/r6seikatsuSH.xlsx"
     if tid.startswith("kyogei_ongaku"): return f"https://www.kyogei.co.jp/download/{KYOGEI[gi]}/"
+    NB = "https://www.nichibun-g.co.jp/textbooks"
+    if tid.startswith("nichibun_shakai"): return f"{NB}/s-shakai/download/r6/r6_shakai_nenkei_{gi}.xlsx"
+    if tid.startswith("nichibun_sansu"): return f"{NB}/sansu/download/r6/r6_sansu_nenkei_{gi}.xlsx"
+    if tid.startswith("nichibun_doutoku"): return f"{NB}/s-doutoku/download/r6/r6_doutoku_nenkei_{gi}.xlsx"
+    if tid.startswith("nichibun_zuko"): return f"{NB}/zuko/download/r6/r6_zuko_nenkei_hyouka.xlsx"
     return IDX.get(f"{IDX_key(tid, subj)}", "")
 
 def IDX_key(tid, subj):
