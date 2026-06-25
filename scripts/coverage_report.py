@@ -28,8 +28,8 @@ ROSTER = {
 # 未取得の理由（np=計画を配布せず, gantt=横型で読取困難, js=JSサイト未対応, todo=容易だが未着手）
 # 注: 日本文教は /useful/ 配下に年間指導計画案あり(社会/算数/道徳/図工 取得済)
 REASON = {
-    ("生活", "学校図書"): "matrix", ("生活", "信州教育出版社"): "matrix",
-    ("生活", "光村図書"): "pdf_doc", ("生活", "啓林館"): "matrix",
+    ("生活", "学校図書"): "matrix", ("生活", "信州教育出版社"): "multi",
+    ("生活", "啓林館"): "matrix",
     ("書写", "光村図書"): "doc_var", ("英語", "三省堂"): "gated",
     ("保健", "大修館書店"): "js", ("保健", "文教社"): "js",
     ("保健", "光文書院"): "taiiku", ("保健", "Gakken"): "taiiku",
@@ -37,7 +37,7 @@ REASON = {
 REASON_LABEL = {"np": "計画未配布", "matrix": "横型マトリクスで読取困難",
                 "pdf_doc": "PDF/.doc形式", "doc_var": ".doc・学年別レイアウト差で不整合",
                 "gated": "ログイン必須(公開DL不可)", "js": "JSサイト未調査",
-                "taiiku": "体育全体に内包され保健分離不可"}
+                "taiiku": "体育全体に内包され保健分離不可", "multi": "作成資料(複数の計画例)で単一の確定時数なし"}
 
 D = os.path.join(os.path.dirname(__file__), "..", "client/public/templates/teaching")
 have = defaultdict(set)

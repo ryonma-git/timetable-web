@@ -47,6 +47,7 @@ common_gotchas:
   - "ページ番号や月番号を時数に誤計上しやすい。時数は1〜25程度・該当列に限定"
   - "「N～M時間」等の範囲表記は下限を採る。年間計が明記される場合はそれ=法定に合わせ随時題材で補完"
   - "/tmp は揮発する。再取得前提でURLを残す"
+  - "★目視メソッド: ベクター描画PDFや横型マトリクスでテキスト/表抽出できない場合、LibreOfficeでPDF化→Readツールで画像レンダリングを目視し単元名・時数を読み取る(光村生活で実証)。docx→pdf: soffice --headless --convert-to pdf。pdfplumberは pip install --break-system-packages pdfplumber"
 
 # ---------------------------------------------------------------------------
 # 発行者ごとの取得基盤（URLパターン・取得難度）
@@ -286,10 +287,10 @@ recipes:
 # ---------------------------------------------------------------------------
   - {id: shinkyo_seikatsu,   publisher: 信州教育出版社, subject: 生活, grades: [1,2], status: blocked, tier: 1,
      file: "shinkyo-pub.or.jp/r6_kyokasyo_sp/r6_seikatsu/R6_seikatsu_nenkanshidou_keikaku.docx",
-     reason: "横型マトリクス(内容項目×季節×月)。単元名×時数の行が無く信頼読取困難。合計時数のみ記載(1年90/標準102)"}
-  - {id: mitsumura_seikatsu, publisher: 光村図書, subject: 生活, grades: [1,2], status: blocked, tier: 1,
-     file: "download_file/view/d7cd0f43-8515-44e1-8ce8-3eaf06df7131/2529 (実体はPDF 688KB)",
-     reason: "PDFのみ(LibreOffice変換不可)。PDF表解析(pdfplumber)が要る"}
+     reason: "★『作成資料』で単元配列図(時数なし)＋4つの計画例(非確定)を併載。単一の確定単元×時数が存在しないため収録見送り(任意の例選択は恣意的)"}
+  - {id: mitsumura_seikatsu, publisher: 光村図書, subject: 生活, grades: [1,2], status: done, tier: 2,
+     file: "download_file/view/d7cd0f43-8515-44e1-8ce8-3eaf06df7131/2529 (PDF・p1=1年/p2=2年の年間単元配列図)",
+     parse: "★ベクターPDFでテキスト抽出不可→Readツールで目視。単元名+時間数を読取。標準完全一致(102/105)"}
 
 # 再調査の教訓（2026-06-18）: 「教科書ページ」に無くても『サポート資料/指導者用/useful/
 #   teaching-/dataroom』等の別ページに年間指導計画があることが多い(日文・教芸・光文書院で確認)。
