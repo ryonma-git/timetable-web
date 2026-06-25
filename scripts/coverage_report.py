@@ -28,15 +28,16 @@ ROSTER = {
 # 未取得の理由（np=計画を配布せず, gantt=横型で読取困難, js=JSサイト未対応, todo=容易だが未着手）
 # 注: 日本文教は /useful/ 配下に年間指導計画案あり(社会/算数/道徳/図工 取得済)
 REASON = {
-    ("生活", "学校図書"): "gantt", ("生活", "信州教育出版社"): "todo",
-    ("生活", "光村図書"): "todo", ("生活", "啓林館"): "todo(横型)",
-    ("書写", "光村図書"): "todo", ("英語", "三省堂"): "js",
-    ("道徳", "東京書籍"): "js", ("道徳", "光文書院"): "js", ("道徳", "Gakken"): "js",
+    ("生活", "学校図書"): "matrix", ("生活", "信州教育出版社"): "matrix",
+    ("生活", "光村図書"): "pdf_doc", ("生活", "啓林館"): "matrix",
+    ("書写", "光村図書"): "doc_var", ("英語", "三省堂"): "gated",
     ("保健", "大修館書店"): "js", ("保健", "文教社"): "js",
-    ("保健", "光文書院"): "js", ("保健", "Gakken"): "js",
+    ("保健", "光文書院"): "taiiku", ("保健", "Gakken"): "taiiku",
 }
-REASON_LABEL = {"np": "計画未配布", "gantt": "横型ガント読取困難", "js": "JSサイト要ブラウザ",
-                "todo": "未着手(容易)", "todo(横型)": "横型要検討"}
+REASON_LABEL = {"np": "計画未配布", "matrix": "横型マトリクスで読取困難",
+                "pdf_doc": "PDF/.doc形式", "doc_var": ".doc・学年別レイアウト差で不整合",
+                "gated": "ログイン必須(公開DL不可)", "js": "JSサイト未調査",
+                "taiiku": "体育全体に内包され保健分離不可"}
 
 D = os.path.join(os.path.dirname(__file__), "..", "client/public/templates/teaching")
 have = defaultdict(set)
