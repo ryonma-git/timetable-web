@@ -273,9 +273,12 @@ recipes:
   - {id: kobun_hoken,        publisher: 光文書院, subject: 保健, grades: [3,4,5,6], status: blocked, tier: 4,
      discovery: "kobun.co.jp/teaching-taiiku/ に『学年別年間指導計画例』Excel: /Portals/0/resource/dataroom/plan/dl/r6_taiiku0{1-6}.xlsx",
      reason: "★公開取得OKだが中身は『体育の学習』(運動領域)で、保健領域が単元として分離されていない。保健だけの抽出は別ファイル要確認"}
-  - {id: kobun_dotoku,       publisher: 光文書院, subject: 道徳, status: todo, tier: 4,
-     discovery: "kobun.co.jp/textbook/doutoku/ から指導資料ページへ。未調査"}
-  - {id: gakken_dotoku,      publisher: Gakken, subject: 道徳, status: todo, tier: 4, note: "未調査"}
+  - {id: kobun_dotoku,       publisher: 光文書院, subject: 道徳, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "kobun.co.jp/textbook2024/doutoku/pdf/nenkanshidoukeikaku_{g}nen_hyoka_202502.xlsx",
+     parse: "学年1シート。col1=月,col2=番号,col3=教材名。1教材=1時で月集計。★掲載40教材(選択・補充込で標準35より多め)"}
+  - {id: gakken_dotoku,      publisher: Gakken, subject: 道徳, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "gakkokyoiku.gakken.co.jp/r6text_doutoku/img/2024_syoudou_nenkei_202404.zip → 中の_1..6_2024.xlsx(名はShift-JIS文字化け→zipindex順)",
+     parse: "col1=月,col2=番号,col3=教材名。1教材=1時。全学年標準34/35一致"}
   - {id: sanseido_eigo,      publisher: 三省堂, subject: 英語, grades: [5,6], status: blocked, tier: gated,
      reason: "★年間指導計画は『ことまな学校サポートサイト』のログイン必須(指導書購入＋学校別ID/パスワード)。公開DL不可=エージェント取得不能。採用校の認証が要る"}
   - {id: hoken_others,       publisher: [大修館書店, 文教社, Gakken], subject: 保健, status: todo, tier: 4, note: "未調査。大修館taishukan/Gakkenは要ブラウザ"}
