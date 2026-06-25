@@ -42,6 +42,11 @@
    "kind": "publisher"
   },
   {
+   "id": "Gakken",
+   "name": "Gakken",
+   "kind": "publisher"
+  },
+  {
    "id": "教育芸術社",
    "name": "教育芸術社",
    "kind": "publisher"
@@ -2317,6 +2322,78 @@
    "units": 11,
    "periods": 40,
    "file": "kobun_doutoku6.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakken_doutoku1",
+   "source": "Gakken",
+   "grade": "1年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「新版 みんなの道徳」",
+   "units": 11,
+   "periods": 34,
+   "file": "gakken_doutoku1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakken_doutoku2",
+   "source": "Gakken",
+   "grade": "2年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「新版 みんなの道徳」",
+   "units": 11,
+   "periods": 35,
+   "file": "gakken_doutoku2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakken_doutoku3",
+   "source": "Gakken",
+   "grade": "3年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「新版 みんなの道徳」",
+   "units": 11,
+   "periods": 35,
+   "file": "gakken_doutoku3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakken_doutoku4",
+   "source": "Gakken",
+   "grade": "4年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「新版 みんなの道徳」",
+   "units": 11,
+   "periods": 35,
+   "file": "gakken_doutoku4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakken_doutoku5",
+   "source": "Gakken",
+   "grade": "5年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「新版 みんなの道徳」",
+   "units": 11,
+   "periods": 35,
+   "file": "gakken_doutoku5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakken_doutoku6",
+   "source": "Gakken",
+   "grade": "6年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「新版 みんなの道徳」",
+   "units": 11,
+   "periods": 35,
+   "file": "gakken_doutoku6.json",
    "sourceKind": "publisher"
   }
  ]
