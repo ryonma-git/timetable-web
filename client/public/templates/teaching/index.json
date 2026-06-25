@@ -2395,6 +2395,30 @@
    "periods": 35,
    "file": "gakken_doutoku6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_seikatsu1",
+   "source": "光村図書",
+   "grade": "1年",
+   "subject": "生活",
+   "year": 2024,
+   "edition": "令和6年度版「せいかつ たんけんたい」",
+   "units": 9,
+   "periods": 102,
+   "file": "mitsumura_seikatsu1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_seikatsu2",
+   "source": "光村図書",
+   "grade": "2年",
+   "subject": "生活",
+   "year": 2024,
+   "edition": "令和6年度版「せいかつ たんけんたい」",
+   "units": 9,
+   "periods": 105,
+   "file": "mitsumura_seikatsu2.json",
+   "sourceKind": "publisher"
   }
  ]
 }
