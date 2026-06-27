@@ -108,10 +108,10 @@ publishers:
     tier: no_plan
     note: 地図帳。年間指導計画なし
   三省堂:    {tier: 4, note: 英語(CROWN Jr.)。未取得。JSサイト要ブラウザ}
-  大修館書店: {tier: 4, note: 保健。未取得}
-  文教社:    {tier: 4, note: 保健。未取得}
-  光文書院:  {tier: 4, note: 保健・道徳。未取得}
-  Gakken:    {tier: 4, note: 保健・道徳。未取得}
+  大修館書店: {tier: 4, note: "保健=取得済。taishukan.co.jp/hoken/download/ の『評価規準と指導の計画例』docx(act=word id=497[3・4年]/498[5・6年])に『●配当時数：N時間』"}
+  文教社:    {tier: 4, note: "保健=取得済。bunkyosya.co.jp/r6-hoken/ annualr-r6.xlsx(体育全領域マトリクスの保健行=列63に時数)＋r6-tangenkousei-34/56.pdf(単元構成・目視)"}
+  光文書院:  {tier: 4, note: "保健=取得済(道徳は別途済)。kobun.co.jp henshushuisyo PDFの『2 対照表』に配当授業時数表。発展【】は時数－で除外"}
+  Gakken:    {tier: 4, note: "保健=取得済(道徳は別途済)。gakkokyoiku.gakken.co.jp/r6text_hoken/ 構成・内容一覧PDF(時間配当例)＋編修趣意書zip docxの『◆配当授業時数：N時間』。5年は心の健康重点版"}
 
 # ---------------------------------------------------------------------------
 # 取得・解析レシピ（done のものは実装済みパーサの規則）
