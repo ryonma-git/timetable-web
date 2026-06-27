@@ -1,0 +1,22 @@
+{
+ "id": "taishukan_hoken4",
+ "source": "大修館書店",
+ "sourceKind": "publisher",
+ "grade": "4年",
+ "subject": "保健",
+ "year": 2024,
+ "edition": "令和6年度版『新 小学校保健』3・4年",
+ "retrievedAt": "2026-06-27",
+ "note": "大修館書店『評価規準と指導の計画例』(保健3・4年)より大単元の配当時数を抽出。計4時=標準時数と完全一致。出典: taishukan.co.jp/hoken/download/ act=word id=497",
+ "units": [
+  {
+   "name": "体の成長",
+   "lessons": [
+    "体の成長",
+    "体の成長",
+    "体の成長",
+    "体の成長"
+   ]
+  }
+ ]
+}

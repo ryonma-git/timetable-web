@@ -2467,6 +2467,54 @@
    "periods": 105,
    "file": "gakuto_seikatsu2.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "taishukan_hoken3",
+   "source": "大修館書店",
+   "grade": "3年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新 小学校保健』3・4年",
+   "units": 1,
+   "periods": 4,
+   "file": "taishukan_hoken3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "taishukan_hoken4",
+   "source": "大修館書店",
+   "grade": "4年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新 小学校保健』3・4年",
+   "units": 1,
+   "periods": 4,
+   "file": "taishukan_hoken4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "taishukan_hoken5",
+   "source": "大修館書店",
+   "grade": "5年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新 小学校保健』5・6年",
+   "units": 2,
+   "periods": 8,
+   "file": "taishukan_hoken5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "taishukan_hoken6",
+   "source": "大修館書店",
+   "grade": "6年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新 小学校保健』5・6年",
+   "units": 1,
+   "periods": 8,
+   "file": "taishukan_hoken6.json",
+   "sourceKind": "publisher"
   }
  ]
 }

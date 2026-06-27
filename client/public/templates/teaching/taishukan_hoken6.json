@@ -1,0 +1,26 @@
+{
+ "id": "taishukan_hoken6",
+ "source": "大修館書店",
+ "sourceKind": "publisher",
+ "grade": "6年",
+ "subject": "保健",
+ "year": 2024,
+ "edition": "令和6年度版『新 小学校保健』5・6年",
+ "retrievedAt": "2026-06-27",
+ "note": "大修館書店『評価規準と指導の計画例』(保健5・6年)より大単元の配当時数を抽出。計8時=標準時数と完全一致。出典: taishukan.co.jp/hoken/download/ act=word id=498",
+ "units": [
+  {
+   "name": "病気の予防",
+   "lessons": [
+    "病気の予防",
+    "病気の予防",
+    "病気の予防",
+    "病気の予防",
+    "病気の予防",
+    "病気の予防",
+    "病気の予防",
+    "病気の予防"
+   ]
+  }
+ ]
+}
