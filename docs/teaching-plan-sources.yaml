@@ -238,10 +238,13 @@ recipes:
        学習活動文を拾ってしまう。3・5年は単元名良好・時数40/26で取れた。
        要対応: 学年別に単元名列/配当時数列を明示マッピングするパーサ(または各学年を個別調整)。
        時数合計の参考値: 硬筆/毛筆+N の総和が各学年30前後で東書/教出と整合。"}
-  - {id: keirinkan_seikatsu, publisher: 啓林館, subject: 生活, grades: [1,2], status: missing, tier: 1,
-     todo: "seikatsu_guidance_plan.xlsx あり。ただし横型レイアウトでパーサ要検討"}
+  - {id: keirinkan_seikatsu, publisher: 啓林館, subject: 生活, grades: [1,2], status: done, tier: 1,
+     file: "keirinkan/sho_r6/seikatsu/file/seikatsu_guidance_plan.xlsx",
+     parse: "★松尾さんの学期制指摘が的中。【3学期制】シートで単元名に併記の(N時間)を抽出。栽培/飼育の随時活動は時数表記なしで除外し91/92時"}
   - {id: mitsumura_seikatsu, publisher: 光村図書, subject: 生活, grades: [1,2], status: missing, tier: 1, todo: "/kyokasho/s-seikatsu/keikaku"}
-  - {id: gakuto_seikatsu,    publisher: 学校図書, subject: 生活, grades: [1,2], status: blocked, reason: "横型ガント表(列DE超)で信頼読取困難"}
+  - {id: gakuto_seikatsu,    publisher: 学校図書, subject: 生活, grades: [1,2], status: done, tier: 4,
+     file: "wp-content/uploads/r6_seikatsu_jou_nenkanhairetsu_2404.xlsx(1年)/r6_seikatsu2_tangen.xlsx(2年)",
+     parse: "★横型ガント表。(N)抽出は85時止まり→PDF化+目視で帯合計(時/予)復元。松尾さんの目視協働で残余単元を確定。(N+M)の予備時数Mは親単元に算入。1年102/2年105時で標準完全一致"}
   - {id: shinkyo_seikatsu,   publisher: 信州教育出版社, subject: 生活, grades: [1,2], status: missing, tier: 1, todo: "要調査"}
   # ---- 日本文教出版 (/useful/ 配下。ブラウザでURL特定→curl) -----------------
   - {id: nichibun_shakai,  publisher: 日本文教出版, subject: 社会, grades: [3,4,5,6], status: done, tier: 4,
