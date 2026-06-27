@@ -30,7 +30,6 @@ ROSTER = {
 REASON = {
     ("生活", "信州教育出版社"): "multi",
     ("書写", "光村図書"): "doc_var", ("英語", "三省堂"): "gated",
-    ("保健", "Gakken"): "taiiku",
 }
 REASON_LABEL = {"np": "計画未配布", "matrix": "横型マトリクスで読取困難",
                 "pdf_doc": "PDF/.doc形式", "doc_var": ".doc・学年別レイアウト差で不整合",

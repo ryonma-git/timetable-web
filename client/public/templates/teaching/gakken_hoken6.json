@@ -1,0 +1,61 @@
+{
+ "id": "gakken_hoken6",
+ "source": "Gakken",
+ "sourceKind": "publisher",
+ "grade": "6年",
+ "subject": "保健",
+ "year": 2024,
+ "edition": "令和6年度版『新・みんなの保健』5・6年",
+ "retrievedAt": "2026-06-27",
+ "note": "Gakken『構成・内容一覧(時間配当例)』PDF＋編修趣意書docxの『◆配当授業時数：N時間』より。5年は『心の健康』重点版(時間配当例1)。計8時=標準完全一致。出典: gakkokyoiku.gakken.co.jp/r6text_hoken/",
+ "units": [
+  {
+   "name": "病気の起こり方",
+   "lessons": [
+    "病気の起こり方"
+   ]
+  },
+  {
+   "name": "病原体と病気",
+   "lessons": [
+    "病原体と病気"
+   ]
+  },
+  {
+   "name": "生活習慣病の予防①",
+   "lessons": [
+    "生活習慣病の予防①"
+   ]
+  },
+  {
+   "name": "生活習慣病の予防②",
+   "lessons": [
+    "生活習慣病の予防②"
+   ]
+  },
+  {
+   "name": "喫煙の害",
+   "lessons": [
+    "喫煙の害"
+   ]
+  },
+  {
+   "name": "飲酒の害",
+   "lessons": [
+    "飲酒の害"
+   ]
+  },
+  {
+   "name": "薬物乱用の害",
+   "lessons": [
+    "薬物乱用の害"
+   ]
+  },
+  {
+   "name": "地域のさまざまな保健活動",
+   "lessons": [
+    "地域のさまざまな保健活動"
+   ]
+  }
+ ]
+}

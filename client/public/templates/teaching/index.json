@@ -2611,6 +2611,54 @@
    "periods": 8,
    "file": "kobun_hoken6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "gakken_hoken3",
+   "source": "Gakken",
+   "grade": "3年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新・みんなのほけん』3・4年",
+   "units": 4,
+   "periods": 4,
+   "file": "gakken_hoken3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakken_hoken4",
+   "source": "Gakken",
+   "grade": "4年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新・みんなのほけん』3・4年",
+   "units": 4,
+   "periods": 4,
+   "file": "gakken_hoken4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakken_hoken5",
+   "source": "Gakken",
+   "grade": "5年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新・みんなの保健』5・6年",
+   "units": 8,
+   "periods": 8,
+   "file": "gakken_hoken5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakken_hoken6",
+   "source": "Gakken",
+   "grade": "6年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新・みんなの保健』5・6年",
+   "units": 8,
+   "periods": 8,
+   "file": "gakken_hoken6.json",
+   "sourceKind": "publisher"
   }
  ]
 }

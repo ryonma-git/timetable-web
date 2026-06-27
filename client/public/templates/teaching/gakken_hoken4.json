@@ -1,0 +1,37 @@
+{
+ "id": "gakken_hoken4",
+ "source": "Gakken",
+ "sourceKind": "publisher",
+ "grade": "4年",
+ "subject": "保健",
+ "year": 2024,
+ "edition": "令和6年度版『新・みんなのほけん』3・4年",
+ "retrievedAt": "2026-06-27",
+ "note": "Gakken『構成・内容一覧(時間配当例)』PDF＋編修趣意書docxの『◆配当授業時数：N時間』より。5年は『心の健康』重点版(時間配当例1)。計4時=標準完全一致。出典: gakkokyoiku.gakken.co.jp/r6text_hoken/",
+ "units": [
+  {
+   "name": "変化してきたわたしの体",
+   "lessons": [
+    "変化してきたわたしの体"
+   ]
+  },
+  {
+   "name": "大人に近づく体",
+   "lessons": [
+    "大人に近づく体"
+   ]
+  },
+  {
+   "name": "体の中で起こる変化",
+   "lessons": [
+    "体の中で起こる変化"
+   ]
+  },
+  {
+   "name": "よりよい発育・発達のために",
+   "lessons": [
+    "よりよい発育・発達のために"
+   ]
+  }
+ ]
+}
