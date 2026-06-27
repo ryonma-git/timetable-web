@@ -2563,6 +2563,54 @@
    "periods": 8,
    "file": "bunkyo_hoken6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "kobun_hoken3",
+   "source": "光文書院",
+   "grade": "3年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『小学ほけん』3・4年",
+   "units": 4,
+   "periods": 4,
+   "file": "kobun_hoken3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kobun_hoken4",
+   "source": "光文書院",
+   "grade": "4年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『小学ほけん』3・4年",
+   "units": 4,
+   "periods": 4,
+   "file": "kobun_hoken4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kobun_hoken5",
+   "source": "光文書院",
+   "grade": "5年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『小学保健』5・6年",
+   "units": 8,
+   "periods": 8,
+   "file": "kobun_hoken5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "kobun_hoken6",
+   "source": "光文書院",
+   "grade": "6年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『小学保健』5・6年",
+   "units": 8,
+   "periods": 8,
+   "file": "kobun_hoken6.json",
+   "sourceKind": "publisher"
   }
  ]
 }

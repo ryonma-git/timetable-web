@@ -1,0 +1,61 @@
+{
+ "id": "kobun_hoken6",
+ "source": "光文書院",
+ "sourceKind": "publisher",
+ "grade": "6年",
+ "subject": "保健",
+ "year": 2024,
+ "edition": "令和6年度版『小学保健』5・6年",
+ "retrievedAt": "2026-06-27",
+ "note": "光文書院『編修趣意書(対照表・配当授業時数表)』PDFより。発展【】は時数－で除外。計8時=標準完全一致。出典: kobun.co.jp/Portals/0/resource/products/hoken/dl/r6_hoken_henshushuisyo_56nen.pdf",
+ "units": [
+  {
+   "name": "病気の起こり方",
+   "lessons": [
+    "病気の起こり方"
+   ]
+  },
+  {
+   "name": "感染症の予防",
+   "lessons": [
+    "感染症の予防"
+   ]
+  },
+  {
+   "name": "生活習慣病の予防①",
+   "lessons": [
+    "生活習慣病の予防①"
+   ]
+  },
+  {
+   "name": "生活習慣病の予防②",
+   "lessons": [
+    "生活習慣病の予防②"
+   ]
+  },
+  {
+   "name": "喫煙の害",
+   "lessons": [
+    "喫煙の害"
+   ]
+  },
+  {
+   "name": "飲酒の害",
+   "lessons": [
+    "飲酒の害"
+   ]
+  },
+  {
+   "name": "薬物乱用の害",
+   "lessons": [
+    "薬物乱用の害"
+   ]
+  },
+  {
+   "name": "地域の保健活動",
+   "lessons": [
+    "地域の保健活動"
+   ]
+  }
+ ]
+}

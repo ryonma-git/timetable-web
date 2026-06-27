@@ -1,0 +1,37 @@
+{
+ "id": "kobun_hoken3",
+ "source": "光文書院",
+ "sourceKind": "publisher",
+ "grade": "3年",
+ "subject": "保健",
+ "year": 2024,
+ "edition": "令和6年度版『小学ほけん』3・4年",
+ "retrievedAt": "2026-06-27",
+ "note": "光文書院『編修趣意書(対照表・配当授業時数表)』PDFより。発展【】は時数－で除外。計4時=標準完全一致。出典: kobun.co.jp/Portals/0/resource/products/hoken/dl/r6_hoken_henshushuisyo_34nen.pdf",
+ "units": [
+  {
+   "name": "けんこうって、なに？",
+   "lessons": [
+    "けんこうって、なに？"
+   ]
+  },
+  {
+   "name": "けんこうな1日の生活",
+   "lessons": [
+    "けんこうな1日の生活"
+   ]
+  },
+  {
+   "name": "体のせいけつ",
+   "lessons": [
+    "体のせいけつ"
+   ]
+  },
+  {
+   "name": "身の回りのかんきょう",
+   "lessons": [
+    "身の回りのかんきょう"
+   ]
+  }
+ ]
+}
