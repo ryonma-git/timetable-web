@@ -1,0 +1,37 @@
+{
+ "id": "bunkyo_hoken4",
+ "source": "文教社",
+ "sourceKind": "publisher",
+ "grade": "4年",
+ "subject": "保健",
+ "year": 2024,
+ "edition": "令和6年度版『新 わたしたちの保健』3・4年",
+ "retrievedAt": "2026-06-27",
+ "note": "文教社『新わたしたちの保健の単元構成』PDF(目視)＋年間指導計画例xlsxの保健領域時数より。各小単元1時・計4時=標準完全一致。出典: bunkyosya.co.jp/r6-hoken/ (annualr-r6.xlsx, r6-tangenkousei-34.pdf)",
+ "units": [
+  {
+   "name": "変化していく体とわたし",
+   "lessons": [
+    "変化していく体とわたし"
+   ]
+  },
+  {
+   "name": "思春期の体の変化",
+   "lessons": [
+    "思春期の体の変化"
+   ]
+  },
+  {
+   "name": "思春期の心の変化",
+   "lessons": [
+    "思春期の心の変化"
+   ]
+  },
+  {
+   "name": "体のよりよい発育・発達と生活のしかた",
+   "lessons": [
+    "体のよりよい発育・発達と生活のしかた"
+   ]
+  }
+ ]
+}

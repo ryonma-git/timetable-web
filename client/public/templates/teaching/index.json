@@ -2515,6 +2515,54 @@
    "periods": 8,
    "file": "taishukan_hoken6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "bunkyo_hoken3",
+   "source": "文教社",
+   "grade": "3年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新 わたしたちの保健』3・4年",
+   "units": 4,
+   "periods": 4,
+   "file": "bunkyo_hoken3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "bunkyo_hoken4",
+   "source": "文教社",
+   "grade": "4年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新 わたしたちの保健』3・4年",
+   "units": 4,
+   "periods": 4,
+   "file": "bunkyo_hoken4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "bunkyo_hoken5",
+   "source": "文教社",
+   "grade": "5年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新 わたしたちの保健』5・6年",
+   "units": 8,
+   "periods": 8,
+   "file": "bunkyo_hoken5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "bunkyo_hoken6",
+   "source": "文教社",
+   "grade": "6年",
+   "subject": "保健",
+   "year": 2024,
+   "edition": "令和6年度版『新 わたしたちの保健』5・6年",
+   "units": 8,
+   "periods": 8,
+   "file": "bunkyo_hoken6.json",
+   "sourceKind": "publisher"
   }
  ]
 }

@@ -1,0 +1,61 @@
+{
+ "id": "bunkyo_hoken5",
+ "source": "文教社",
+ "sourceKind": "publisher",
+ "grade": "5年",
+ "subject": "保健",
+ "year": 2024,
+ "edition": "令和6年度版『新 わたしたちの保健』5・6年",
+ "retrievedAt": "2026-06-27",
+ "note": "文教社『新わたしたちの保健の単元構成』PDF(目視)＋年間指導計画例xlsxの保健領域時数より。各小単元1時・計8時=標準完全一致。出典: bunkyosya.co.jp/r6-hoken/ (annualr-r6.xlsx, r6-tangenkousei-56.pdf)",
+ "units": [
+  {
+   "name": "心の発達",
+   "lessons": [
+    "心の発達"
+   ]
+  },
+  {
+   "name": "心と体の関わり合い",
+   "lessons": [
+    "心と体の関わり合い"
+   ]
+  },
+  {
+   "name": "不安やなやみへの対処①",
+   "lessons": [
+    "不安やなやみへの対処①"
+   ]
+  },
+  {
+   "name": "不安やなやみへの対処②",
+   "lessons": [
+    "不安やなやみへの対処②"
+   ]
+  },
+  {
+   "name": "学校生活でのけがの防止",
+   "lessons": [
+    "学校生活でのけがの防止"
+   ]
+  },
+  {
+   "name": "交通事故の防止",
+   "lessons": [
+    "交通事故の防止"
+   ]
+  },
+  {
+   "name": "地域での安全",
+   "lessons": [
+    "地域での安全"
+   ]
+  },
+  {
+   "name": "けがの手当て",
+   "lessons": [
+    "けがの手当て"
+   ]
+  }
+ ]
+}
