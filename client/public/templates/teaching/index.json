@@ -2659,6 +2659,78 @@
    "periods": 8,
    "file": "gakken_hoken6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_shosha1",
+   "source": "光村図書",
+   "grade": "1年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版『書写』一・二年",
+   "units": 23,
+   "periods": 37,
+   "file": "mitsumura_shosha1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_shosha2",
+   "source": "光村図書",
+   "grade": "2年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版『書写』一・二年",
+   "units": 20,
+   "periods": 35,
+   "file": "mitsumura_shosha2.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_shosha3",
+   "source": "光村図書",
+   "grade": "3年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版『書写』三・四年",
+   "units": 22,
+   "periods": 34,
+   "file": "mitsumura_shosha3.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_shosha4",
+   "source": "光村図書",
+   "grade": "4年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版『書写』三・四年",
+   "units": 18,
+   "periods": 36,
+   "file": "mitsumura_shosha4.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_shosha5",
+   "source": "光村図書",
+   "grade": "5年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版『書写』五・六年",
+   "units": 19,
+   "periods": 38,
+   "file": "mitsumura_shosha5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "mitsumura_shosha6",
+   "source": "光村図書",
+   "grade": "6年",
+   "subject": "書写",
+   "year": 2024,
+   "edition": "令和6年度版『書写』五・六年",
+   "units": 19,
+   "periods": 38,
+   "file": "mitsumura_shosha6.json",
+   "sourceKind": "publisher"
   }
  ]
 }

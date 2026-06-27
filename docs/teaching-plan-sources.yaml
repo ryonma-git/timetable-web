@@ -229,8 +229,9 @@ recipes:
      parse: "『題材NTop』シートの題材名(B1)+扱い時数(C2 N時間)。標準と整合"}
 
   # ---- 未取得（要対応） ----------------------------------------------------
-  - {id: mitsumura_shosha,   publisher: 光村図書, subject: 書写, grades: [1,2,3,4,5,6], status: partial, tier: 1,
-     file: "download_file/view/{uuid}/549  # 一覧 /kyokasho/s-shosha/keikaku。1年6784ecec/2年813a5690/3年2855cd91/4年6f58a6e6/5年2bf3e718/6年345e178f",
+  - {id: mitsumura_shosha,   publisher: 光村図書, subject: 書写, grades: [1,2,3,4,5,6], status: done, tier: 1,
+     file: "一覧 /kyokasho/s-shosha/keikaku のWordを各学年DL(SPA・要ブラウザ)。06s_sho_nenkei_p12-18等",
+     parse: "★松尾さんの目視協働で攻略。.docは(1)1・2年/3・4年/5・6年の合本→col0学年列で分割 (2)毛筆=毛/硬筆=硬の接頭辞つき時数→合算 (3)表0(配当時数ヘッダ)のみ採用し表1(評価規準)は無視。範囲は下限・適宜は1時算入で34〜38時。3社で書写整合",
      reason: |
        ファイルは旧.doc(OLE)。LibreOffice導入済→`soffice --headless --convert-to docx`でクリーンな表に変換できる
        (表: 学年/月/ページ/単元名/教材名/学習指導要領/配当時数。配当時数は『毛N』『硬N』『適宜』)。
