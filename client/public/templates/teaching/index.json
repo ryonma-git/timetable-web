@@ -2443,6 +2443,30 @@
    "periods": 92,
    "file": "keirinkan_seikatsu2.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "gakuto_seikatsu1",
+   "source": "学校図書",
+   "grade": "1年",
+   "subject": "生活",
+   "year": 2024,
+   "edition": "令和6年度版「あたらしい せいかつ 上」",
+   "units": 25,
+   "periods": 102,
+   "file": "gakuto_seikatsu1.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "gakuto_seikatsu2",
+   "source": "学校図書",
+   "grade": "2年",
+   "subject": "生活",
+   "year": 2024,
+   "edition": "令和6年度版「あたらしい せいかつ 下」",
+   "units": 25,
+   "periods": 105,
+   "file": "gakuto_seikatsu2.json",
+   "sourceKind": "publisher"
   }
  ]
 }
