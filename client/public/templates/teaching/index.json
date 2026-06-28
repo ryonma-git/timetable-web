@@ -2731,6 +2731,30 @@
    "periods": 38,
    "file": "mitsumura_shosha6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "sanseido_eigo5",
+   "source": "三省堂",
+   "grade": "5年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版『Kids CROWN(キッズクラウン)』",
+   "units": 22,
+   "periods": 135,
+   "file": "sanseido_eigo5.json",
+   "sourceKind": "publisher"
+  },
+  {
+   "id": "sanseido_eigo6",
+   "source": "三省堂",
+   "grade": "6年",
+   "subject": "英語",
+   "year": 2024,
+   "edition": "令和6年度版『Kids CROWN(キッズクラウン)』",
+   "units": 24,
+   "periods": 138,
+   "file": "sanseido_eigo6.json",
+   "sourceKind": "publisher"
   }
  ]
 }

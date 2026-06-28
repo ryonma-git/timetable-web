@@ -1,0 +1,213 @@
+{
+ "id": "sanseido_eigo5",
+ "source": "三省堂",
+ "sourceKind": "publisher",
+ "grade": "5年",
+ "subject": "英語",
+ "year": 2024,
+ "edition": "令和6年度版『Kids CROWN(キッズクラウン)』",
+ "retrievedAt": "2026-06-28",
+ "note": "三省堂『学習・指導内容一覧(年間指導計画)』docxより。Lesson/箇所ごとの配当時間を抽出。計70時=外国語の法定。出典: tb.sanseido-publ.co.jp/06cjpr/ (06crown_jrN_curric.docx)",
+ "units": [
+  {
+   "name": "英語で言ってみよう",
+   "lessons": [
+    "英語で言ってみよう",
+    "英語で言ってみよう",
+    "英語で言ってみよう"
+   ]
+  },
+  {
+   "name": "HOP 1 Hello!",
+   "lessons": [
+    "HOP 1 Hello!"
+   ]
+  },
+  {
+   "name": "STEP L1 My name is Jun",
+   "lessons": [
+    "STEP L1 My name is Jun",
+    "STEP L1 My name is Jun",
+    "STEP L1 My name is Jun",
+    "STEP L1 My name is Jun",
+    "STEP L1 My name is Jun"
+   ]
+  },
+  {
+   "name": "ABC Fun Box 1 アルファベットの形の認識と名称読み／BINGO（歌）／ローマ字 ",
+   "lessons": [
+    "ABC Fun Box 1 アルファベットの形の認識と名称読み／BINGO（歌）／ローマ字 "
+   ]
+  },
+  {
+   "name": "STEP L2 I play soccer on Tuesdays",
+   "lessons": [
+    "STEP L2 I play soccer on Tuesdays",
+    "STEP L2 I play soccer on Tuesdays",
+    "STEP L2 I play soccer on Tuesdays",
+    "STEP L2 I play soccer on Tuesdays",
+    "STEP L2 I play soccer on Tuesdays",
+    "STEP L2 I play soccer on Tuesdays",
+    "STEP L2 I play soccer on Tuesdays"
+   ]
+  },
+  {
+   "name": "JUMP 1 My name is Waka",
+   "lessons": [
+    "JUMP 1 My name is Waka",
+    "JUMP 1 My name is Waka"
+   ]
+  },
+  {
+   "name": "ABC Fun Box 2 アルファベットの音読み（ABC Chant）／初頭音／小文字の形",
+   "lessons": [
+    "ABC Fun Box 2 アルファベットの音読み（ABC Chant）／初頭音／小文字の形"
+   ]
+  },
+  {
+   "name": "ABC Fun Box 1・2まとめ ◎",
+   "lessons": [
+    "ABC Fun Box 1・2まとめ ◎"
+   ]
+  },
+  {
+   "name": "Story Time 1 世界のおはなし",
+   "lessons": [
+    "Story Time 1 世界のおはなし"
+   ]
+  },
+  {
+   "name": "HOP 2 This is my hero",
+   "lessons": [
+    "HOP 2 This is my hero"
+   ]
+  },
+  {
+   "name": "STEP L3 He is my brother",
+   "lessons": [
+    "STEP L3 He is my brother",
+    "STEP L3 He is my brother",
+    "STEP L3 He is my brother",
+    "STEP L3 He is my brother",
+    "STEP L3 He is my brother"
+   ]
+  },
+  {
+   "name": "STEP L4 I can jump high",
+   "lessons": [
+    "STEP L4 I can jump high",
+    "STEP L4 I can jump high",
+    "STEP L4 I can jump high",
+    "STEP L4 I can jump high",
+    "STEP L4 I can jump high",
+    "STEP L4 I can jump high",
+    "STEP L4 I can jump high"
+   ]
+  },
+  {
+   "name": "ABC Fun Box 3 単語とそれを表す絵の線結び（単語の認識）／Pease Porri",
+   "lessons": [
+    "ABC Fun Box 3 単語とそれを表す絵の線結び（単語の認識）／Pease Porri"
+   ]
+  },
+  {
+   "name": "STEP L5 She can bake cookies",
+   "lessons": [
+    "STEP L5 She can bake cookies",
+    "STEP L5 She can bake cookies",
+    "STEP L5 She can bake cookies",
+    "STEP L5 She can bake cookies",
+    "STEP L5 She can bake cookies",
+    "STEP L5 She can bake cookies",
+    "STEP L5 She can bake cookies"
+   ]
+  },
+  {
+   "name": "JUMP 2 She is my hero",
+   "lessons": [
+    "JUMP 2 She is my hero",
+    "JUMP 2 She is my hero"
+   ]
+  },
+  {
+   "name": "Try 一日の生活",
+   "lessons": [
+    "Try 一日の生活",
+    "Try 一日の生活",
+    "Try 一日の生活"
+   ]
+  },
+  {
+   "name": "Story Time 2 ケンの冒険",
+   "lessons": [
+    "Story Time 2 ケンの冒険"
+   ]
+  },
+  {
+   "name": "世界のおはなし",
+   "lessons": [
+    "世界のおはなし"
+   ]
+  },
+  {
+   "name": "HOP 3 Let’s go to Thailand",
+   "lessons": [
+    "HOP 3 Let’s go to Thailand"
+   ]
+  },
+  {
+   "name": "STEP L6 It is in Fukui",
+   "lessons": [
+    "STEP L6 It is in Fukui",
+    "STEP L6 It is in Fukui",
+    "STEP L6 It is in Fukui",
+    "STEP L6 It is in Fukui",
+    "STEP L6 It is in Fukui",
+    "STEP L6 It is in Fukui",
+    "STEP L6 It is in Fukui"
+   ]
+  },
+  {
+   "name": "STEP L7 I want to go to Kenya",
+   "lessons": [
+    "STEP L7 I want to go to Kenya",
+    "STEP L7 I want to go to Kenya",
+    "STEP L7 I want to go to Kenya",
+    "STEP L7 I want to go to Kenya",
+    "STEP L7 I want to go to Kenya"
+   ]
+  },
+  {
+   "name": "ABC Fun Box 4 単語の始まりの音を表す文字を書く／Down by the Bay",
+   "lessons": [
+    "ABC Fun Box 4 単語の始まりの音を表す文字を書く／Down by the Bay"
+   ]
+  },
+  {
+   "name": "JUMP 3 You can swim in January",
+   "lessons": [
+    "JUMP 3 You can swim in January",
+    "JUMP 3 You can swim in January"
+   ]
+  },
+  {
+   "name": "Try プログラミング",
+   "lessons": [
+    "Try プログラミング",
+    "Try プログラミング"
+   ]
+  },
+  {
+   "name": "Story Time 3 ケンの冒険",
+   "lessons": [
+    "Story Time 3 ケンの冒険"
+   ]
+  },
+  {
+   "name": "世界のおはなし",
+   "lessons": [
+    "世界のおはなし"
+   ]
+  }
+ ]
+}

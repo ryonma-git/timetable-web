@@ -1,0 +1,214 @@
+{
+ "id": "sanseido_eigo6",
+ "source": "三省堂",
+ "sourceKind": "publisher",
+ "grade": "6年",
+ "subject": "英語",
+ "year": 2024,
+ "edition": "令和6年度版『Kids CROWN(キッズクラウン)』",
+ "retrievedAt": "2026-06-28",
+ "note": "三省堂『学習・指導内容一覧(年間指導計画)』docxより。Lesson/箇所ごとの配当時間を抽出。各項目合計71時(印字の法定総時数は70時。資料に『JUMPを3〜4時間とする場合はTry/Story Timeで調整』と明記され1時間分は調整余地)。Hello World(―)は0時で除外。出典: tb.sanseido-publ.co.jp/06cjpr/ (06crown_jr6_curric.docx)",
+ "units": [
+  {
+   "name": "英語で言ってみよう",
+   "lessons": [
+    "英語で言ってみよう",
+    "英語で言ってみよう"
+   ]
+  },
+  {
+   "name": "HOP 1 This is our town",
+   "lessons": [
+    "HOP 1 This is our town"
+   ]
+  },
+  {
+   "name": "STEP L1 We are from India",
+   "lessons": [
+    "STEP L1 We are from India",
+    "STEP L1 We are from India",
+    "STEP L1 We are from India",
+    "STEP L1 We are from India",
+    "STEP L1 We are from India"
+   ]
+  },
+  {
+   "name": "STEP L2 We have Children’s Day in May",
+   "lessons": [
+    "STEP L2 We have Children’s Day in May",
+    "STEP L2 We have Children’s Day in May",
+    "STEP L2 We have Children’s Day in May",
+    "STEP L2 We have Children’s Day in May",
+    "STEP L2 We have Children’s Day in May",
+    "STEP L2 We have Children’s Day in May",
+    "STEP L2 We have Children’s Day in May"
+   ]
+  },
+  {
+   "name": "ABC Fun Box 1 絵をたよりに単語を読む／Mary Had a Little La",
+   "lessons": [
+    "ABC Fun Box 1 絵をたよりに単語を読む／Mary Had a Little La"
+   ]
+  },
+  {
+   "name": "JUMP 1 We can enjoy skiing",
+   "lessons": [
+    "JUMP 1 We can enjoy skiing",
+    "JUMP 1 We can enjoy skiing"
+   ]
+  },
+  {
+   "name": "Try 道案内",
+   "lessons": [
+    "Try 道案内",
+    "Try 道案内",
+    "Try 道案内"
+   ]
+  },
+  {
+   "name": "Story Time 1 ケンの冒険",
+   "lessons": [
+    "Story Time 1 ケンの冒険"
+   ]
+  },
+  {
+   "name": "世界のおはなし",
+   "lessons": [
+    "世界のおはなし"
+   ]
+  },
+  {
+   "name": "HOP 2 My Memories",
+   "lessons": [
+    "HOP 2 My Memories"
+   ]
+  },
+  {
+   "name": "STEP L3 I went to the beach",
+   "lessons": [
+    "STEP L3 I went to the beach",
+    "STEP L3 I went to the beach",
+    "STEP L3 I went to the beach",
+    "STEP L3 I went to the beach",
+    "STEP L3 I went to the beach",
+    "STEP L3 I went to the beach",
+    "STEP L3 I went to the beach"
+   ]
+  },
+  {
+   "name": "ABC Fun Box 2 単語の仲間集め・語順／Take Me Out to the Ba",
+   "lessons": [
+    "ABC Fun Box 2 単語の仲間集め・語順／Take Me Out to the Ba"
+   ]
+  },
+  {
+   "name": "STEP L4 It was green",
+   "lessons": [
+    "STEP L4 It was green",
+    "STEP L4 It was green",
+    "STEP L4 It was green",
+    "STEP L4 It was green",
+    "STEP L4 It was green"
+   ]
+  },
+  {
+   "name": "STEP L5 We had the sports day in October",
+   "lessons": [
+    "STEP L5 We had the sports day in October",
+    "STEP L5 We had the sports day in October",
+    "STEP L5 We had the sports day in October",
+    "STEP L5 We had the sports day in October",
+    "STEP L5 We had the sports day in October",
+    "STEP L5 We had the sports day in October",
+    "STEP L5 We had the sports day in October"
+   ]
+  },
+  {
+   "name": "JUMP 2 My best memory is the school trip",
+   "lessons": [
+    "JUMP 2 My best memory is the school trip",
+    "JUMP 2 My best memory is the school trip"
+   ]
+  },
+  {
+   "name": "Try 買い物",
+   "lessons": [
+    "Try 買い物",
+    "Try 買い物",
+    "Try 買い物"
+   ]
+  },
+  {
+   "name": "Story Time 2 ケンの冒険",
+   "lessons": [
+    "Story Time 2 ケンの冒険"
+   ]
+  },
+  {
+   "name": "世界のおはなし",
+   "lessons": [
+    "世界のおはなし"
+   ]
+  },
+  {
+   "name": "HOP 3 My Dream",
+   "lessons": [
+    "HOP 3 My Dream"
+   ]
+  },
+  {
+   "name": "STEP L6 I want to be a singer",
+   "lessons": [
+    "STEP L6 I want to be a singer",
+    "STEP L6 I want to be a singer",
+    "STEP L6 I want to be a singer",
+    "STEP L6 I want to be a singer",
+    "STEP L6 I want to be a singer",
+    "STEP L6 I want to be a singer",
+    "STEP L6 I want to be a singer"
+   ]
+  },
+  {
+   "name": "STEP L7 I want to join the brass band",
+   "lessons": [
+    "STEP L7 I want to join the brass band",
+    "STEP L7 I want to join the brass band",
+    "STEP L7 I want to join the brass band",
+    "STEP L7 I want to join the brass band",
+    "STEP L7 I want to join the brass band"
+   ]
+  },
+  {
+   "name": "ABC Fun Box 3 語順・つながりのある文章／I Love the Mountain",
+   "lessons": [
+    "ABC Fun Box 3 語順・つながりのある文章／I Love the Mountain"
+   ]
+  },
+  {
+   "name": "JUMP 3 This is my dream!「これからのわたし」スピーチをする／友だちの",
+   "lessons": [
+    "JUMP 3 This is my dream!「これからのわたし」スピーチをする／友だちの",
+    "JUMP 3 This is my dream!「これからのわたし」スピーチをする／友だちの"
+   ]
+  },
+  {
+   "name": "Story Time 3 ケンの冒険",
+   "lessons": [
+    "Story Time 3 ケンの冒険"
+   ]
+  },
+  {
+   "name": "世界のおはなし",
+   "lessons": [
+    "世界のおはなし"
+   ]
+  },
+  {
+   "name": "Try This is me!",
+   "lessons": [
+    "Try This is me!",
+    "Try This is me!"
+   ]
+  }
+ ]
+}
