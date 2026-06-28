@@ -17,7 +17,8 @@ import { toast } from "sonner";
 import { exportTeachingPlansToExcel, importTeachingPlansFromExcel } from "@/lib/teachingPlanExcel";
 import { TeachingPlanTemplateDialog } from "@/components/TeachingPlanTemplateDialog";
 import { TeachingPlanPublisherImportDialog } from "@/components/TeachingPlanPublisherImportDialog";
-import { BookMarked, Building2 } from "lucide-react";
+import { TeachingPlanRefreshDialog } from "@/components/TeachingPlanRefreshDialog";
+import { BookMarked, Building2, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -1584,6 +1585,7 @@ export function TeachingPlanView() {
   // ── テンプレートから取り込む ───────────────────────────────
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showPublisherDialog, setShowPublisherDialog] = useState(false);
+  const [showRefreshDialog, setShowRefreshDialog] = useState(false);
 
   const handleExcelExport = useCallback(async () => {
     if (teachingPlans.length === 0) {
@@ -1761,6 +1763,16 @@ export function TeachingPlanView() {
           >
             <Building2 size={13} className="text-indigo-600" />
             {t("pub.button")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs gap-1.5"
+            onClick={() => setShowRefreshDialog(true)}
+            title="各社の年間指導計画の改訂をチェックし、変更分の差し替えや要対応(ログイン/学校請求)を案内します"
+          >
+            <RefreshCw size={13} className="text-indigo-600" />
+            取得ブラウザ
           </Button>
           <input
             ref={excelInputRef}
@@ -2001,6 +2013,11 @@ export function TeachingPlanView() {
         onClose={() => setShowPublisherDialog(false)}
         getPlan={(id) => planMap.get(id) ?? null}
         onApply={(plan) => { upsertTeachingPlan(plan); setSelectedId(plan.id); }}
+      />
+
+      <TeachingPlanRefreshDialog
+        open={showRefreshDialog}
+        onClose={() => setShowRefreshDialog(false)}
       />
 
       <Dialog open={!!confirmDeleteId} onOpenChange={() => setConfirmDeleteId(null)}>

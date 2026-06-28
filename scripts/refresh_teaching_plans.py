@@ -98,6 +98,7 @@ DRIVER = [
     {"source": "東京書籍", "subject": "英語", "method": "auto",
      "url_pattern": B_TEN + "/eigo/data/*.docx"},
     {"source": "東京書籍", "subject": "道徳", "method": "login",
+     "login_url": "https://www.tokyo-shoseki.co.jp/e-net/",
      "user_action": (
          "東京書籍『道徳』の年間指導計画は東書Eネット(ten.tokyo-shoseki.co.jp)の"
          "【会員ログイン必須】領域にあります。ログインしてから再実行してください。"
@@ -120,8 +121,10 @@ DRIVER = [
     {"source": "光村図書", "subject": "国語", "method": "auto"},
     {"source": "光村図書", "subject": "道徳", "method": "auto"},
     {"source": "光村図書", "subject": "生活", "method": "browser",
+     "open_url": "https://www.mitsumura-tosho.co.jp/kyokasho/s-seikatsu/keikaku",
      "user_action": "光村『生活』はベクターPDF。LibreOfficeでPDF化→目視で読む(Claudeが実施)。"},
     {"source": "光村図書", "subject": "書写", "method": "browser",
+     "open_url": "https://www.mitsumura-tosho.co.jp/kyokasho/s-shosha/keikaku",
      "user_action": (
          "光村『書写』は配布ページが完全なJS-SPA(/kyokasho/s-shosha/keikaku)。"
          "Chrome拡張で各学年のWordをクリックDLし、~/Downloads から解析する。"
@@ -152,6 +155,7 @@ DRIVER = [
     {"source": "学校図書", "subject": "理科", "method": "auto", "curl_insecure": True},
     {"source": "学校図書", "subject": "算数", "method": "auto", "curl_insecure": True},
     {"source": "学校図書", "subject": "生活", "method": "browser",
+     "open_url": "https://r6-sho.gakuto-plus.jp/seikatsu/",
      "urls": {1: "https://r6-sho.gakuto-plus.jp/wp-content/uploads/r6_seikatsu_jou_nenkanhairetsu_2404.xlsx",
               2: "https://r6-sho.gakuto-plus.jp/wp-content/uploads/r6_seikatsu2_tangen.xlsx"},
      "user_action": "学校図書『生活』は横型ガント表。xlsxは取得できるが目視復元が必要(Claudeが実施)。"},
@@ -159,6 +163,7 @@ DRIVER = [
     # ---- 信州教育出版社 ----
     {"source": "信州教育出版社", "subject": "理科", "method": "auto"},
     {"source": "信州教育出版社", "subject": "生活", "method": "school_request", "recurring": True,
+     "open_url": "https://www.shinkyo-pub.or.jp/",
      "user_action": (
          "信州教育出版社『生活』は公開資料が“中心活動別の計画例”のみで、単元×配当時数の"
          "確定表がありません。学校の立場で『時数入りの正式な年間指導計画』を請求してください。"
@@ -408,6 +413,8 @@ def cmd_check(args):
     else:
         print("\n[時数バリデーション] 逸脱なし ✓")
 
+    import datetime
+    report["_generatedAt"] = datetime.datetime.now().isoformat(timespec="seconds")
     save_json(REPORT, report)
     if not args.offline:
         save_json(STATE, new_state)
@@ -486,6 +493,68 @@ def cmd_package(args):
     print("→ check の『変更あり』社のテンプレートを再取得・更新し、このパックを配布してください。")
 
 
+def cmd_ui(args):
+    """取得ブラウザ(アプリUI)向けに、社×教科の状態を1つのJSONで標準出力へ。
+
+    直近の check 結果(refresh-report.json)と DRIVER を統合し、カードに必要な
+    status / アクション(login/open) / 校種(level) をUI都合の形にして返す。
+    """
+    inv = load_inventory()
+    report = load_json(REPORT, {})
+
+    # 状態の逆引き表（auto 社の改訂検知結果）
+    auto_status = {}
+    for r in report.get("changed", []):
+        auto_status[r["key"]] = ("changed", r.get("changed", []))
+    for r in report.get("unchanged", []):
+        auto_status[r["key"]] = ("unchanged", [])
+    for r in report.get("fetch_fail", []):
+        auto_status[r["key"]] = ("fetch_fail", [])
+    no_url = {e["key"] for e in report.get("auto_no_url", [])}
+
+    cards = []
+    for d in DRIVER:
+        key = f"{d['source']}/{d['subject']}"
+        have = inv.get((d["source"], d["subject"]), [])
+        method = d["method"]
+        if method == "auto":
+            st, chg = auto_status.get(key, ("unknown", []))
+            if key in no_url and key not in auto_status:
+                st = "no_url"
+            status = st  # changed/unchanged/fetch_fail/no_url/unknown
+        else:
+            status = method  # login/school_request/browser
+        action_kind, action_url = None, None
+        if d.get("login_url"):
+            action_kind, action_url = "login", d["login_url"]
+        elif d.get("open_url"):
+            action_kind, action_url = "open", d["open_url"]
+        cards.append({
+            "level": d.get("level", "小学校"),
+            "source": d["source"],
+            "subject": d["subject"],
+            "method": method,
+            "methodLabel": METHOD_LABEL[method],
+            "status": status,
+            "haveGrades": sorted(grade_int(t["grade"]) for t in have),
+            "changedGrades": chg if method == "auto" else [],
+            "missingGrades": d.get("missing_grades", []),
+            "recurring": bool(d.get("recurring")),
+            "userAction": d.get("user_action", ""),
+            "actionKind": action_kind,
+            "actionUrl": action_url,
+            "note": d.get("note", ""),
+        })
+    out = {
+        "generatedAt": report.get("_generatedAt"),
+        "hasBaseline": os.path.exists(STATE),
+        "levels": sorted({c["level"] for c in cards}),
+        "validation": report.get("validation", []),
+        "cards": cards,
+    }
+    print(json.dumps(out, ensure_ascii=False))
+
+
 def main():
     ap = argparse.ArgumentParser(description="年間指導計画 改訂チェック&差し替えエンジン")
     sub = ap.add_subparsers(dest="cmd")
@@ -493,6 +562,7 @@ def main():
     c.add_argument("--offline", action="store_true", help="取得せず分類/検証のみ")
     sub.add_parser("baseline", help="現在のソースを基準値として保存")
     sub.add_parser("manifest", help="acquisition.json を書き出す")
+    sub.add_parser("ui", help="取得ブラウザ向けに状態をJSONで標準出力")
     p = sub.add_parser("package", help="令和N年度パッケージ雛形を生成")
     p.add_argument("year", type=int, help="西暦(例: 2028)")
     args = ap.parse_args()
@@ -502,6 +572,8 @@ def main():
         cmd_baseline(args)
     elif args.cmd == "manifest":
         cmd_manifest(args)
+    elif args.cmd == "ui":
+        cmd_ui(args)
     elif args.cmd == "package":
         cmd_package(args)
     else:

@@ -67,7 +67,27 @@ Claude に対しては「**指導計画の改訂チェックを走らせて**」
 4. すべて反映したら `package <西暦>` で新年度パッケージを生成し、アプリの「パックを読み込む」から配布。
 5. 取り込み後に `baseline` を実行し、次の改訂サイクルの基準を更新。
 
+## アプリ内「取得ブラウザ」（CLI不要）
+
+CLI を触らなくても、アプリの指導計画画面のツールバー「**取得ブラウザ**」ボタンから実行できる。
+
+- UI: `client/src/components/TeachingPlanRefreshDialog.tsx`（クライアント: `client/src/lib/teachingPlanRefresh.ts`）
+- バックエンド・ブリッジ: `server/refreshEngine.ts` が `scripts/refresh_teaching_plans.py` を子プロセス起動。
+  - dev（Vite）: `vite.config.ts` の `refreshApiPlugin`（middleware）。
+  - 本番（express）: `server/index.ts` の `/api/refresh/:action`。
+  - エンドポイント: `GET /api/refresh/health|sources|run`。`run` が配布元を再取得して改訂検知。
+- 表示: 校種タブ → 教科ごとに社カード。各社のステータスを
+  - 🟢 **変更なし** / ⚠ **変更あり**（→ Claude に再取得依頼の文言を表示）/ ⏳ **取得中**
+  - 🔒 **ログインが必要**（[ログイン]ボタン → 配布元のログインページを新規タブで開く）
+  - 🏫 **学校から請求**（毎年度再発バッジ）/ 🌐 **ブラウザ操作**（[サイトを開く]ボタン）
+  - ★欠番（例: 東京書籍 道徳5年）も明示。
+- API が無い静的配信環境では「この環境では取得を実行できません」と案内（公開デモでの誤操作防止）。Mac/iOS ラッパーからは同じ HTTP API を叩けばよい。
+
+## 校種の拡張（中学校など）
+
+`DRIVER`（`scripts/refresh_teaching_plans.py`）の各エントリは `level`（既定 `"小学校"`）を持つ。
+中学版を作る時は **中学校の発行者×教科を `level: "中学校"` で追記するだけ**で、UI に「中学校」タブが自動で増え、同じ改訂チェック・要対応提示・パッケージ生成が効く。標準時数（`STANDARD`）も校種別に拡張する。
+
 ## 将来のアプリ同梱像
-- アプリの拡張機能パネルに「指導計画を最新化」ボタンを置き、本エンジンのサービス層版を呼ぶ。
-- `auto` 社はバックグラウンドで差分検知し、`login`/`school_request`/`browser` は「あなたの操作が必要です」カードとして提示。
+- 拡張機能パネルに常駐させ、`auto` 社はバックグラウンドで差分検知、要対応はカード提示。
 - 生成した新年度パッケージは既存の ExtensionPack ローダー（`{version,packId,name,templates}`）でそのまま取り込める。

@@ -134,6 +134,7 @@
    "source": "東京書籍",
    "subject": "道徳",
    "method": "login",
+   "login_url": "https://www.tokyo-shoseki.co.jp/e-net/",
    "user_action": "東京書籍『道徳』の年間指導計画は東書Eネット(ten.tokyo-shoseki.co.jp)の【会員ログイン必須】領域にあります。ログインしてから再実行してください。★既知の不具合: 5年の細案ページ(detail/118720)が6年ファイル(2024069240.docx)に差し替わっており、5年が取得できません。営業担当へ修正依頼が必要です（5年は現状欠番）。",
    "missing_grades": [
     5
@@ -198,12 +199,14 @@
    "source": "光村図書",
    "subject": "生活",
    "method": "browser",
+   "open_url": "https://www.mitsumura-tosho.co.jp/kyokasho/s-seikatsu/keikaku",
    "user_action": "光村『生活』はベクターPDF。LibreOfficeでPDF化→目視で読む(Claudeが実施)。"
   },
   {
    "source": "光村図書",
    "subject": "書写",
    "method": "browser",
+   "open_url": "https://www.mitsumura-tosho.co.jp/kyokasho/s-shosha/keikaku",
    "user_action": "光村『書写』は配布ページが完全なJS-SPA(/kyokasho/s-shosha/keikaku)。Chrome拡張で各学年のWordをクリックDLし、~/Downloads から解析する。★.docは(1)1・2/3・4/5・6年の合本→学年列で分割 (2)毛筆/硬筆接頭辞つき時数→合算 で読む。"
   },
   {
@@ -287,6 +290,7 @@
    "source": "学校図書",
    "subject": "生活",
    "method": "browser",
+   "open_url": "https://r6-sho.gakuto-plus.jp/seikatsu/",
    "urls": {
     "1": "https://r6-sho.gakuto-plus.jp/wp-content/uploads/r6_seikatsu_jou_nenkanhairetsu_2404.xlsx",
     "2": "https://r6-sho.gakuto-plus.jp/wp-content/uploads/r6_seikatsu2_tangen.xlsx"
@@ -303,6 +307,7 @@
    "subject": "生活",
    "method": "school_request",
    "recurring": true,
+   "open_url": "https://www.shinkyo-pub.or.jp/",
    "user_action": "信州教育出版社『生活』は公開資料が“中心活動別の計画例”のみで、単元×配当時数の確定表がありません。学校の立場で『時数入りの正式な年間指導計画』を請求してください。★請求しても時数入りが得られない場合は取得不能として扱い、ユーザー入力 or 他社流用で代替します。",
    "missing_grades": [
     1,

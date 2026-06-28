@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { handleRefresh, actionFromPath } from "./refreshEngine";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,6 +10,17 @@ const __dirname = path.dirname(__filename);
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // 年間指導計画「取得ブラウザ」API（本番）。scripts/ が同梱されている場合に動作。
+  app.get("/api/refresh/:action", async (req, res) => {
+    const action = actionFromPath(`/${req.params.action}`);
+    if (!action) {
+      res.status(404).json({ ok: false, error: "unknown_action" });
+      return;
+    }
+    const { status, json } = await handleRefresh(action);
+    res.status(status).json(json);
+  });
 
   // Serve static files from dist/public in production
   const staticPath =

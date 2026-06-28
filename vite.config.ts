@@ -150,7 +150,36 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+// 年間指導計画「取得ブラウザ」API（dev）。アプリからCLIなしで改訂チェックを起動する。
+function refreshApiPlugin(): Plugin {
+  return {
+    name: "teaching-plan-refresh-api",
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use("/api/refresh", async (req, res) => {
+        try {
+          const { handleRefresh, actionFromPath } = await import("./server/refreshEngine");
+          const action = actionFromPath((req.url || "").split("?")[0]);
+          if (!action) {
+            res.statusCode = 404;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ ok: false, error: "unknown_action" }));
+            return;
+          }
+          const { status, json } = await handleRefresh(action);
+          res.statusCode = status;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify(json));
+        } catch (e) {
+          res.statusCode = 500;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ ok: false, error: String((e as Error).message || e) }));
+        }
+      });
+    },
+  };
+}
+
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), refreshApiPlugin()];
 
 export default defineConfig({
   plugins,
