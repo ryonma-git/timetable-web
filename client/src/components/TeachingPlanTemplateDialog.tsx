@@ -93,12 +93,30 @@ export function TeachingPlanTemplateDialog({ open, onClose, initialGrade, initia
     () => Array.from(new Set(templates.filter((x) => x.grade === grade).map((x) => x.subject))).sort(),
     [templates, grade]
   );
+  // その学年・教科を実際に発行している会社だけ（「標準（学習指導要領）」は末尾）
+  const companies = useMemo(() => {
+    const arr = Array.from(
+      new Set(templates.filter((x) => x.grade === grade && x.subject === subject).map((x) => x.source))
+    );
+    arr.sort(
+      (a, b) =>
+        (a.startsWith("標準") ? 1 : 0) - (b.startsWith("標準") ? 1 : 0) || a.localeCompare(b, "ja")
+    );
+    return arr;
+  }, [templates, grade, subject]);
+
+  // 出所（会社）も絞り込みに使う＝会社を選べばその社のテンプレが出る
   const matches = useMemo(
-    () => templates.filter((x) => x.grade === grade && x.subject === subject),
-    [templates, grade, subject]
+    () => templates.filter((x) => x.grade === grade && x.subject === subject && x.source === sourceId),
+    [templates, grade, subject, sourceId]
   );
 
-  // 学年/教科が変わったら候補の先頭を選ぶ
+  // 教科/学年が変わったら、その教科を出している会社の先頭（実在社優先）に合わせる
+  useEffect(() => {
+    if (companies.length > 0 && !companies.includes(sourceId)) setSourceId(companies[0]);
+  }, [companies, sourceId]);
+
+  // 候補の先頭を選ぶ
   useEffect(() => {
     if (matches.length > 0) setSelectedId(matches[0].id);
     else setSelectedId("");
@@ -194,22 +212,14 @@ export function TeachingPlanTemplateDialog({ open, onClose, initialGrade, initia
         ) : (
           <div className="space-y-4">
             {/* セレクタ */}
+            {/* 選択順: 教科 → 学年 → 会社（読み違いを防ぐため教科起点）。
+                会社はその教科・学年を実際に発行している社だけを表示する。 */}
             <div className="grid grid-cols-2 gap-3">
-              <Field label={t("tpl.source")}>
-                <Select value={sourceId} onValueChange={setSourceId}>
+              <Field label={t("tpl.subject")}>
+                <Select value={subject} onValueChange={setSubject}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {index?.sources.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label={t("tpl.edition")}>
-                <Select value={matches.find((m) => m.id === selectedId)?.edition ?? "標準"} onValueChange={() => {}}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="標準">{t("tpl.editionStd")}</SelectItem>
+                    {subjects.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </Field>
@@ -221,11 +231,15 @@ export function TeachingPlanTemplateDialog({ open, onClose, initialGrade, initia
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label={t("tpl.subject")}>
-                <Select value={subject} onValueChange={setSubject}>
+              <Field label={t("tpl.source")}>
+                <Select value={sourceId} onValueChange={setSourceId}>
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {subjects.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {companies.length === 0 ? (
+                      <SelectItem value="__none__" disabled>（この教科の発行なし）</SelectItem>
+                    ) : (
+                      companies.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)
+                    )}
                   </SelectContent>
                 </Select>
               </Field>
