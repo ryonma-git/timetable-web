@@ -1,0 +1,571 @@
+{
+ "changed": [],
+ "unchanged": [
+  {
+   "key": "啓林館/生活",
+   "url_sample": "https://www.shinko-keirin.co.jp/keirinkan/sho_r6/seikatsu/file/seikatsu_guidance_plan.xlsx",
+   "changed": [],
+   "ok": [
+    1,
+    2
+   ],
+   "fail": []
+  },
+  {
+   "key": "大修館書店/保健",
+   "url_sample": "https://www.taishukan.co.jp/hoken/download/?act=word&id=497",
+   "changed": [],
+   "ok": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "fail": []
+  },
+  {
+   "key": "文教社/保健",
+   "url_sample": "https://bunkyosya.co.jp/r6-hoken/annualr-r6.xlsx",
+   "changed": [],
+   "ok": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "fail": []
+  },
+  {
+   "key": "光文書院/保健",
+   "url_sample": "https://www.kobun.co.jp/Portals/0/resource/products/hoken/dl/r6_hoken_henshushuisyo_34nen.pdf",
+   "changed": [],
+   "ok": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "fail": []
+  },
+  {
+   "key": "Gakken/保健",
+   "url_sample": "https://gakkokyoiku.gakken.co.jp/r6text_hoken/img/R6hoken_kousei.pdf",
+   "changed": [],
+   "ok": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "fail": []
+  },
+  {
+   "key": "三省堂/英語",
+   "url_sample": "https://tb.sanseido-publ.co.jp/06cjpr/images/top/06crown_jr5_curric.docx",
+   "changed": [],
+   "ok": [
+    5,
+    6
+   ],
+   "fail": []
+  }
+ ],
+ "fetch_fail": [],
+ "action_required": [
+  {
+   "key": "東京書籍/道徳",
+   "method": "login",
+   "label": "要ログイン",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    6
+   ],
+   "user_action": "東京書籍『道徳』の年間指導計画は東書Eネット(ten.tokyo-shoseki.co.jp)の【会員ログイン必須】領域にあります。ログインしてから再実行してください。★既知の不具合: 5年の細案ページ(detail/118720)が6年ファイル(2024069240.docx)に差し替わっており、5年が取得できません。営業担当へ修正依頼が必要です（5年は現状欠番）。",
+   "recurring": false,
+   "missing_grades": [
+    5
+   ]
+  },
+  {
+   "key": "光村図書/生活",
+   "method": "browser",
+   "label": "ブラウザ操作要",
+   "have_grades": [
+    1,
+    2
+   ],
+   "user_action": "光村『生活』はベクターPDF。LibreOfficeでPDF化→目視で読む(Claudeが実施)。",
+   "recurring": false,
+   "missing_grades": []
+  },
+  {
+   "key": "光村図書/書写",
+   "method": "browser",
+   "label": "ブラウザ操作要",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "user_action": "光村『書写』は配布ページが完全なJS-SPA(/kyokasho/s-shosha/keikaku)。Chrome拡張で各学年のWordをクリックDLし、~/Downloads から解析する。★.docは(1)1・2/3・4/5・6年の合本→学年列で分割 (2)毛筆/硬筆接頭辞つき時数→合算 で読む。",
+   "recurring": false,
+   "missing_grades": []
+  },
+  {
+   "key": "学校図書/生活",
+   "method": "browser",
+   "label": "ブラウザ操作要",
+   "have_grades": [
+    1,
+    2
+   ],
+   "user_action": "学校図書『生活』は横型ガント表。xlsxは取得できるが目視復元が必要(Claudeが実施)。",
+   "recurring": false,
+   "missing_grades": []
+  },
+  {
+   "key": "信州教育出版社/生活",
+   "method": "school_request",
+   "label": "学校から請求",
+   "have_grades": [],
+   "user_action": "信州教育出版社『生活』は公開資料が“中心活動別の計画例”のみで、単元×配当時数の確定表がありません。学校の立場で『時数入りの正式な年間指導計画』を請求してください。★請求しても時数入りが得られない場合は取得不能として扱い、ユーザー入力 or 他社流用で代替します。",
+   "recurring": true,
+   "missing_grades": [
+    1,
+    2
+   ]
+  }
+ ],
+ "auto_no_url": [
+  {
+   "key": "東京書籍/国語",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/kokugo/data/kokugo_keikaku_{g}_*.docx"
+  },
+  {
+   "key": "東京書籍/社会",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_{g}.docx"
+  },
+  {
+   "key": "東京書籍/算数",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/sansu/data/sansu_keikaku_ryakuan_{g}_*.docx"
+  },
+  {
+   "key": "東京書籍/理科",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/rika/data/rika_nenkankeikaku_{g}*.docx"
+  },
+  {
+   "key": "東京書籍/生活",
+   "have_grades": [
+    1,
+    2
+   ],
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/seikatsu/data/seikatsu_keikaku_r_{g}_*.docx"
+  },
+  {
+   "key": "東京書籍/書写",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/shosha/data/shosha_keikaku_ryakuan_{g}.docx"
+  },
+  {
+   "key": "東京書籍/家庭",
+   "have_grades": [
+    5
+   ],
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/katei/data/*.docx"
+  },
+  {
+   "key": "東京書籍/保健",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/hoken/data/hoken_keikaku_ryakuan_*.docx"
+  },
+  {
+   "key": "東京書籍/英語",
+   "have_grades": [
+    5,
+    6
+   ],
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/eigo/data/*.docx"
+  },
+  {
+   "key": "教育出版/国語",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "教育出版/書写",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "教育出版/社会",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "教育出版/算数",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "教育出版/理科",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "教育出版/生活",
+   "have_grades": [
+    1,
+    2
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "教育出版/音楽",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "教育出版/英語",
+   "have_grades": [
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "教育出版/道徳",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "光村図書/国語",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "光村図書/道徳",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "光村図書/英語",
+   "have_grades": [
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "啓林館/理科",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "啓林館/算数",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "啓林館/英語",
+   "have_grades": [
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "開隆堂/図画工作",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "開隆堂/家庭",
+   "have_grades": [
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "開隆堂/英語",
+   "have_grades": [
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "大日本図書/理科",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "大日本図書/算数",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "大日本図書/保健",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "大日本図書/生活",
+   "have_grades": [
+    1,
+    2
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "学校図書/理科",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "学校図書/算数",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "信州教育出版社/理科",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "教育芸術社/音楽",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "日本文教出版/社会",
+   "have_grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "日本文教出版/算数",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "日本文教出版/図画工作",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "日本文教出版/道徳",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "光文書院/道徳",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  },
+  {
+   "key": "Gakken/道徳",
+   "have_grades": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "url_pattern": ""
+  }
+ ],
+ "validation": []
+}

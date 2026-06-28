@@ -50,6 +50,24 @@ common_gotchas:
   - "★目視メソッド: ベクター描画PDFや横型マトリクスでテキスト/表抽出できない場合、LibreOfficeでPDF化→Readツールで画像レンダリングを目視し単元名・時数を読み取る(光村生活で実証)。docx→pdf: soffice --headless --convert-to pdf。pdfplumberは pip install --break-system-packages pdfplumber"
 
 # ---------------------------------------------------------------------------
+# 改訂チェック & 差し替え機構（拡張版機能。本体非干渉・別ブランチ）
+# ---------------------------------------------------------------------------
+refresh:
+  engine: scripts/refresh_teaching_plans.py        # 1コマンド/将来はボタン1発
+  driver: docs/teaching-plan-acquisition.json      # 機械可読(エンジンが生成)
+  doc: docs/teaching-plan-refresh.md
+  state: verification/refresh-state.json           # 基準フィンガープリント(sha256)
+  branch: feature/teaching-plan-refresh
+  how: |
+    check    … 配布元を再取得しfingerprintで改訂検知＋要対応(ログイン/学校請求/ブラウザ)を提示
+    baseline … 現在を基準値として保存
+    package N … 令和N年度パッケージ(拡張パック形式)を生成
+  methods: {auto: 直リンクcurl, browser: JS-SPA等ブラウザDL, login: 会員ログイン必須, school_request: 学校から請求}
+  pending_user_actions:
+    - {key: 東京書籍/道徳, method: login, detail: "東書Eネット要ログイン。5年は detail/118720 が6年ファイルに差し替わり欠番。営業へ修正依頼"}
+    - {key: 信州教育出版社/生活, method: school_request, recurring: true, detail: "中心活動別の計画例のみ。学校から時数入り正式版を請求。得られなければ取得不能として代替"}
+
+# ---------------------------------------------------------------------------
 # 発行者ごとの取得基盤（URLパターン・取得難度）
 # ---------------------------------------------------------------------------
 publishers:

@@ -1,0 +1,404 @@
+{
+ "_comment": "生成物。編集はDRIVER(refresh_teaching_plans.py)側を正とする。",
+ "standard_hours": {
+  "国語": {
+   "1": 306,
+   "2": 315,
+   "3": 245,
+   "4": 245,
+   "5": 175,
+   "6": 175
+  },
+  "社会": {
+   "3": 70,
+   "4": 90,
+   "5": 100,
+   "6": 105
+  },
+  "算数": {
+   "1": 136,
+   "2": 175,
+   "3": 175,
+   "4": 175,
+   "5": 175,
+   "6": 175
+  },
+  "理科": {
+   "3": 90,
+   "4": 105,
+   "5": 105,
+   "6": 105
+  },
+  "生活": {
+   "1": 102,
+   "2": 105
+  },
+  "音楽": {
+   "1": 68,
+   "2": 70,
+   "3": 60,
+   "4": 60,
+   "5": 50,
+   "6": 50
+  },
+  "図画工作": {
+   "1": 68,
+   "2": 70,
+   "3": 60,
+   "4": 60,
+   "5": 50,
+   "6": 50
+  },
+  "家庭": {
+   "5": 60,
+   "6": 55
+  },
+  "道徳": {
+   "1": 34,
+   "2": 35,
+   "3": 35,
+   "4": 35,
+   "5": 35,
+   "6": 35
+  },
+  "保健": {
+   "3": 4,
+   "4": 4,
+   "5": 8,
+   "6": 8
+  },
+  "英語": {
+   "3": 35,
+   "4": 35,
+   "5": 70,
+   "6": 70
+  },
+  "書写": {}
+ },
+ "sources": [
+  {
+   "source": "東京書籍",
+   "subject": "国語",
+   "method": "auto",
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/kokugo/data/kokugo_keikaku_{g}_*.docx"
+  },
+  {
+   "source": "東京書籍",
+   "subject": "社会",
+   "method": "auto",
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_{g}.docx"
+  },
+  {
+   "source": "東京書籍",
+   "subject": "算数",
+   "method": "auto",
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/sansu/data/sansu_keikaku_ryakuan_{g}_*.docx"
+  },
+  {
+   "source": "東京書籍",
+   "subject": "理科",
+   "method": "auto",
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/rika/data/rika_nenkankeikaku_{g}*.docx"
+  },
+  {
+   "source": "東京書籍",
+   "subject": "生活",
+   "method": "auto",
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/seikatsu/data/seikatsu_keikaku_r_{g}_*.docx"
+  },
+  {
+   "source": "東京書籍",
+   "subject": "書写",
+   "method": "auto",
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/shosha/data/shosha_keikaku_ryakuan_{g}.docx"
+  },
+  {
+   "source": "東京書籍",
+   "subject": "家庭",
+   "method": "auto",
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/katei/data/*.docx"
+  },
+  {
+   "source": "東京書籍",
+   "subject": "保健",
+   "method": "auto",
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/hoken/data/hoken_keikaku_ryakuan_*.docx"
+  },
+  {
+   "source": "東京書籍",
+   "subject": "英語",
+   "method": "auto",
+   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/eigo/data/*.docx"
+  },
+  {
+   "source": "東京書籍",
+   "subject": "道徳",
+   "method": "login",
+   "user_action": "東京書籍『道徳』の年間指導計画は東書Eネット(ten.tokyo-shoseki.co.jp)の【会員ログイン必須】領域にあります。ログインしてから再実行してください。★既知の不具合: 5年の細案ページ(detail/118720)が6年ファイル(2024069240.docx)に差し替わっており、5年が取得できません。営業担当へ修正依頼が必要です（5年は現状欠番）。",
+   "missing_grades": [
+    5
+   ]
+  },
+  {
+   "source": "教育出版",
+   "subject": "国語",
+   "method": "auto"
+  },
+  {
+   "source": "教育出版",
+   "subject": "書写",
+   "method": "auto"
+  },
+  {
+   "source": "教育出版",
+   "subject": "社会",
+   "method": "auto"
+  },
+  {
+   "source": "教育出版",
+   "subject": "算数",
+   "method": "auto"
+  },
+  {
+   "source": "教育出版",
+   "subject": "理科",
+   "method": "auto"
+  },
+  {
+   "source": "教育出版",
+   "subject": "生活",
+   "method": "auto"
+  },
+  {
+   "source": "教育出版",
+   "subject": "音楽",
+   "method": "auto"
+  },
+  {
+   "source": "教育出版",
+   "subject": "英語",
+   "method": "auto"
+  },
+  {
+   "source": "教育出版",
+   "subject": "道徳",
+   "method": "auto"
+  },
+  {
+   "source": "光村図書",
+   "subject": "国語",
+   "method": "auto"
+  },
+  {
+   "source": "光村図書",
+   "subject": "道徳",
+   "method": "auto"
+  },
+  {
+   "source": "光村図書",
+   "subject": "生活",
+   "method": "browser",
+   "user_action": "光村『生活』はベクターPDF。LibreOfficeでPDF化→目視で読む(Claudeが実施)。"
+  },
+  {
+   "source": "光村図書",
+   "subject": "書写",
+   "method": "browser",
+   "user_action": "光村『書写』は配布ページが完全なJS-SPA(/kyokasho/s-shosha/keikaku)。Chrome拡張で各学年のWordをクリックDLし、~/Downloads から解析する。★.docは(1)1・2/3・4/5・6年の合本→学年列で分割 (2)毛筆/硬筆接頭辞つき時数→合算 で読む。"
+  },
+  {
+   "source": "光村図書",
+   "subject": "英語",
+   "method": "auto"
+  },
+  {
+   "source": "啓林館",
+   "subject": "理科",
+   "method": "auto"
+  },
+  {
+   "source": "啓林館",
+   "subject": "算数",
+   "method": "auto"
+  },
+  {
+   "source": "啓林館",
+   "subject": "英語",
+   "method": "auto"
+  },
+  {
+   "source": "啓林館",
+   "subject": "生活",
+   "method": "auto",
+   "urls": {
+    "1": "https://www.shinko-keirin.co.jp/keirinkan/sho_r6/seikatsu/file/seikatsu_guidance_plan.xlsx",
+    "2": "https://www.shinko-keirin.co.jp/keirinkan/sho_r6/seikatsu/file/seikatsu_guidance_plan.xlsx"
+   },
+   "note": "【3学期制】シートに単元名併記の(N時間)。栽培/飼育の随時活動は除外。"
+  },
+  {
+   "source": "開隆堂",
+   "subject": "図画工作",
+   "method": "auto"
+  },
+  {
+   "source": "開隆堂",
+   "subject": "家庭",
+   "method": "auto"
+  },
+  {
+   "source": "開隆堂",
+   "subject": "英語",
+   "method": "auto"
+  },
+  {
+   "source": "大日本図書",
+   "subject": "理科",
+   "method": "auto"
+  },
+  {
+   "source": "大日本図書",
+   "subject": "算数",
+   "method": "auto"
+  },
+  {
+   "source": "大日本図書",
+   "subject": "保健",
+   "method": "auto"
+  },
+  {
+   "source": "大日本図書",
+   "subject": "生活",
+   "method": "auto"
+  },
+  {
+   "source": "学校図書",
+   "subject": "理科",
+   "method": "auto",
+   "curl_insecure": true
+  },
+  {
+   "source": "学校図書",
+   "subject": "算数",
+   "method": "auto",
+   "curl_insecure": true
+  },
+  {
+   "source": "学校図書",
+   "subject": "生活",
+   "method": "browser",
+   "urls": {
+    "1": "https://r6-sho.gakuto-plus.jp/wp-content/uploads/r6_seikatsu_jou_nenkanhairetsu_2404.xlsx",
+    "2": "https://r6-sho.gakuto-plus.jp/wp-content/uploads/r6_seikatsu2_tangen.xlsx"
+   },
+   "user_action": "学校図書『生活』は横型ガント表。xlsxは取得できるが目視復元が必要(Claudeが実施)。"
+  },
+  {
+   "source": "信州教育出版社",
+   "subject": "理科",
+   "method": "auto"
+  },
+  {
+   "source": "信州教育出版社",
+   "subject": "生活",
+   "method": "school_request",
+   "recurring": true,
+   "user_action": "信州教育出版社『生活』は公開資料が“中心活動別の計画例”のみで、単元×配当時数の確定表がありません。学校の立場で『時数入りの正式な年間指導計画』を請求してください。★請求しても時数入りが得られない場合は取得不能として扱い、ユーザー入力 or 他社流用で代替します。",
+   "missing_grades": [
+    1,
+    2
+   ]
+  },
+  {
+   "source": "教育芸術社",
+   "subject": "音楽",
+   "method": "auto",
+   "note": "kyogei.co.jp /download/{id}/ は referer 必須。"
+  },
+  {
+   "source": "日本文教出版",
+   "subject": "社会",
+   "method": "auto",
+   "note": "/useful/ 配下。実ファイルURLはブラウザ発見が要ることがある。"
+  },
+  {
+   "source": "日本文教出版",
+   "subject": "算数",
+   "method": "auto"
+  },
+  {
+   "source": "日本文教出版",
+   "subject": "図画工作",
+   "method": "auto"
+  },
+  {
+   "source": "日本文教出版",
+   "subject": "道徳",
+   "method": "auto"
+  },
+  {
+   "source": "大修館書店",
+   "subject": "保健",
+   "method": "auto",
+   "urls": {
+    "3": "https://www.taishukan.co.jp/hoken/download/?act=word&id=497",
+    "4": "https://www.taishukan.co.jp/hoken/download/?act=word&id=497",
+    "5": "https://www.taishukan.co.jp/hoken/download/?act=word&id=498",
+    "6": "https://www.taishukan.co.jp/hoken/download/?act=word&id=498"
+   }
+  },
+  {
+   "source": "文教社",
+   "subject": "保健",
+   "method": "auto",
+   "urls": {
+    "3": "https://bunkyosya.co.jp/r6-hoken/annualr-r6.xlsx",
+    "4": "https://bunkyosya.co.jp/r6-hoken/annualr-r6.xlsx",
+    "5": "https://bunkyosya.co.jp/r6-hoken/annualr-r6.xlsx",
+    "6": "https://bunkyosya.co.jp/r6-hoken/annualr-r6.xlsx"
+   }
+  },
+  {
+   "source": "光文書院",
+   "subject": "保健",
+   "method": "auto",
+   "urls": {
+    "3": "https://www.kobun.co.jp/Portals/0/resource/products/hoken/dl/r6_hoken_henshushuisyo_34nen.pdf",
+    "4": "https://www.kobun.co.jp/Portals/0/resource/products/hoken/dl/r6_hoken_henshushuisyo_34nen.pdf",
+    "5": "https://www.kobun.co.jp/Portals/0/resource/products/hoken/dl/r6_hoken_henshushuisyo_56nen.pdf",
+    "6": "https://www.kobun.co.jp/Portals/0/resource/products/hoken/dl/r6_hoken_henshushuisyo_56nen.pdf"
+   }
+  },
+  {
+   "source": "光文書院",
+   "subject": "道徳",
+   "method": "auto"
+  },
+  {
+   "source": "Gakken",
+   "subject": "保健",
+   "method": "auto",
+   "urls": {
+    "3": "https://gakkokyoiku.gakken.co.jp/r6text_hoken/img/R6hoken_kousei.pdf",
+    "4": "https://gakkokyoiku.gakken.co.jp/r6text_hoken/img/R6hoken_kousei.pdf",
+    "5": "https://gakkokyoiku.gakken.co.jp/r6text_hoken/img/R6hoken_kousei.pdf",
+    "6": "https://gakkokyoiku.gakken.co.jp/r6text_hoken/img/R6hoken_kousei.pdf"
+   }
+  },
+  {
+   "source": "Gakken",
+   "subject": "道徳",
+   "method": "auto"
+  },
+  {
+   "source": "三省堂",
+   "subject": "英語",
+   "method": "auto",
+   "urls": {
+    "5": "https://tb.sanseido-publ.co.jp/06cjpr/images/top/06crown_jr5_curric.docx",
+    "6": "https://tb.sanseido-publ.co.jp/06cjpr/images/top/06crown_jr6_curric.docx"
+   },
+   "note": "学習・指導内容一覧。配当時間は最終列(vMerge restart)。3・4年は外国語活動で検定教科書なし。"
+  }
+ ]
+}

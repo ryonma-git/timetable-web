@@ -2739,8 +2739,8 @@
    "subject": "英語",
    "year": 2024,
    "edition": "令和6年度版『Kids CROWN(キッズクラウン)』",
-   "units": 22,
-   "periods": 135,
+   "units": 26,
+   "periods": 70,
    "file": "sanseido_eigo5.json",
    "sourceKind": "publisher"
   },
@@ -2751,8 +2751,8 @@
    "subject": "英語",
    "year": 2024,
    "edition": "令和6年度版『Kids CROWN(キッズクラウン)』",
-   "units": 24,
-   "periods": 138,
+   "units": 26,
+   "periods": 71,
    "file": "sanseido_eigo6.json",
    "sourceKind": "publisher"
   }
