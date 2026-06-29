@@ -1,0 +1,70 @@
+{
+ "description": "指導計画テンプレートの一次ソース(配布元の原本)。再パース・再構築の土台。",
+ "entries": [
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "東京書籍",
+   "grade": "3年",
+   "path": "小学校/社会/東京書籍/shakai_keikaku_ryakuan_3.docx",
+   "url": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_3.docx",
+   "sha256_16": "b189abde77d49ff7",
+   "bytes": 22568,
+   "templateIds": [
+    "tosho_shakai3"
+   ],
+   "retrievedAt": "2026-06-28",
+   "method": "auto",
+   "parse": "col3=大単元(N時間)/col4=小単元時数/col5=小単元名。小単元を単元として展開"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "東京書籍",
+   "grade": "4年",
+   "path": "小学校/社会/東京書籍/shakai_keikaku_ryakuan_4.docx",
+   "url": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_4.docx",
+   "sha256_16": "7894394b11d81541",
+   "bytes": 23805,
+   "templateIds": [
+    "tosho_shakai4"
+   ],
+   "retrievedAt": "2026-06-28",
+   "method": "auto",
+   "parse": "col3=大単元(N時間)/col4=小単元時数/col5=小単元名。小単元を単元として展開"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "東京書籍",
+   "grade": "5年",
+   "path": "小学校/社会/東京書籍/shakai_keikaku_ryakuan_5.docx",
+   "url": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_5.docx",
+   "sha256_16": "27458a236bfca298",
+   "bytes": 27328,
+   "templateIds": [
+    "tosho_shakai5"
+   ],
+   "retrievedAt": "2026-06-28",
+   "method": "auto",
+   "parse": "col3=大単元(N時間)/col4=小単元時数/col5=小単元名。小単元を単元として展開"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "東京書籍",
+   "grade": "6年",
+   "path": "小学校/社会/東京書籍/shakai_keikaku_ryakuan_6.docx",
+   "url": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_6.docx",
+   "sha256_16": "9370e0f5cdd204de",
+   "bytes": 27063,
+   "templateIds": [
+    "tosho_shakai6"
+   ],
+   "retrievedAt": "2026-06-28",
+   "method": "auto",
+   "parse": "col3=大単元(N時間)/col4=小単元時数/col5=小単元名。小単元を単元として展開"
+  }
+ ],
+ "updatedAt": "2026-06-30"
+}
