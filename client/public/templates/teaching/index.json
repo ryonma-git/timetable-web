@@ -1935,7 +1935,7 @@
    "subject": "社会",
    "year": 2024,
    "edition": "令和6年度版「小学社会」",
-   "units": 4,
+   "units": 6,
    "periods": 70,
    "file": "nichibun_shakai3.json",
    "sourceKind": "publisher"
@@ -1947,8 +1947,8 @@
    "subject": "社会",
    "year": 2024,
    "edition": "令和6年度版「小学社会」",
-   "units": 5,
-   "periods": 102,
+   "units": 9,
+   "periods": 90,
    "file": "nichibun_shakai4.json",
    "sourceKind": "publisher"
   },
@@ -1959,7 +1959,7 @@
    "subject": "社会",
    "year": 2024,
    "edition": "令和6年度版「小学社会」",
-   "units": 5,
+   "units": 16,
    "periods": 100,
    "file": "nichibun_shakai5.json",
    "sourceKind": "publisher"
@@ -1971,7 +1971,7 @@
    "subject": "社会",
    "year": 2024,
    "edition": "令和6年度版「小学社会」",
-   "units": 3,
+   "units": 16,
    "periods": 104,
    "file": "nichibun_shakai6.json",
    "sourceKind": "publisher"

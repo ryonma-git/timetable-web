@@ -4,6 +4,70 @@
   {
    "level": "小学校",
    "subject": "社会",
+   "publisher": "日本文教出版",
+   "grade": "3年",
+   "path": "小学校/社会/日本文教出版/r6_shakai_nenkei_3.xlsx",
+   "url": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_3.xlsx",
+   "sha256_16": "42c41ce18ce988ef",
+   "bytes": 45559,
+   "templateIds": [
+    "nichibun_shakai3"
+   ],
+   "retrievedAt": "2026-06-28",
+   "method": "auto",
+   "parse": "1シート=1小単元(r1大単元/r2小単元/配当時間『全N時間』)。選択単元・続きシート除外"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "日本文教出版",
+   "grade": "4年",
+   "path": "小学校/社会/日本文教出版/r6_shakai_nenkei_4.xlsx",
+   "url": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_4.xlsx",
+   "sha256_16": "74f93de4ef7a00a2",
+   "bytes": 60115,
+   "templateIds": [
+    "nichibun_shakai4"
+   ],
+   "retrievedAt": "2026-06-28",
+   "method": "auto",
+   "parse": "1シート=1小単元(r1大単元/r2小単元/配当時間『全N時間』)。選択単元・続きシート除外"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "日本文教出版",
+   "grade": "5年",
+   "path": "小学校/社会/日本文教出版/r6_shakai_nenkei_5.xlsx",
+   "url": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_5.xlsx",
+   "sha256_16": "be72b6700313ea39",
+   "bytes": 93397,
+   "templateIds": [
+    "nichibun_shakai5"
+   ],
+   "retrievedAt": "2026-06-28",
+   "method": "auto",
+   "parse": "1シート=1小単元(r1大単元/r2小単元/配当時間『全N時間』)。選択単元・続きシート除外"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "日本文教出版",
+   "grade": "6年",
+   "path": "小学校/社会/日本文教出版/r6_shakai_nenkei_6.xlsx",
+   "url": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_6.xlsx",
+   "sha256_16": "b9f68071ea029794",
+   "bytes": 90973,
+   "templateIds": [
+    "nichibun_shakai6"
+   ],
+   "retrievedAt": "2026-06-28",
+   "method": "auto",
+   "parse": "1シート=1小単元(r1大単元/r2小単元/配当時間『全N時間』)。選択単元・続きシート除外"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
    "publisher": "東京書籍",
    "grade": "3年",
    "path": "小学校/社会/東京書籍/shakai_keikaku_ryakuan_3.docx",
@@ -66,5 +130,5 @@
    "parse": "col3=大単元(N時間)/col4=小単元時数/col5=小単元名。小単元を単元として展開"
   }
  ],
- "updatedAt": "2026-06-30"
+ "updatedAt": "2026-07-01"
 }
