@@ -2755,6 +2755,18 @@
    "periods": 71,
    "file": "sanseido_eigo6.json",
    "sourceKind": "publisher"
+  },
+  {
+   "id": "tosho_dotoku5",
+   "source": "東京書籍",
+   "grade": "5年",
+   "subject": "道徳",
+   "year": 2024,
+   "edition": "令和6年度版「新編 新しい道徳」",
+   "units": 11,
+   "periods": 35,
+   "file": "tosho_dotoku5.json",
+   "sourceKind": "publisher"
   }
  ]
 }

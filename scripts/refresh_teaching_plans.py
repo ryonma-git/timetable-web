@@ -97,14 +97,10 @@ DRIVER = [
      "url_pattern": B_TEN + "/hoken/data/hoken_keikaku_ryakuan_*.docx"},
     {"source": "東京書籍", "subject": "英語", "method": "auto",
      "url_pattern": B_TEN + "/eigo/data/*.docx"},
-    {"source": "東京書籍", "subject": "道徳", "method": "login",
-     "login_url": "https://www.tokyo-shoseki.co.jp/e-net/",
-     "user_action": (
-         "東京書籍『道徳』の年間指導計画は東書Eネット(ten.tokyo-shoseki.co.jp)の"
-         "【会員ログイン必須】領域にあります。ログインしてから再実行してください。"
-         "★既知の不具合: 5年の細案ページ(detail/118720)が6年ファイル(2024069240.docx)に"
-         "差し替わっており、5年が取得できません。営業担当へ修正依頼が必要です（5年は現状欠番）。"),
-     "missing_grades": [5]},
+    # 道徳は当初Eネット(要ログイン・5年が6年ファイルに差し替わる不具合)経由だったが、
+    # 営業確認(2026-07)により教科書HP側 /text/shou/doutoku/data/ から全学年ログイン不要で取得可。
+    {"source": "東京書籍", "subject": "道徳", "method": "auto",
+     "url_pattern": B_TEN + "/doutoku/data/doutoku_keikaku_{g}.docx"},
 
     # ---- 教育出版 ----
     {"source": "教育出版", "subject": "国語", "method": "auto"},

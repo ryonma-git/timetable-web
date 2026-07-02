@@ -158,5 +158,35 @@
   "sha": "b9f68071ea0297947b287199ea3f7ec201b54e64024917cdc73cbef9ca6931f9",
   "url": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_6.xlsx",
   "bytes": 90973
+ },
+ "東京書籍/道徳#1": {
+  "sha": "d4a5378a6f8366d62d49ebe61ef07a5afe54423785858a891bba2adb9dda22cb",
+  "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_1.docx",
+  "bytes": 55701
+ },
+ "東京書籍/道徳#2": {
+  "sha": "5f45215ec9dd96972d457c5eb602997c34dbf66d9535f8820ca51e770a700ae6",
+  "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_2.docx",
+  "bytes": 56633
+ },
+ "東京書籍/道徳#3": {
+  "sha": "15449f95672d2d2541efbd0e9615836c070a5b03abb0b741935a638bd5ca564b",
+  "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_3.docx",
+  "bytes": 52481
+ },
+ "東京書籍/道徳#4": {
+  "sha": "da098ca28bdf9ec7f69d780228e0c1fcfc3b70c953423f4ca930286bdbcc92e8",
+  "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_4.docx",
+  "bytes": 53279
+ },
+ "東京書籍/道徳#5": {
+  "sha": "bef5126931a9f9e8b853257521b52788a6dfdf697fe1696c33c90ee7588471d3",
+  "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_5.docx",
+  "bytes": 49508
+ },
+ "東京書籍/道徳#6": {
+  "sha": "98d1bde2758d098a44bc6ec880d7fb46b9c99ab6e6b281aaa461cf66f8124345",
+  "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_6.docx",
+  "bytes": 50667
  }
 }

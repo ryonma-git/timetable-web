@@ -14,6 +14,20 @@
    "fail": []
   },
   {
+   "key": "東京書籍/道徳",
+   "url_sample": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_1.docx",
+   "changed": [],
+   "ok": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+   ],
+   "fail": []
+  },
+  {
    "key": "教育出版/社会",
    "url_sample": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai3_nenkeihyouka_2504.docx",
    "changed": [],
@@ -108,23 +122,6 @@
  ],
  "fetch_fail": [],
  "action_required": [
-  {
-   "key": "東京書籍/道徳",
-   "method": "login",
-   "label": "要ログイン",
-   "have_grades": [
-    1,
-    2,
-    3,
-    4,
-    6
-   ],
-   "user_action": "東京書籍『道徳』の年間指導計画は東書Eネット(ten.tokyo-shoseki.co.jp)の【会員ログイン必須】領域にあります。ログインしてから再実行してください。★既知の不具合: 5年の細案ページ(detail/118720)が6年ファイル(2024069240.docx)に差し替わっており、5年が取得できません。営業担当へ修正依頼が必要です（5年は現状欠番）。",
-   "recurring": false,
-   "missing_grades": [
-    5
-   ]
-  },
   {
    "key": "光村図書/生活",
    "method": "browser",
@@ -574,5 +571,5 @@
   }
  ],
  "validation": [],
- "_generatedAt": "2026-07-02T16:06:02"
+ "_generatedAt": "2026-07-02T16:32:58"
 }

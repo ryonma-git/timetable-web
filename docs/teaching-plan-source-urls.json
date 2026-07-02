@@ -1,5 +1,13 @@
 {
  "_comment": "実ダウンロードURLレジストリ。refresh_teaching_plans.py が DRIVER にマージし、改訂検知(fingerprint)の対象になる。archive_sources.py が取得検証済みURLをここへ追記する。キー='発行者/教科'、値={学年:URL}。'_insecure':true でTLS検証スキップ。",
+ "東京書籍/道徳": {
+  "1": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_1.docx",
+  "2": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_2.docx",
+  "3": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_3.docx",
+  "4": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_4.docx",
+  "5": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_5.docx",
+  "6": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_6.docx"
+ },
  "東京書籍/社会": {
   "3": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_3.docx",
   "4": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_4.docx",

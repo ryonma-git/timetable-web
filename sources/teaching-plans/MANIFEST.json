@@ -405,6 +405,108 @@
    ],
    "retrievedAt": "2026-07-02",
    "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "道徳",
+   "publisher": "東京書籍",
+   "grades": [
+    1
+   ],
+   "path": "小学校/道徳/東京書籍/doutoku_keikaku_1.docx",
+   "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_1.docx",
+   "sha256_16": "d4a5378a6f8366d6",
+   "bytes": 55701,
+   "templateIds": [
+    "tosho_dotoku1"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "道徳",
+   "publisher": "東京書籍",
+   "grades": [
+    2
+   ],
+   "path": "小学校/道徳/東京書籍/doutoku_keikaku_2.docx",
+   "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_2.docx",
+   "sha256_16": "5f45215ec9dd9697",
+   "bytes": 56633,
+   "templateIds": [
+    "tosho_dotoku2"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "道徳",
+   "publisher": "東京書籍",
+   "grades": [
+    3
+   ],
+   "path": "小学校/道徳/東京書籍/doutoku_keikaku_3.docx",
+   "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_3.docx",
+   "sha256_16": "15449f95672d2d25",
+   "bytes": 52481,
+   "templateIds": [
+    "tosho_dotoku3"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "道徳",
+   "publisher": "東京書籍",
+   "grades": [
+    4
+   ],
+   "path": "小学校/道徳/東京書籍/doutoku_keikaku_4.docx",
+   "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_4.docx",
+   "sha256_16": "da098ca28bdf9ec7",
+   "bytes": 53279,
+   "templateIds": [
+    "tosho_dotoku4"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "道徳",
+   "publisher": "東京書籍",
+   "grades": [
+    5
+   ],
+   "path": "小学校/道徳/東京書籍/doutoku_keikaku_5.docx",
+   "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_5.docx",
+   "sha256_16": "bef5126931a9f9e8",
+   "bytes": 49508,
+   "templateIds": [
+    "tosho_dotoku5"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "道徳",
+   "publisher": "東京書籍",
+   "grades": [
+    6
+   ],
+   "path": "小学校/道徳/東京書籍/doutoku_keikaku_6.docx",
+   "url": "https://ten.tokyo-shoseki.co.jp/text/shou/doutoku/data/doutoku_keikaku_6.docx",
+   "sha256_16": "98d1bde2758d098a",
+   "bytes": 50667,
+   "templateIds": [
+    "tosho_dotoku6"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
   }
  ],
  "updatedAt": "2026-07-02"
