@@ -215,6 +215,36 @@ DRIVER = [
 
 import re
 
+# ---------------------------------------------------------------------------
+# URLレジストリ（docs/teaching-plan-source-urls.json）を DRIVER にマージする。
+# 実ダウンロードURLはコードでなくこのJSONで管理し、archive_sources.py が
+# 取得検証済みのURLを追記していく。キーは "発行者/教科"、値は {学年: URL}。
+# "_insecure": true でTLS検証をスキップ（学校図書等の証明書不備サイト用）。
+# ---------------------------------------------------------------------------
+URLS_JSON = os.path.join(ROOT, "docs/teaching-plan-source-urls.json")
+
+
+def _merge_url_registry():
+    try:
+        with open(URLS_JSON, encoding="utf-8") as f:
+            reg = json.load(f)
+    except FileNotFoundError:
+        return
+    except Exception as e:  # 壊れたレジストリは全体を止めず警告
+        print(f"[warn] URLレジストリ読込失敗: {e}", file=sys.stderr)
+        return
+    for d in DRIVER:
+        ent = reg.get(f"{d['source']}/{d['subject']}")
+        if not ent:
+            continue
+        urls = {int(k): v for k, v in ent.items()
+                if k != "_insecure" and isinstance(v, str)}
+        if urls:
+            # レジストリを正とし、DRIVER側の暫定URLより優先
+            d["urls"] = {**d.get("urls", {}), **urls}
+        if ent.get("_insecure"):
+            d["curl_insecure"] = True
+
 
 def grade_int(s):
     """'5年'/'5・6'/'5・6年' などから先頭の学年番号を取り出す。失敗時 0。"""
@@ -326,24 +356,24 @@ def cmd_check(args):
         have_grades = sorted(grade_int(t["grade"]) for t in have)
 
         # --- 自動取得できないものは「要対応」として提示 ---
-        if method != "auto" or args.offline:
-            entry = {"key": key, "method": method,
-                     "label": METHOD_LABEL[method],
-                     "have_grades": have_grades,
-                     "user_action": d.get("user_action", ""),
-                     "recurring": d.get("recurring", False),
-                     "missing_grades": d.get("missing_grades", [])}
-            if method != "auto":
-                report["action_required"].append(entry)
+        if method != "auto":
+            report["action_required"].append({
+                "key": key, "method": method,
+                "label": METHOD_LABEL[method],
+                "have_grades": have_grades,
+                "user_action": d.get("user_action", ""),
+                "recurring": d.get("recurring", False),
+                "missing_grades": d.get("missing_grades", [])})
             continue
 
-        # --- auto: 取得してフィンガープリント比較 ---
+        # --- auto: URL未登録は offline でも分類しUIに出す（保守メモ） ---
         urls = d.get("urls")
         if not urls:
-            # 具体URL未登録（パターンのみ）。フィンガープリント対象外＝保守メモ。
             report["auto_no_url"].append({
                 "key": key, "have_grades": have_grades,
                 "url_pattern": d.get("url_pattern", "")})
+            continue
+        if args.offline:  # 取得はしない（分類・検証のみ）
             continue
 
         changed_grades, ok_grades, fail_grades = [], [], []
@@ -517,10 +547,12 @@ def cmd_ui(args):
         key = f"{d['source']}/{d['subject']}"
         have = inv.get((d["source"], d["subject"]), [])
         method = d["method"]
+        chg = []  # 非autoカードや未チェックで未定義参照しないよう毎回初期化
         if method == "auto":
             st, chg = auto_status.get(key, ("unknown", []))
-            if key in no_url and key not in auto_status:
-                st = "no_url"
+            if key not in auto_status:
+                # 直近レポートに現れないauto: URL登録が無ければ no_url と明示
+                st = "no_url" if (key in no_url or not d.get("urls")) else "unknown"
             status = st  # changed/unchanged/fetch_fail/no_url/unknown
         else:
             status = method  # login/school_request/browser
@@ -566,6 +598,7 @@ def main():
     p = sub.add_parser("package", help="令和N年度パッケージ雛形を生成")
     p.add_argument("year", type=int, help="西暦(例: 2028)")
     args = ap.parse_args()
+    _merge_url_registry()
     if args.cmd == "check":
         cmd_check(args)
     elif args.cmd == "baseline":

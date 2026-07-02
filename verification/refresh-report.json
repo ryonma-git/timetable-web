@@ -2,12 +2,48 @@
  "changed": [],
  "unchanged": [
   {
+   "key": "東京書籍/社会",
+   "url_sample": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_3.docx",
+   "changed": [],
+   "ok": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "fail": []
+  },
+  {
+   "key": "教育出版/社会",
+   "url_sample": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai3_nenkeihyouka_2504.docx",
+   "changed": [],
+   "ok": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "fail": []
+  },
+  {
    "key": "啓林館/生活",
    "url_sample": "https://www.shinko-keirin.co.jp/keirinkan/sho_r6/seikatsu/file/seikatsu_guidance_plan.xlsx",
    "changed": [],
    "ok": [
     1,
     2
+   ],
+   "fail": []
+  },
+  {
+   "key": "日本文教出版/社会",
+   "url_sample": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_3.xlsx",
+   "changed": [],
+   "ok": [
+    3,
+    4,
+    5,
+    6
    ],
    "fail": []
   },
@@ -156,16 +192,6 @@
    "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/kokugo/data/kokugo_keikaku_{g}_*.docx"
   },
   {
-   "key": "東京書籍/社会",
-   "have_grades": [
-    3,
-    4,
-    5,
-    6
-   ],
-   "url_pattern": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_{g}.docx"
-  },
-  {
    "key": "東京書籍/算数",
    "have_grades": [
     1,
@@ -249,16 +275,6 @@
    "have_grades": [
     1,
     2,
-    3,
-    4,
-    5,
-    6
-   ],
-   "url_pattern": ""
-  },
-  {
-   "key": "教育出版/社会",
-   "have_grades": [
     3,
     4,
     5,
@@ -497,16 +513,6 @@
    "url_pattern": ""
   },
   {
-   "key": "日本文教出版/社会",
-   "have_grades": [
-    3,
-    4,
-    5,
-    6
-   ],
-   "url_pattern": ""
-  },
-  {
    "key": "日本文教出版/算数",
    "have_grades": [
     1,
@@ -568,5 +574,5 @@
   }
  ],
  "validation": [],
- "_generatedAt": "2026-06-28T12:21:45"
+ "_generatedAt": "2026-07-02T16:06:02"
 }

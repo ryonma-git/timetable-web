@@ -13,10 +13,18 @@
 | ファイル | 役割 |
 |---|---|
 | `scripts/refresh_teaching_plans.py` | エンジン本体（取得・改訂検知・要対応提示・パッケージ生成） |
+| `docs/teaching-plan-source-urls.json` | **実DL URLレジストリ**。エンジンが起動時に DRIVER へマージ。URL追加はコードでなくここに書く |
+| `scripts/archive_sources.py` | 登録済み全URLを一括DLし `sources/teaching-plans/` へ保管・MANIFEST登録。失敗は exit 1 で列挙 |
+| `scripts/validate_teaching_data.py` | 整合性バリデータ（index↔実体ドリフト/id重複/孤児/MANIFEST sha照合。`--fix` で index 同期） |
 | `docs/teaching-plan-acquisition.json` | 機械可読の取得元ドライバ（エンジンが生成。編集は `DRIVER` を正とする） |
 | `docs/teaching-plan-sources.yaml` | 人間可読のマスター（URLパターン・解析規則・落とし穴） |
+| `sources/teaching-plans/` | 一次ソース保管庫（原本＋MANIFEST.json） |
 | `verification/refresh-state.json` | 基準フィンガープリント（sha256）。差分検知の起点 |
 | `verification/refresh-report.json` | 直近の実行結果スナップショット |
+
+**運用ループ**: 新しい取得元を確定 → `source-urls.json` に追記 → `archive_sources.py`（原本保管）→
+`check`（fingerprint基準化）→ テンプレ再生成 → `validate_teaching_data.py`（整合検査）。
+API側は同時実行ロック済み（実行ボタン連打でも python は1プロセスに共有される）。
 
 ## 使い方
 

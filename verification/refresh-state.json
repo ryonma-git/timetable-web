@@ -98,5 +98,65 @@
   "sha": "ff8148f995f4f5194de5429eb506f5c28052cc50e75b6fc68e5b2996f8f3f5d6",
   "url": "https://tb.sanseido-publ.co.jp/06cjpr/images/top/06crown_jr6_curric.docx",
   "bytes": 57154
+ },
+ "東京書籍/社会#3": {
+  "sha": "b189abde77d49ff79b1abc6560cf2ca694ae79ec732206e835fdec4e778f1edc",
+  "url": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_3.docx",
+  "bytes": 22568
+ },
+ "東京書籍/社会#4": {
+  "sha": "7894394b11d815419896f387e4627780195c3d7a42ba22c50b6f4127de228ac9",
+  "url": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_4.docx",
+  "bytes": 23805
+ },
+ "東京書籍/社会#5": {
+  "sha": "27458a236bfca298003d9ece02289a9dffbce46364cc11fafe7de1f6f2342ed7",
+  "url": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_5.docx",
+  "bytes": 27328
+ },
+ "東京書籍/社会#6": {
+  "sha": "9370e0f5cdd204de50b119ac952c54785eceef6d902223a2d85c14a08cb4340e",
+  "url": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_6.docx",
+  "bytes": 27063
+ },
+ "教育出版/社会#3": {
+  "sha": "5a760beb144f12bc886fffc702cf5f4b33aafbb7f516df8acd30426b125844b2",
+  "url": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai3_nenkeihyouka_2504.docx",
+  "bytes": 218887
+ },
+ "教育出版/社会#4": {
+  "sha": "7233320da0534648d491adf912c9f6e44300eb3a10655b09147247c70b392b7d",
+  "url": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai4_nenkeihyouka_2504.docx",
+  "bytes": 255902
+ },
+ "教育出版/社会#5": {
+  "sha": "f960761c440294011ebe0ebbfa21aaefd8d69f47fea6faa8a6019d8fc1afa129",
+  "url": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai5_nenkeihyouka_2504.docx",
+  "bytes": 339574
+ },
+ "教育出版/社会#6": {
+  "sha": "4ff8660d9bb2f08fa96649f5c9b49718121c8f99b8c5a21211019675f44c946f",
+  "url": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai6_nenkeihyouka_2604.docx",
+  "bytes": 399491
+ },
+ "日本文教出版/社会#3": {
+  "sha": "42c41ce18ce988efb2e0e7baee224e4e5ed295385a8d69754f0f89e3989ef2cb",
+  "url": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_3.xlsx",
+  "bytes": 45559
+ },
+ "日本文教出版/社会#4": {
+  "sha": "74f93de4ef7a00a2d6ac988b4b1594757cd94b7fad5a00da2e0dbb41929c3bb7",
+  "url": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_4.xlsx",
+  "bytes": 60115
+ },
+ "日本文教出版/社会#5": {
+  "sha": "be72b6700313ea392e82f972a536c163e802f1f13d30dca36c625d32e328a47e",
+  "url": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_5.xlsx",
+  "bytes": 93397
+ },
+ "日本文教出版/社会#6": {
+  "sha": "b9f68071ea0297947b287199ea3f7ec201b54e64024917cdc73cbef9ca6931f9",
+  "url": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_6.xlsx",
+  "bytes": 90973
  }
 }

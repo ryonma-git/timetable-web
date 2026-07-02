@@ -111,3 +111,7 @@ client/public/__pubtest__/
 
 # 指導計画リフレッシュ機構の生成物(再生成可)
 client/public/templates/teaching/packages/
+
+# Word/Excel の一時ロックファイル
+~$*
+**/~$*

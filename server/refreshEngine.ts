@@ -58,10 +58,24 @@ export async function getUiState(): Promise<unknown> {
   return JSON.parse(out);
 }
 
+// run は同時実行させない（連打で複数の python が state/report を書き競合するのを防ぐ）。
+// 実行中に再度呼ばれたら同じ実行結果を共有して返す。
+let inflightRun: Promise<unknown> | null = null;
+
 /** 本年度取得＝配布元を再取得して改訂検知し、最新状態を返す（ネットに出る）。 */
-export async function runCheck(): Promise<unknown> {
-  await runPy(["check"]);
-  return getUiState();
+export function runCheck(): Promise<unknown> {
+  if (!inflightRun) {
+    inflightRun = (async () => {
+      try {
+        // URL登録が増えるほど時間がかかるため長め（curl 30s × 直列）
+        await runPy(["check"], 300_000);
+        return await getUiState();
+      } finally {
+        inflightRun = null;
+      }
+    })();
+  }
+  return inflightRun;
 }
 
 export type RefreshAction = "sources" | "run" | "health";

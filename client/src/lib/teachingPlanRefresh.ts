@@ -81,9 +81,9 @@ export async function getRefreshState(): Promise<RefreshState> {
   return (await getJson("sources")) as RefreshState;
 }
 
-/** 本年度取得＝配布元を再取得して改訂検知し、最新状態を返す（数十秒かかる）。 */
+/** 本年度取得＝配布元を再取得して改訂検知し、最新状態を返す（URL登録数に応じ数分かかりうる）。 */
 export async function runRefreshCheck(): Promise<RefreshState> {
-  return (await getJson("run")) as RefreshState;
+  return (await getJson("run", 320_000)) as RefreshState; // サーバー側300sより長く
 }
 
 // ─── 表示用ヘルパ ─────────────────────────────────────────────

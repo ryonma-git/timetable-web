@@ -3,6 +3,249 @@
  "entries": [
   {
    "level": "小学校",
+   "subject": "保健",
+   "publisher": "Gakken",
+   "grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "path": "小学校/保健/Gakken/R6hoken_kousei.pdf",
+   "url": "https://gakkokyoiku.gakken.co.jp/r6text_hoken/img/R6hoken_kousei.pdf",
+   "sha256_16": "f727467914614b7b",
+   "bytes": 926352,
+   "templateIds": [
+    "gakken_hoken3",
+    "gakken_hoken4",
+    "gakken_hoken5",
+    "gakken_hoken6"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "保健",
+   "publisher": "光文書院",
+   "grades": [
+    3,
+    4
+   ],
+   "path": "小学校/保健/光文書院/r6_hoken_henshushuisyo_34nen.pdf",
+   "url": "https://www.kobun.co.jp/Portals/0/resource/products/hoken/dl/r6_hoken_henshushuisyo_34nen.pdf",
+   "sha256_16": "a566de4037740120",
+   "bytes": 3268405,
+   "templateIds": [
+    "kobun_hoken3",
+    "kobun_hoken4"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "保健",
+   "publisher": "光文書院",
+   "grades": [
+    5,
+    6
+   ],
+   "path": "小学校/保健/光文書院/r6_hoken_henshushuisyo_56nen.pdf",
+   "url": "https://www.kobun.co.jp/Portals/0/resource/products/hoken/dl/r6_hoken_henshushuisyo_56nen.pdf",
+   "sha256_16": "7fa83ac829ab5419",
+   "bytes": 3575638,
+   "templateIds": [
+    "kobun_hoken5",
+    "kobun_hoken6"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "保健",
+   "publisher": "大修館書店",
+   "grades": [
+    3,
+    4
+   ],
+   "path": "小学校/保健/大修館書店/大修館書店_保健_3・4年_act_word_id_497.docx",
+   "url": "https://www.taishukan.co.jp/hoken/download/?act=word&id=497",
+   "sha256_16": "c6a8b20577ed9699",
+   "bytes": 54905,
+   "templateIds": [
+    "taishukan_hoken3",
+    "taishukan_hoken4"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "保健",
+   "publisher": "大修館書店",
+   "grades": [
+    5,
+    6
+   ],
+   "path": "小学校/保健/大修館書店/大修館書店_保健_5・6年_act_word_id_498.docx",
+   "url": "https://www.taishukan.co.jp/hoken/download/?act=word&id=498",
+   "sha256_16": "2f948afbb22fccb0",
+   "bytes": 85981,
+   "templateIds": [
+    "taishukan_hoken5",
+    "taishukan_hoken6"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "保健",
+   "publisher": "文教社",
+   "grades": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "path": "小学校/保健/文教社/annualr-r6.xlsx",
+   "url": "https://bunkyosya.co.jp/r6-hoken/annualr-r6.xlsx",
+   "sha256_16": "6b9b612fe1d81e32",
+   "bytes": 44358,
+   "templateIds": [
+    "bunkyo_hoken3",
+    "bunkyo_hoken4",
+    "bunkyo_hoken5",
+    "bunkyo_hoken6"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "生活",
+   "publisher": "啓林館",
+   "grades": [
+    1,
+    2
+   ],
+   "path": "小学校/生活/啓林館/seikatsu_guidance_plan.xlsx",
+   "url": "https://www.shinko-keirin.co.jp/keirinkan/sho_r6/seikatsu/file/seikatsu_guidance_plan.xlsx",
+   "sha256_16": "96c45cf2cf9c8c3f",
+   "bytes": 31172,
+   "templateIds": [
+    "keirinkan_seikatsu1",
+    "keirinkan_seikatsu2"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "生活",
+   "publisher": "学校図書",
+   "grades": [
+    1
+   ],
+   "path": "小学校/生活/学校図書/r6_seikatsu_jou_nenkanhairetsu_2404.xlsx",
+   "url": "https://r6-sho.gakuto-plus.jp/wp-content/uploads/r6_seikatsu_jou_nenkanhairetsu_2404.xlsx",
+   "sha256_16": "1fdf9240eae48eca",
+   "bytes": 19214,
+   "templateIds": [
+    "gakuto_seikatsu1"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "browser"
+  },
+  {
+   "level": "小学校",
+   "subject": "生活",
+   "publisher": "学校図書",
+   "grades": [
+    2
+   ],
+   "path": "小学校/生活/学校図書/r6_seikatsu2_tangen.xlsx",
+   "url": "https://r6-sho.gakuto-plus.jp/wp-content/uploads/r6_seikatsu2_tangen.xlsx",
+   "sha256_16": "bffb36e2180a121c",
+   "bytes": 19725,
+   "templateIds": [
+    "gakuto_seikatsu2"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "browser"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "教育出版",
+   "grades": [
+    3
+   ],
+   "path": "小学校/社会/教育出版/r6shakai3_nenkeihyouka_2504.docx",
+   "url": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai3_nenkeihyouka_2504.docx",
+   "sha256_16": "5a760beb144f12bc",
+   "bytes": 218887,
+   "templateIds": [
+    "kyoiku_shakai3"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "教育出版",
+   "grades": [
+    4
+   ],
+   "path": "小学校/社会/教育出版/r6shakai4_nenkeihyouka_2504.docx",
+   "url": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai4_nenkeihyouka_2504.docx",
+   "sha256_16": "7233320da0534648",
+   "bytes": 255902,
+   "templateIds": [
+    "kyoiku_shakai4"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "教育出版",
+   "grades": [
+    5
+   ],
+   "path": "小学校/社会/教育出版/r6shakai5_nenkeihyouka_2504.docx",
+   "url": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai5_nenkeihyouka_2504.docx",
+   "sha256_16": "f960761c44029401",
+   "bytes": 339574,
+   "templateIds": [
+    "kyoiku_shakai5"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "社会",
+   "publisher": "教育出版",
+   "grades": [
+    6
+   ],
+   "path": "小学校/社会/教育出版/r6shakai6_nenkeihyouka_2604.docx",
+   "url": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai6_nenkeihyouka_2604.docx",
+   "sha256_16": "4ff8660d9bb2f08f",
+   "bytes": 399491,
+   "templateIds": [
+    "kyoiku_shakai6"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
    "subject": "社会",
    "publisher": "日本文教出版",
    "grade": "3年",
@@ -128,7 +371,41 @@
    "retrievedAt": "2026-06-28",
    "method": "auto",
    "parse": "col3=大単元(N時間)/col4=小単元時数/col5=小単元名。小単元を単元として展開"
+  },
+  {
+   "level": "小学校",
+   "subject": "英語",
+   "publisher": "三省堂",
+   "grades": [
+    5
+   ],
+   "path": "小学校/英語/三省堂/06crown_jr5_curric.docx",
+   "url": "https://tb.sanseido-publ.co.jp/06cjpr/images/top/06crown_jr5_curric.docx",
+   "sha256_16": "0b732c106659ad57",
+   "bytes": 55183,
+   "templateIds": [
+    "sanseido_eigo5"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
+  },
+  {
+   "level": "小学校",
+   "subject": "英語",
+   "publisher": "三省堂",
+   "grades": [
+    6
+   ],
+   "path": "小学校/英語/三省堂/06crown_jr6_curric.docx",
+   "url": "https://tb.sanseido-publ.co.jp/06cjpr/images/top/06crown_jr6_curric.docx",
+   "sha256_16": "ff8148f995f4f519",
+   "bytes": 57154,
+   "templateIds": [
+    "sanseido_eigo6"
+   ],
+   "retrievedAt": "2026-07-02",
+   "method": "auto"
   }
  ],
- "updatedAt": "2026-07-01"
+ "updatedAt": "2026-07-02"
 }

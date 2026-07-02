@@ -1,0 +1,21 @@
+{
+ "_comment": "実ダウンロードURLレジストリ。refresh_teaching_plans.py が DRIVER にマージし、改訂検知(fingerprint)の対象になる。archive_sources.py が取得検証済みURLをここへ追記する。キー='発行者/教科'、値={学年:URL}。'_insecure':true でTLS検証スキップ。",
+ "東京書籍/社会": {
+  "3": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_3.docx",
+  "4": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_4.docx",
+  "5": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_5.docx",
+  "6": "https://ten.tokyo-shoseki.co.jp/text/shou/shakai/data/shakai_keikaku_ryakuan_6.docx"
+ },
+ "日本文教出版/社会": {
+  "3": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_3.xlsx",
+  "4": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_4.xlsx",
+  "5": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_5.xlsx",
+  "6": "https://www.nichibun-g.co.jp/textbooks/s-shakai/download/r6/r6_shakai_nenkei_6.xlsx"
+ },
+ "教育出版/社会": {
+  "3": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai3_nenkeihyouka_2504.docx",
+  "4": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai4_nenkeihyouka_2504.docx",
+  "5": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai5_nenkeihyouka_2504.docx",
+  "6": "https://www.kyoiku-shuppan.co.jp/textbook/shou/shakai/files/r6shakai6_nenkeihyouka_2604.docx"
+ }
+}
