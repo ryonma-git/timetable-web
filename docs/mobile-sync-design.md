@@ -86,9 +86,25 @@
 - データは `.sync-data/`（gitignore）。直近30版を保持し `GET /api/sync/versions` で確認可（誤上書き復旧用）。
 - 認証はトークン（`x-sync-token`）。漏洩時は `.sync-data/token.txt` を消して再生成（各端末で入れ直し）。
 
-## 6.6 Vercel 化（P2・後日）
-`SyncStore` を Vercel KV/Blob 実装に差し替え、`/api/sync` を Vercel Functions として配置するだけ。
-アプリ側（`timetableSync.ts` / `SyncContext`）は無改修。**その際は E2E暗号化を有効化**して児童データを平文で置かないこと（設計 §4）。
+## 6.6 Vercel デプロイ（実装済み・推奨経路）
+> 補足: 時間割データに児童個人情報は入れない運用のため、**E2E暗号化は今回入れない**（平文でVercel KVに保存）。将来機微情報を扱うなら §4 のE2E層を足す。
+
+実装済みのもの:
+- `api/sync/[...path].ts` … Vercel サーバレス関数（catch-all）。自宅サーバと同じ `handleSync` を再利用。
+- `server/syncStore.ts` … `KvSyncStore`（Upstash Redis REST・SDK不要）。`getSyncStore()` が
+  環境変数 `KV_REST_API_URL` があればKV、無ければファイル（自宅/dev）を自動選択。
+- `vercel.json` … `vite build` → `dist/public` を配信、`/api/*` は関数、他はSPAフォールバック。
+
+デプロイ手順（ユーザー操作）:
+1. Vercel にこのリポジトリ（`timetable-web/`）をインポート（Framework: Other／設定は vercel.json が持つ）。
+2. **Storage → KV（Upstash Redis）を作成しプロジェクトに接続** → `KV_REST_API_URL` / `KV_REST_API_TOKEN` が自動注入される。
+3. **環境変数 `SYNC_TOKEN`** に十分長い文字列を設定（Mac/iPhone 両方でこれを入力）。
+   ※Vercelでは `bootstrap-token`（localhost限定）は無効なので、トークンは手入力運用。
+4. デプロイ後、`https://<app>.vercel.app` を Mac と iPhone の両方で開き、「スマホ連動」→
+   **サーバURLは空欄のまま**（同一オリジン）／トークンに `SYNC_TOKEN` を入力 → 有効化。
+- 検証: モックUpstashで put/get/409競合/版一覧/認証を確認済み（ロジックは自宅FS実装と同一契約）。
+- 注意: 取得ブラウザ（指導計画の改訂チェック）は python 依存のため Vercel では動かない（Mac ローカル専用）。
+  クライアントは `engine_unavailable` を検知して「この環境では実行できません」と表示する既存挙動でOK。
 
 ## 7. リスクと対処
 - 鍵紛失＝復号不能：合言葉は端末に保存＋復旧用にエクスポート導線。サーバ版は無意味化するだけでローカルファイルは無傷。

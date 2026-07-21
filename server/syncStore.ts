@@ -158,11 +158,93 @@ export class FileSyncStore implements SyncStore {
   }
 }
 
+/**
+ * Vercel KV / Upstash Redis 実装（REST API・SDK不要）。
+ * 環境変数 KV_REST_API_URL / KV_REST_API_TOKEN（Vercel KV連携が自動注入）で動く。
+ * キー: tt:snapshot(現行) / tt:v{n}(各版) / tt:index(版メタのJSON配列, cap KEEP)。
+ */
+export class KvSyncStore implements SyncStore {
+  kind = "kv";
+  constructor(
+    private url: string,
+    private token: string
+  ) {}
+
+  private async cmd(...args: (string | number)[]): Promise<unknown> {
+    const res = await fetch(this.url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${this.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+    if (!res.ok) throw new Error(`KV error ${res.status}: ${await res.text()}`);
+    const j = (await res.json()) as { result?: unknown };
+    return j.result;
+  }
+  private async getJson<T>(key: string): Promise<T | null> {
+    const v = (await this.cmd("GET", key)) as string | null;
+    return v ? (JSON.parse(v) as T) : null;
+  }
+
+  async get(): Promise<Snapshot | null> {
+    return this.getJson<Snapshot>("tt:snapshot");
+  }
+
+  async put(input: {
+    payload: unknown;
+    updatedAt: string;
+    baseVersion?: number | null;
+    device?: string;
+  }): Promise<PutResult> {
+    const cur = await this.get();
+    const curVersion = cur?.version ?? 0;
+    if (
+      input.baseVersion !== undefined &&
+      input.baseVersion !== null &&
+      input.baseVersion !== curVersion
+    ) {
+      return { ok: false, conflict: true, serverVersion: curVersion, updatedAt: cur?.updatedAt ?? "" };
+    }
+    const snap: Snapshot = {
+      version: curVersion + 1,
+      updatedAt: input.updatedAt,
+      savedAt: new Date().toISOString(),
+      device: input.device,
+      payload: input.payload,
+    };
+    await this.cmd("SET", `tt:v${snap.version}`, JSON.stringify(snap));
+    await this.cmd("SET", "tt:snapshot", JSON.stringify(snap));
+    // 版インデックス更新（cap KEEP、古い版キーは掃除）
+    const idx = (await this.getJson<number[]>("tt:index")) ?? [];
+    idx.push(snap.version);
+    const prune = idx.slice(0, Math.max(0, idx.length - KEEP_VERSIONS));
+    const kept = idx.slice(-KEEP_VERSIONS);
+    await this.cmd("SET", "tt:index", JSON.stringify(kept));
+    for (const v of prune) await this.cmd("DEL", `tt:v${v}`).catch(() => undefined);
+    return { ok: true, version: snap.version };
+  }
+
+  async listVersions(limit = KEEP_VERSIONS) {
+    const idx = ((await this.getJson<number[]>("tt:index")) ?? []).slice(-limit).reverse();
+    const out: Array<Pick<Snapshot, "version" | "updatedAt" | "savedAt" | "device">> = [];
+    for (const v of idx) {
+      const s = await this.getJson<Snapshot>(`tt:v${v}`);
+      if (s) out.push({ version: s.version, updatedAt: s.updatedAt, savedAt: s.savedAt, device: s.device });
+    }
+    return out;
+  }
+
+  async getVersion(version: number): Promise<Snapshot | null> {
+    return this.getJson<Snapshot>(`tt:v${version}`);
+  }
+}
+
 let _store: SyncStore | null = null;
 export function getSyncStore(): SyncStore {
   if (!_store) {
-    // 将来: process.env.SYNC_BACKEND === "vercel-kv" などで分岐
-    _store = new FileSyncStore();
+    const url = process.env.KV_REST_API_URL;
+    const token = process.env.KV_REST_API_TOKEN;
+    // Vercel KV/Upstash が設定されていればそれを、無ければローカルFS（自宅サーバ/dev）。
+    _store = url && token ? new KvSyncStore(url, token) : new FileSyncStore();
   }
   return _store;
 }
