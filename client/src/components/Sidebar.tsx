@@ -49,6 +49,8 @@ import { ExportDialog } from "@/components/ExportDialog";
 import { SubjectSettingsDialog } from "@/components/SubjectSettingsDialog";
 import { SamplePickerDialog } from "@/components/SamplePickerDialog";
 import { DriveBackupDialog } from "@/components/DriveBackupDialog";
+import { SyncSettingsDialog } from "@/components/SyncSettingsDialog";
+import { useSync } from "@/contexts/SyncContext";
 import { ShareTemplateDialog } from "@/components/ShareTemplateDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 import { useSidebarStyle, type SidebarStyle } from "@/hooks/useSidebarStyle";
@@ -98,6 +100,9 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
   const { language, setLanguage, t } = useLanguage();
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSyncDialog, setShowSyncDialog] = useState(false);
+  const { config: syncConfig } = useSync();
+  const syncEnabled = syncConfig.enabled;
   const [showHolidaySettings, setShowHolidaySettings] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerValue, setDatePickerValue] = useState("");
@@ -423,6 +428,25 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
         >
           {t("sidebar.loadSample")}
         </button>
+
+        {/* ─── スマホ連動（自宅サーバ同期） ─── */}
+        <div className="border-t border-sidebar-border/50 pt-2 mt-1 space-y-1.5">
+          <button
+            onClick={() => setShowSyncDialog(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md
+                       bg-sidebar-accent hover:bg-sidebar-accent/80 text-sidebar-foreground/80
+                       text-xs font-medium transition-colors duration-150 border border-sidebar-border"
+          >
+            <Smartphone size={13} className="text-indigo-400" />
+            スマホ連動
+            <span
+              className={`ml-auto h-2 w-2 rounded-full ${
+                syncEnabled ? "bg-emerald-500" : "bg-sidebar-foreground/25"
+              }`}
+              title={syncEnabled ? "同期ON" : "同期OFF"}
+            />
+          </button>
+        </div>
 
         {/* ─── Google Drive 連携 ─── */}
         <div className="border-t border-sidebar-border/50 pt-2 mt-1 space-y-1.5">
@@ -903,6 +927,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
       <SamplePickerDialog open={showSamplePicker} onClose={() => setShowSamplePicker(false)} />
       {/* Drive Backup Dialog */}
       <DriveBackupDialog open={showDriveBackup} onClose={() => setShowDriveBackup(false)} />
+      <SyncSettingsDialog open={showSyncDialog} onClose={() => setShowSyncDialog(false)} />
       {/* Share Template Dialog */}
       <ShareTemplateDialog open={showShareTemplate} onClose={() => setShowShareTemplate(false)} />
     </aside>

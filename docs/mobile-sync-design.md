@@ -70,6 +70,26 @@
 3. **P3**：競合UI（409時の取り込み/上書き）、定期プル、同期状態インジケータ。
 4. 既存Drive同期は残す（同期先セレクタで択一）。
 
+## 6.5 使い方（P1・自宅サーバ運用）
+実装済み。エンドポイント `/api/sync`（dev=Vite / 本番=express の両方で動作）。
+
+1. **サーバを起動**（Mac mini 等・自宅サーバ）
+   ```bash
+   npm run build && npm start      # 本番(express, :3000)  ／ 開発なら npm run dev
+   ```
+   初回に同期トークンが `.sync-data/token.txt` に自動生成される（`SYNC_TOKEN` 環境変数で固定も可）。
+2. **Mac（サーバ同居）**: サイドバー「スマホ連動」→「このMacから」でトークン自動設定→「同期を有効にする」。
+   以後、保存すると自動送信。
+3. **iPhone**: 同じ URL をSafariでPWA追加。「スマホ連動」で **サーバURL**（例 `http://mac-mini:3000` や Tailscale の `http://100.x.x.x:3000`）と、Macで表示された**トークン**を入力→有効化。開くと最新が入る。
+4. **外から届かせる**（学校からiPhoneで見る）: **Tailscale** 推奨（Mac miniとiPhoneを同一 tailnet に入れるだけ。ポート開放不要・経路は暗号化）。または Cloudflare Tunnel。
+
+- データは `.sync-data/`（gitignore）。直近30版を保持し `GET /api/sync/versions` で確認可（誤上書き復旧用）。
+- 認証はトークン（`x-sync-token`）。漏洩時は `.sync-data/token.txt` を消して再生成（各端末で入れ直し）。
+
+## 6.6 Vercel 化（P2・後日）
+`SyncStore` を Vercel KV/Blob 実装に差し替え、`/api/sync` を Vercel Functions として配置するだけ。
+アプリ側（`timetableSync.ts` / `SyncContext`）は無改修。**その際は E2E暗号化を有効化**して児童データを平文で置かないこと（設計 §4）。
+
 ## 7. リスクと対処
 - 鍵紛失＝復号不能：合言葉は端末に保存＋復旧用にエクスポート導線。サーバ版は無意味化するだけでローカルファイルは無傷。
 - トークン漏洩：漏れても中身はE2Eで読めない。トークンは再発行可能に。

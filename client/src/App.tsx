@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { TimetableProvider } from "./contexts/TimetableContext";
 import { GradeColorProvider } from "./contexts/GradeColorContext";
 import { GoogleDriveProvider } from "./contexts/GoogleDriveContext";
+import { SyncProvider } from "./contexts/SyncContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import Home from "./pages/Home";
 import { InstallBanner } from "./components/InstallBanner";
@@ -46,13 +47,15 @@ function App() {
           <GradeColorProvider>
             <TimetableProvider>
               <GoogleDriveProvider>
-                <SidebarStyleProvider>
-                  <TooltipProvider>
-                    <Toaster richColors position="top-right" />
-                    <Router />
-                    <InstallBanner />
-                  </TooltipProvider>
-                </SidebarStyleProvider>
+                <SyncProvider>
+                  <SidebarStyleProvider>
+                    <TooltipProvider>
+                      <Toaster richColors position="top-right" />
+                      <Router />
+                      <InstallBanner />
+                    </TooltipProvider>
+                  </SidebarStyleProvider>
+                </SyncProvider>
               </GoogleDriveProvider>
             </TimetableProvider>
           </GradeColorProvider>

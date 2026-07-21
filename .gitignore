@@ -115,3 +115,6 @@ client/public/templates/teaching/packages/
 # Word/Excel の一時ロックファイル
 ~$*
 **/~$*
+
+# 同期スナップショット(ローカルデータ)
+.sync-data/

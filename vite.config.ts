@@ -179,7 +179,54 @@ function refreshApiPlugin(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), refreshApiPlugin()];
+// 時間割スナップショット同期API（dev）。自宅サーバ相当をローカルでも動かす。
+function syncApiPlugin(): Plugin {
+  return {
+    name: "timetable-sync-api",
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use("/api/sync", async (req, res) => {
+        try {
+          const { handleSync, normalizeSyncPath } = await import("./server/syncApi");
+          const remote = req.socket.remoteAddress || "";
+          const isLocal =
+            remote === "127.0.0.1" || remote === "::1" || remote === "::ffff:127.0.0.1";
+          const { status, json } = await handleSync({
+            method: req.method || "GET",
+            pathname: normalizeSyncPath(req.originalUrl || req.url || ""),
+            token: (req.headers["x-sync-token"] as string) || null,
+            isLocal,
+            body: () =>
+              new Promise((resolve) => {
+                let b = "";
+                req.on("data", (c) => (b += c));
+                req.on("end", () => {
+                  try {
+                    resolve(b ? JSON.parse(b) : null);
+                  } catch {
+                    resolve(null);
+                  }
+                });
+              }),
+          });
+          if (status === 204) {
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+          res.statusCode = status;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify(json));
+        } catch (e) {
+          res.statusCode = 500;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: String((e as Error).message || e) }));
+        }
+      });
+    },
+  };
+}
+
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), refreshApiPlugin(), syncApiPlugin()];
 
 export default defineConfig({
   plugins,
