@@ -843,7 +843,7 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版「新編 新しい算数」",
-   "units": 24,
+   "units": 56,
    "periods": 120,
    "file": "tosho_sansu1.json",
    "sourceKind": "publisher"
@@ -855,7 +855,7 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版「新編 新しい算数」",
-   "units": 21,
+   "units": 55,
    "periods": 148,
    "file": "tosho_sansu2.json",
    "sourceKind": "publisher"
@@ -867,7 +867,7 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版「新編 新しい算数」",
-   "units": 25,
+   "units": 65,
    "periods": 149,
    "file": "tosho_sansu3.json",
    "sourceKind": "publisher"
@@ -879,7 +879,7 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版「新編 新しい算数」",
-   "units": 23,
+   "units": 62,
    "periods": 154,
    "file": "tosho_sansu4.json",
    "sourceKind": "publisher"
@@ -891,7 +891,7 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版「新編 新しい算数」",
-   "units": 26,
+   "units": 61,
    "periods": 160,
    "file": "tosho_sansu5.json",
    "sourceKind": "publisher"
@@ -903,7 +903,7 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版「新編 新しい算数」",
-   "units": 22,
+   "units": 53,
    "periods": 151,
    "file": "tosho_sansu6.json",
    "sourceKind": "publisher"
