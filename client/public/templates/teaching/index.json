@@ -255,7 +255,7 @@
    "subject": "理科",
    "year": 2024,
    "edition": "令和6年度版",
-   "units": 14,
+   "units": 25,
    "periods": 79,
    "file": "kyoikushuppan_rika3.json",
    "sourceKind": "publisher"
@@ -351,7 +351,7 @@
    "subject": "理科",
    "year": 2024,
    "edition": "令和6年度版",
-   "units": 17,
+   "units": 27,
    "periods": 89,
    "file": "kyoikushuppan_rika4.json",
    "sourceKind": "publisher"
@@ -447,7 +447,7 @@
    "subject": "理科",
    "year": 2024,
    "edition": "令和6年度版",
-   "units": 12,
+   "units": 21,
    "periods": 91,
    "file": "kyoikushuppan_rika5.json",
    "sourceKind": "publisher"
@@ -567,7 +567,7 @@
    "subject": "理科",
    "year": 2024,
    "edition": "令和6年度版",
-   "units": 11,
+   "units": 23,
    "periods": 89,
    "file": "kyoikushuppan_rika6.json",
    "sourceKind": "publisher"
@@ -1011,7 +1011,7 @@
    "subject": "理科",
    "year": 2024,
    "edition": "令和6年度版「新しい理科」",
-   "units": 14,
+   "units": 25,
    "periods": 105,
    "file": "tosho_rika5.json",
    "sourceKind": "publisher"
@@ -1023,7 +1023,7 @@
    "subject": "理科",
    "year": 2024,
    "edition": "令和6年度版「新しい理科」",
-   "units": 16,
+   "units": 33,
    "periods": 105,
    "file": "tosho_rika6.json",
    "sourceKind": "publisher"
