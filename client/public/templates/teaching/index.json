@@ -507,7 +507,7 @@
    "subject": "英語",
    "year": 2024,
    "edition": "令和6年度版",
-   "units": 11,
+   "units": 19,
    "periods": 70,
    "file": "kairyudo_eigo5.json",
    "sourceKind": "publisher"
@@ -1227,7 +1227,7 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版「小学算数」",
-   "units": 26,
+   "units": 28,
    "periods": 123,
    "file": "kyoiku_sansu1.json",
    "sourceKind": "publisher"
@@ -1287,7 +1287,7 @@
    "subject": "算数",
    "year": 2024,
    "edition": "令和6年度版「小学算数」",
-   "units": 22,
+   "units": 47,
    "periods": 152,
    "file": "kyoiku_sansu6.json",
    "sourceKind": "publisher"
@@ -1491,7 +1491,7 @@
    "subject": "生活",
    "year": 2024,
    "edition": "令和6年度版「新編 新しい生活」",
-   "units": 8,
+   "units": 31,
    "periods": 99,
    "file": "tosho_seikatsu1.json",
    "sourceKind": "publisher"
@@ -1503,7 +1503,7 @@
    "subject": "生活",
    "year": 2024,
    "edition": "令和6年度版「新編 新しい生活」",
-   "units": 9,
+   "units": 34,
    "periods": 105,
    "file": "tosho_seikatsu2.json",
    "sourceKind": "publisher"
@@ -1839,7 +1839,7 @@
    "subject": "生活",
    "year": 2024,
    "edition": "令和6年度版「新版 たのしいせいかつ」",
-   "units": 4,
+   "units": 18,
    "periods": 99,
    "file": "dainippon_seikatsu1.json",
    "sourceKind": "publisher"
@@ -1851,7 +1851,7 @@
    "subject": "生活",
    "year": 2024,
    "edition": "令和6年度版「新版 たのしいせいかつ」",
-   "units": 6,
+   "units": 19,
    "periods": 103,
    "file": "dainippon_seikatsu2.json",
    "sourceKind": "publisher"

@@ -1,137 +1,178 @@
 {
-  "id": "kairyudo_eigo5",
-  "source": "開隆堂",
-  "sourceKind": "publisher",
-  "grade": "5年",
-  "subject": "英語",
-  "year": 2024,
-  "edition": "令和6年度版",
-  "retrievedAt": "2026-06-18",
-  "units": [
-    {
-      "name": "Hello, everyone.",
-      "lessons": [
-        "Hello.",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ]
-    },
-    {
-      "name": "When is your special day?",
-      "lessons": [
-        "My birthday [special day] is (January 1st).",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ]
-    },
-    {
-      "name": "What do you have on Mondays?",
-      "lessons": [
-        "What do you have on (Mondays)?",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ]
-    },
-    {
-      "name": "Questions：5年2組の仲間たち",
-      "lessons": [
-        "Lesson 1～3で学習した表現",
-        ""
-      ]
-    },
-    {
-      "name": "I can draw pictures well.",
-      "lessons": [
-        "I [You / He / She] can [can’t] (play soccer).",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ]
-    },
-    {
-      "name": "Where is the station?",
-      "lessons": [
-        "Where is (the station)?",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ]
-    },
-    {
-      "name": "What would you like?",
-      "lessons": [
-        "May I help you?",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ]
-    },
-    {
-      "name": "Questions：太陽小学校の先生たち",
-      "lessons": [
-        "Lesson 4～6 で学習した表現",
-        ""
-      ]
-    },
-    {
-      "name": "I love my town.",
-      "lessons": [
-        "I love my town.",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ]
-    },
-    {
-      "name": "My Hero",
-      "lessons": [
-        "Who is your hero?",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
-      ]
-    },
-    {
-      "name": "Questions：ミーナ先生，ありがとう",
-      "lessons": [
-        "5年生で学習した表現",
-        ""
-      ]
-    }
-  ]
+ "id": "kairyudo_eigo5",
+ "source": "開隆堂",
+ "sourceKind": "publisher",
+ "grade": "5年",
+ "subject": "英語",
+ "year": 2024,
+ "edition": "令和6年度版",
+ "retrievedAt": "2026-06-18",
+ "units": [
+  {
+   "name": "Hello, everyone.「Hello.」",
+   "lessons": [
+    "Hello, everyone.「Hello.」"
+   ]
+  },
+  {
+   "name": "Hello, everyone.",
+   "lessons": [
+    "Hello, everyone.",
+    "Hello, everyone.",
+    "Hello, everyone.",
+    "Hello, everyone.",
+    "Hello, everyone.",
+    "Hello, everyone.",
+    "Hello, everyone."
+   ]
+  },
+  {
+   "name": "When is your special day?「My birthday [special day] is (January 1st).」",
+   "lessons": [
+    "When is your special day?「My birthday [special day] is (January 1st).」"
+   ]
+  },
+  {
+   "name": "When is your special day?",
+   "lessons": [
+    "When is your special day?",
+    "When is your special day?",
+    "When is your special day?",
+    "When is your special day?",
+    "When is your special day?",
+    "When is your special day?",
+    "When is your special day?"
+   ]
+  },
+  {
+   "name": "What do you have on Mondays?「What do you have on (Mondays)?」",
+   "lessons": [
+    "What do you have on Mondays?「What do you have on (Mondays)?」"
+   ]
+  },
+  {
+   "name": "What do you have on Mondays?",
+   "lessons": [
+    "What do you have on Mondays?",
+    "What do you have on Mondays?",
+    "What do you have on Mondays?",
+    "What do you have on Mondays?",
+    "What do you have on Mondays?",
+    "What do you have on Mondays?",
+    "What do you have on Mondays?"
+   ]
+  },
+  {
+   "name": "Questions：5年2組の仲間たち",
+   "lessons": [
+    "Lesson 1～3で学習した表現",
+    ""
+   ]
+  },
+  {
+   "name": "I can draw pictures well.「I [You / He / She] can [can’t] (play soccer).」",
+   "lessons": [
+    "I can draw pictures well.「I [You / He / She] can [can’t] (play soccer).」"
+   ]
+  },
+  {
+   "name": "I can draw pictures well.",
+   "lessons": [
+    "I can draw pictures well.",
+    "I can draw pictures well.",
+    "I can draw pictures well.",
+    "I can draw pictures well.",
+    "I can draw pictures well.",
+    "I can draw pictures well.",
+    "I can draw pictures well."
+   ]
+  },
+  {
+   "name": "Where is the station?「Where is (the station)?」",
+   "lessons": [
+    "Where is the station?「Where is (the station)?」"
+   ]
+  },
+  {
+   "name": "Where is the station?",
+   "lessons": [
+    "Where is the station?",
+    "Where is the station?",
+    "Where is the station?",
+    "Where is the station?",
+    "Where is the station?",
+    "Where is the station?",
+    "Where is the station?"
+   ]
+  },
+  {
+   "name": "What would you like?「May I help you?」",
+   "lessons": [
+    "What would you like?「May I help you?」"
+   ]
+  },
+  {
+   "name": "What would you like?",
+   "lessons": [
+    "What would you like?",
+    "What would you like?",
+    "What would you like?",
+    "What would you like?",
+    "What would you like?",
+    "What would you like?",
+    "What would you like?"
+   ]
+  },
+  {
+   "name": "Questions：太陽小学校の先生たち",
+   "lessons": [
+    "Lesson 4～6 で学習した表現",
+    ""
+   ]
+  },
+  {
+   "name": "I love my town.",
+   "lessons": [
+    "I love my town."
+   ]
+  },
+  {
+   "name": "I love my town.",
+   "lessons": [
+    "I love my town.",
+    "I love my town.",
+    "I love my town.",
+    "I love my town.",
+    "I love my town.",
+    "I love my town.",
+    "I love my town."
+   ]
+  },
+  {
+   "name": "My Hero「Who is your hero?」",
+   "lessons": [
+    "My Hero「Who is your hero?」"
+   ]
+  },
+  {
+   "name": "My Hero",
+   "lessons": [
+    "My Hero",
+    "My Hero",
+    "My Hero",
+    "My Hero",
+    "My Hero",
+    "My Hero",
+    "My Hero"
+   ]
+  },
+  {
+   "name": "Questions：ミーナ先生，ありがとう",
+   "lessons": [
+    "5年生で学習した表現",
+    ""
+   ]
+  }
+ ],
+ "note": "★再構築: 小単元(節)を単元の基準にし、単元名を『大単元「小単元」』の入れ子表記へ（学期跨ぎ低減・大単元の文脈保持）。総時数・コマ内容は不変。"
 }
