@@ -32,6 +32,7 @@ import {
   DrawerContent,
 } from "@/components/ui/drawer";
 import { useSidebarStyle } from "@/hooks/useSidebarStyle";
+import { SyncIndicator } from "@/components/SyncIndicator";
 
 export default function Home() {
   const {
@@ -229,6 +230,8 @@ export default function Home() {
                 <span>{unsavedMinutes === -1 ? t("common.unsaved") : unsavedMinutes >= 60 ? `${Math.floor(unsavedMinutes / 60)}h ${t("common.unsaved")}` : unsavedMinutes >= 1 ? `${unsavedMinutes}m ${t("common.unsaved")}` : t("common.unsaved")}</span>
               </button>
             )}
+            {/* スマホ連動の状態（有効時のみ表示） */}
+            <SyncIndicator />
           </div>
           {isLoaded && (
             <div className="flex items-center gap-1.5 shrink-0">

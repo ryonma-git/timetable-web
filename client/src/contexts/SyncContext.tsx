@@ -45,6 +45,8 @@ export const useSync = (): SyncContextValue => {
 };
 
 const PUSH_DEBOUNCE_MS = 2500;
+/** 表示中の定期プル間隔。短すぎると電池と通信を食うので控えめに。 */
+const POLL_INTERVAL_MS = 60_000;
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const { currentFile, loadTimetableFile } = useTimetable();
@@ -187,6 +189,24 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
+  }, [config.enabled, pullNow]);
+
+  // オンライン復帰時: すぐ再同期（電波が戻った瞬間に最新へ追いつく）
+  useEffect(() => {
+    if (!config.enabled) return;
+    const onOnline = () => void pullNow();
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [config.enabled, pullNow]);
+
+  // 定期プル: 表示中のみ一定間隔で最新を確認（他端末の編集を放置しても追いつく）。
+  // 非表示中はタイマーを動かさない（電池とリクエストの無駄を避ける）。
+  useEffect(() => {
+    if (!config.enabled) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible" && navigator.onLine) void pullNow();
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
   }, [config.enabled, pullNow]);
 
   return (
