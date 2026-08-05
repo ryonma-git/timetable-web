@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useTimetable } from "@/contexts/TimetableContext";
+import { useSync } from "@/contexts/SyncContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { deserializeTimetableFile } from "@/lib/timetableFile";
 import { applyOverrides } from "@/lib/timetable";
@@ -29,12 +30,17 @@ interface SavedMeta {
 export function AutoRestoreDialog() {
   const { isLoaded, loadTimetableFile } = useTimetable();
   const { language, t } = useLanguage();
+  const { config: syncConfig } = useSync();
   const [open, setOpen] = useState(false);
   const [meta, setMeta] = useState<SavedMeta | null>(null);
 
   useEffect(() => {
     // Only show if no data is currently loaded
     if (isLoaded) return;
+    // スマホ連動が有効なときは出さない。
+    // 同期はサーバの最新を自動で取り込むので、ここでローカルの復元を挟むと
+    // 「どちらが正か」が競合し、復元を選ぶと同期側が『未送信あり』と誤認する。
+    if (syncConfig.enabled) return;
 
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -47,7 +53,7 @@ export function AutoRestoreDialog() {
     } catch {
       // Invalid data - ignore
     }
-  }, [isLoaded]);
+  }, [isLoaded, syncConfig.enabled]);
 
   const handleRestore = async () => {
     try {
