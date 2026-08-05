@@ -45,7 +45,7 @@ export const useSync = (): SyncContextValue => {
   return v;
 };
 
-const PUSH_DEBOUNCE_MS = 2500;
+const PUSH_DEBOUNCE_MS = 1200;
 /** 表示中の定期プル間隔。短すぎると電池と通信を食うので控えめに。 */
 const POLL_INTERVAL_MS = 60_000;
 
@@ -61,6 +61,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPushedUpdatedAt = useRef<string | null>(null);
   const didInitialPull = useRef(false);
+  /** まだサーバへ送れていない編集があるか（画面を離れる直前の送り切り＆再開時の送り直しに使う） */
+  const hasUnsent = useRef(false);
+  /** pullNow から pushNow を呼ぶための参照（相互依存を避ける） */
+  const pushNowRef = useRef<(() => Promise<void>) | null>(null);
 
   const updateConfig = useCallback((patch: Partial<SyncConfig>) => {
     persistConfig(patch);
@@ -105,10 +109,16 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       if (isNewer(remote.updatedAt, localUpdated) || !currentFile) {
         await loadTimetableFile(remote.payload);
         lastPushedUpdatedAt.current = remote.updatedAt;
+        hasUnsent.current = false;
         setLastSyncedAt(new Date().toISOString());
         setState("synced");
         setMessage(`サーバの最新を取り込みました（${remote.device ?? "他端末"}）`);
         toast.success("スマホ/他端末の最新を取り込みました");
+      } else if (hasUnsent.current) {
+        // ローカルの方が新しい＝前回送り切れなかった変更が残っている。
+        // 取得のついでに送り直す（アプリを開くたびに未送信が解消される安全網）。
+        setMessage("未送信の変更を送ります");
+        await pushNowRef.current?.();
       } else {
         setState("synced");
         setMessage("ローカルが最新です");
@@ -127,6 +137,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       if (r.ok) {
         setServerVersion(r.version);
         lastPushedUpdatedAt.current = currentFile.meta?.updatedAt ?? null;
+        hasUnsent.current = false;
         setLastSyncedAt(new Date().toISOString());
         setState("synced");
         setMessage("送信しました");
@@ -144,6 +155,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           const f = await forcePush(currentFile, r.serverVersion);
           if (f.ok) {
             setServerVersion(f.version);
+            hasUnsent.current = false;
             setState("synced");
             setMessage("上書き送信しました");
           }
@@ -153,6 +165,11 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       handleErr(e);
     }
   }, [currentFile, loadTimetableFile]);
+
+  // pullNow から呼べるように最新の pushNow を保持
+  useEffect(() => {
+    pushNowRef.current = pushNow;
+  }, [pushNow]);
 
   const handleErr = (e: unknown) => {
     if (e instanceof SyncError && e.code === "unauthorized") {
@@ -181,6 +198,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     if (!config.enabled || !currentFile) return;
     const u = currentFile.meta?.updatedAt;
     if (!u || u === lastPushedUpdatedAt.current) return; // 取り込み直後や無変更はスキップ
+    hasUnsent.current = true; // まだ送っていない変更がある
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
       void pushNow();
@@ -189,6 +207,27 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       if (pushTimer.current) clearTimeout(pushTimer.current);
     };
   }, [currentFile, config.enabled, pushNow]);
+
+  // 画面を離れる直前に未送信の変更を送り切る。
+  // スマホでは編集直後にアプリを閉じる/ホームに戻ることが多く、debounce待ちのまま
+  // ページが停止されると変更が失われるため（iPhoneで実際に発生）。
+  useEffect(() => {
+    if (!config.enabled) return;
+    const flush = () => {
+      if (!hasUnsent.current) return;
+      if (pushTimer.current) clearTimeout(pushTimer.current);
+      void pushNow();
+    };
+    const onVis = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [config.enabled, pushNow]);
 
   // フォアグラウンド復帰時: 最新を取りに行く（スマホで開き直した時に効く）
   useEffect(() => {

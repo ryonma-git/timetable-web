@@ -1,5 +1,5 @@
 // Service Worker for 時間割管理 PWA
-const CACHE_NAME = 'timetable-v90';
+const CACHE_NAME = 'timetable-v91';
 const STATIC_ASSETS = [
   './',
   './index.html',
