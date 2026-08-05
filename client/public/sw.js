@@ -1,5 +1,5 @@
 // Service Worker for 時間割管理 PWA
-const CACHE_NAME = 'timetable-v89';
+const CACHE_NAME = 'timetable-v90';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -40,6 +40,29 @@ self.addEventListener('fetch', (event) => {
 
   // chrome-extension や外部リクエストはスキップ
   if (!event.request.url.startsWith(self.location.origin)) return;
+
+  const url = new URL(event.request.url);
+
+  // 同期API等は常にネットワーク（キャッシュすると古いデータを掴む）
+  if (url.pathname.startsWith('/api/')) return;
+
+  // ビルド成果物(/assets/*)は内容ハッシュ付きで不変。
+  // キャッシュ優先にして2回目以降の起動を即座にする（スマホで効く）。
+  if (url.pathname.includes('/assets/')) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)
