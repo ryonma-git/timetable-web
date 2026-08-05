@@ -17,6 +17,7 @@ import {
   pushSnapshot,
   forcePush,
   isNewer,
+  validateSnapshotPayload,
   SyncError,
   type SyncConfig,
 } from "@/lib/timetableSync";
@@ -93,6 +94,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       setServerVersion(remote.version);
+      // 壊れた/古い形式を取り込むとアプリ側で例外になるため、先に検証して弾く
+      const v = validateSnapshotPayload(remote.payload);
+      if (!v.ok) {
+        setState("error");
+        setMessage(`サーバのデータを取り込めません（${v.reason}）。Macから「送信」し直してください`);
+        return;
+      }
       const localUpdated = currentFile?.meta?.updatedAt;
       if (isNewer(remote.updatedAt, localUpdated) || !currentFile) {
         await loadTimetableFile(remote.payload);
@@ -125,7 +133,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       } else {
         // 競合: サーバの方が新しいことがある。updatedAtで判定して last-write-wins。
         const remote = await pullSnapshot();
-        if (remote && isNewer(remote.updatedAt, currentFile.meta?.updatedAt)) {
+        const rv = remote ? validateSnapshotPayload(remote.payload) : { ok: false as const, reason: "データなし" };
+        if (remote && rv.ok && isNewer(remote.updatedAt, currentFile.meta?.updatedAt)) {
           await loadTimetableFile(remote.payload);
           setServerVersion(remote.version);
           setState("synced");

@@ -166,6 +166,26 @@ export class SyncError extends Error {
   }
 }
 
+/**
+ * サーバから受け取った payload が取り込み可能な時間割ファイルか検証する。
+ * 壊れた/古い形式を loadTimetableFile に渡すと配列の map で例外になり、
+ * 「未接続」と紛らわしい表示になるため、取り込む前にここで弾く。
+ */
+export function validateSnapshotPayload(p: unknown): { ok: true } | { ok: false; reason: string } {
+  if (!p || typeof p !== "object") return { ok: false, reason: "データが空です" };
+  const f = p as Partial<TimetableFile> & { semesters?: unknown };
+  if (typeof f.format !== "string" || !f.format.startsWith("timetable-app/")) {
+    return { ok: false, reason: "時間割ファイルの形式ではありません" };
+  }
+  if (!f.meta || typeof f.meta !== "object") return { ok: false, reason: "meta がありません" };
+  const hasSemesters = Array.isArray(f.semesters) && f.semesters.length > 0;
+  const hasLegacy = Array.isArray(f.base);
+  if (!hasSemesters && !hasLegacy) {
+    return { ok: false, reason: "時間割の中身（base / semesters）がありません" };
+  }
+  return { ok: true };
+}
+
 /** 2つの updatedAt を比較。a が新しければ正。 */
 export function isNewer(a?: string, b?: string): boolean {
   if (!a) return false;
