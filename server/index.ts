@@ -45,6 +45,12 @@ async function startServer() {
 
   // 時間割スナップショット同期API（自宅サーバ本番）。
   app.use("/api/sync", express.json({ limit: "8mb" }), async (req, res) => {
+    // どの端末がいつ何を叩いたかを残す（「iPhoneから届いていない」等の切り分け用）
+    const ua = req.header("user-agent") || "";
+    const kind = /iPhone|iPad|iPod/i.test(ua) ? "iOS" : /Macintosh/i.test(ua) ? "Mac" : "その他";
+    console.log(
+      `[sync] ${new Date().toISOString()} ${req.method} ${req.path} from=${kind} ip=${req.socket.remoteAddress} ua=${ua.slice(0, 80)}`
+    );
     const { status, json } = await handleSync({
       method: req.method,
       pathname: req.path || "/",

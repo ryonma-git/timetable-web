@@ -14,23 +14,30 @@ export function SyncIndicator() {
 
   const busy = sync.state === "pulling" || sync.state === "pushing" || sync.state === "checking";
   const bad = sync.state === "offline" || sync.state === "error";
+  const conflict = sync.state === "conflict";
 
   const cls = busy
     ? "bg-sky-50 text-sky-700 border-sky-200"
-    : bad
-      ? "bg-rose-50 text-rose-600 border-rose-200"
-      : "bg-emerald-50 text-emerald-700 border-emerald-200";
+    : conflict
+      ? "bg-amber-50 text-amber-700 border-amber-200 font-medium"
+      : bad
+        ? "bg-rose-50 text-rose-600 border-rose-200"
+        : "bg-emerald-50 text-emerald-700 border-emerald-200";
 
   const label = busy
     ? sync.state === "pushing"
       ? "送信中"
       : "同期中"
-    : bad
-      ? "未接続"
-      : "同期済み";
+    : conflict
+      ? "未送信あり"
+      : bad
+        ? "未接続"
+        : "同期済み";
 
   const icon = busy ? (
     <Loader2 size={10} className="animate-spin shrink-0" />
+  ) : conflict ? (
+    <AlertTriangle size={10} className="shrink-0" />
   ) : bad ? (
     sync.state === "error" ? (
       <AlertTriangle size={10} className="shrink-0" />

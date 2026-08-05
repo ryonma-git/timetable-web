@@ -106,6 +106,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const localUpdated = currentFile?.meta?.updatedAt;
+      // ★安全装置: 未送信のローカル編集がある間は、サーバが新しくても絶対に上書きしない。
+      // （実機で「iPhoneの編集が消える」事故が起きたため。まず送ってから取り込む）
+      if (hasUnsent.current && currentFile) {
+        setState("conflict");
+        setMessage("未送信の変更があるため取り込みを保留しました。先に「送信」してください");
+        return;
+      }
       if (isNewer(remote.updatedAt, localUpdated) || !currentFile) {
         await loadTimetableFile(remote.payload);
         lastPushedUpdatedAt.current = remote.updatedAt;
