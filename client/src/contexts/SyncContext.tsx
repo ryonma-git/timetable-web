@@ -50,7 +50,27 @@ const PUSH_DEBOUNCE_MS = 1200;
 const POLL_INTERVAL_MS = 60_000;
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
-  const { currentFile, loadTimetableFile } = useTimetable();
+  const { currentFile, loadTimetableFile, allOps } = useTimetable();
+
+  // ★重要: コマの編集は allOps に入り、currentFile.ops は「保存」するまで更新されない。
+  // そのため currentFile だけを送ると編集が含まれず、変更が同期されない（実機で発生）。
+  // ここで「未保存の編集も含んだ状態」を組み立て、これを同期の対象とする。
+  const lastEditAt = useRef<string | null>(null);
+  const prevOpsLen = useRef<number>(-1);
+  if (allOps.length !== prevOpsLen.current) {
+    if (prevOpsLen.current !== -1) lastEditAt.current = new Date().toISOString();
+    prevOpsLen.current = allOps.length;
+  }
+  const syncFile = (() => {
+    if (!currentFile) return null;
+    const savedLen = currentFile.ops?.length ?? 0;
+    if (allOps.length === savedLen) return currentFile; // 未保存の編集なし
+    return {
+      ...currentFile,
+      ops: allOps,
+      meta: { ...currentFile.meta, updatedAt: lastEditAt.current ?? currentFile.meta.updatedAt },
+    };
+  })();
   const [config, setConfig] = useState<SyncConfig>(() => getSyncConfig());
   const [state, setState] = useState<SyncState>("idle");
   const [message, setMessage] = useState("");
@@ -105,15 +125,15 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         setMessage(`サーバのデータを取り込めません（${v.reason}）。Macから「送信」し直してください`);
         return;
       }
-      const localUpdated = currentFile?.meta?.updatedAt;
+      const localUpdated = syncFile?.meta?.updatedAt;
       // ★安全装置: 未送信のローカル編集がある間は、サーバが新しくても絶対に上書きしない。
       // （実機で「iPhoneの編集が消える」事故が起きたため。まず送ってから取り込む）
-      if (hasUnsent.current && currentFile) {
+      if (hasUnsent.current && syncFile) {
         setState("conflict");
         setMessage("未送信の変更があるため取り込みを保留しました。先に「送信」してください");
         return;
       }
-      if (isNewer(remote.updatedAt, localUpdated) || !currentFile) {
+      if (isNewer(remote.updatedAt, localUpdated) || !syncFile) {
         await loadTimetableFile(remote.payload);
         lastPushedUpdatedAt.current = remote.updatedAt;
         hasUnsent.current = false;
@@ -133,17 +153,17 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       handleErr(e);
     }
-  }, [currentFile, loadTimetableFile]);
+  }, [syncFile, loadTimetableFile]);
 
   const pushNow = useCallback(async () => {
-    if (!currentFile) return;
+    if (!syncFile) return;
     try {
       setState("pushing");
-      const r = await pushSnapshot(currentFile);
+      const r = await pushSnapshot(syncFile);
       setReachable(true);
       if (r.ok) {
         setServerVersion(r.version);
-        lastPushedUpdatedAt.current = currentFile.meta?.updatedAt ?? null;
+        lastPushedUpdatedAt.current = syncFile.meta?.updatedAt ?? null;
         hasUnsent.current = false;
         setLastSyncedAt(new Date().toISOString());
         setState("synced");
@@ -152,14 +172,14 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         // 競合: サーバの方が新しいことがある。updatedAtで判定して last-write-wins。
         const remote = await pullSnapshot();
         const rv = remote ? validateSnapshotPayload(remote.payload) : { ok: false as const, reason: "データなし" };
-        if (remote && rv.ok && isNewer(remote.updatedAt, currentFile.meta?.updatedAt)) {
+        if (remote && rv.ok && isNewer(remote.updatedAt, syncFile.meta?.updatedAt)) {
           await loadTimetableFile(remote.payload);
           setServerVersion(remote.version);
           setState("synced");
           setMessage("サーバが新しかったため取り込みました");
           toast.info("サーバ側が新しかったので取り込みました");
         } else {
-          const f = await forcePush(currentFile, r.serverVersion);
+          const f = await forcePush(syncFile, r.serverVersion);
           if (f.ok) {
             setServerVersion(f.version);
             hasUnsent.current = false;
@@ -171,7 +191,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       handleErr(e);
     }
-  }, [currentFile, loadTimetableFile]);
+  }, [syncFile, loadTimetableFile]);
 
   // pullNow から呼べるように最新の pushNow を保持
   useEffect(() => {
@@ -202,8 +222,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   // 保存(currentFile.updatedAt変更)時: debounceして自動プッシュ
   useEffect(() => {
-    if (!config.enabled || !currentFile) return;
-    const u = currentFile.meta?.updatedAt;
+    if (!config.enabled || !syncFile) return;
+    const u = syncFile.meta?.updatedAt;
     if (!u || u === lastPushedUpdatedAt.current) return; // 取り込み直後や無変更はスキップ
     hasUnsent.current = true; // まだ送っていない変更がある
     if (pushTimer.current) clearTimeout(pushTimer.current);
@@ -213,7 +233,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (pushTimer.current) clearTimeout(pushTimer.current);
     };
-  }, [currentFile, config.enabled, pushNow]);
+  }, [syncFile, config.enabled, pushNow]);
 
   // 画面を離れる直前に未送信の変更を送り切る。
   // スマホでは編集直後にアプリを閉じる/ホームに戻ることが多く、debounce待ちのまま
