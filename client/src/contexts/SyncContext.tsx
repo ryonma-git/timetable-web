@@ -129,8 +129,15 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       // ★安全装置: 未送信のローカル編集がある間は、サーバが新しくても絶対に上書きしない。
       // （実機で「iPhoneの編集が消える」事故が起きたため。まず送ってから取り込む）
       if (hasUnsent.current && syncFile) {
-        setState("conflict");
-        setMessage("未送信の変更があるため取り込みを保留しました。先に「送信」してください");
+        // 未送信のローカル編集がある。黙って上書きせず、まず送る（メモアプリのように
+        // 利用者が意識しなくても解消される）。送信できれば以後は普通に取り込める。
+        setMessage("未送信の変更を先に送ります");
+        await pushNowRef.current?.();
+        if (hasUnsent.current) {
+          // 送信できなかった場合だけ手動対応を促す
+          setState("conflict");
+          setMessage("未送信の変更があります。「送信」をお試しください");
+        }
         return;
       }
       if (isNewer(remote.updatedAt, localUpdated) || !syncFile) {

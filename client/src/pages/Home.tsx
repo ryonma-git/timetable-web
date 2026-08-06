@@ -11,7 +11,7 @@ import { Inspector } from "@/components/Inspector";
 import { StatsView, HistoryView, AuditView } from "@/components/StatsView";
 import { TeachingPlanView } from "@/components/TeachingPlanView";
 import { Button } from "@/components/ui/button";
-import { Printer, Save, Menu, FileSpreadsheet, FileInput, MoreHorizontal, CalendarDays, Database } from "lucide-react";
+import { Printer, Save, Menu, FileSpreadsheet, FileInput, MoreHorizontal, CalendarDays, Database, ChevronLeft, ChevronRight } from "lucide-react";
 import { SemesterTabs } from "@/components/SemesterTabs";
 import { PrintPreviewDialog } from "@/components/PrintPreviewDialog";
 import { AutoRestoreDialog } from "@/components/AutoRestoreDialog";
@@ -38,7 +38,15 @@ export default function Home() {
   const {
     activeTab, isLoaded, currentFile, isDirty, lastFileSavedAt,
     saveFile, exportCSV, exportEffective, exportOverride,
+    currentWeekMonday, navigateWeek, goToToday,
   } = useTimetable();
+
+  // 週移動バー用のラベル（例 6/22 〜 6/26）
+  const weekRangeLabel = (() => {
+    const end = new Date(currentWeekMonday);
+    end.setDate(end.getDate() + 4);
+    return `${currentWeekMonday.getMonth() + 1}/${currentWeekMonday.getDate()} 〜 ${end.getMonth() + 1}/${end.getDate()}`;
+  })();
 
   const { syncStatus, lastSyncedAt } = useGoogleDrive();
   const { t, language } = useLanguage();
@@ -337,6 +345,38 @@ export default function Home() {
             </div>
           )}
         </div>
+        {/* 週移動バー（モバイル専用・固定）。
+            従来は週移動がサイドバー内にあり、iPhoneでは開いてスクロールしないと
+            前週/次週へ飛べなかったため、時間割表示中は常に手が届く位置に置く。 */}
+        {isLoaded && activeTab === "grid" && (
+          <div className="lg:hidden flex items-center gap-1 px-2 py-1.5 border-b border-border bg-background/95 backdrop-blur-sm shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 shrink-0"
+              onClick={() => navigateWeek(-1)}
+              aria-label="前の週"
+            >
+              <ChevronLeft size={16} />
+            </Button>
+            <button
+              onClick={goToToday}
+              className="flex-1 min-w-0 text-center px-2 py-1 rounded hover:bg-muted transition-colors"
+              title={t("sidebar.thisWeek")}
+            >
+              <span className="text-sm font-medium tabular-nums">{weekRangeLabel}</span>
+            </button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 shrink-0"
+              onClick={() => navigateWeek(1)}
+              aria-label="次の週"
+            >
+              <ChevronRight size={16} />
+            </Button>
+          </div>
+        )}
         {/* Semester tabs */}
         {isLoaded && <SemesterTabs />}
         {/* Content area */}
