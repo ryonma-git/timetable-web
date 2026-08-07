@@ -6,6 +6,7 @@ import zlib from "node:zlib";
 import { fileURLToPath } from "url";
 import { handleRefresh, actionFromPath } from "./refreshEngine";
 import { handleSync } from "./syncApi";
+import { handleDriveApi, normalizeDrivePath } from "./driveApi";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,6 +64,32 @@ async function startServer() {
       return;
     }
     res.status(status).json(json);
+  });
+
+  // Google Drive サーバー経由ログイン（都度ログイン解消。任意・GOOGLE_CLIENT_SECRET未設定なら404扱い）
+  app.get("/api/drive/*", async (req, res) => {
+    const r = await handleDriveApi({
+      method: req.method,
+      pathname: normalizeDrivePath(req.originalUrl),
+      token: (req.header("x-sync-token") as string) || null,
+      query: new URLSearchParams(req.query as Record<string, string>),
+      origin: `${req.protocol}://${req.get("host")}`,
+    });
+    if (r.html) {
+      res.status(r.status).type("html").send(r.html);
+      return;
+    }
+    res.status(r.status).json(r.json);
+  });
+  app.post("/api/drive/*", async (req, res) => {
+    const r = await handleDriveApi({
+      method: req.method,
+      pathname: normalizeDrivePath(req.originalUrl),
+      token: (req.header("x-sync-token") as string) || null,
+      query: new URLSearchParams(),
+      origin: `${req.protocol}://${req.get("host")}`,
+    });
+    res.status(r.status).json(r.json);
   });
 
   // Serve static files from dist/public in production

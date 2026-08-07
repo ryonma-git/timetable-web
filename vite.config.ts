@@ -226,7 +226,42 @@ function syncApiPlugin(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), refreshApiPlugin(), syncApiPlugin()];
+// Google Drive サーバー経由ログイン（dev）。
+function driveApiPlugin(): Plugin {
+  return {
+    name: "timetable-drive-api",
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use("/api/drive", async (req, res) => {
+        try {
+          const { handleDriveApi, normalizeDrivePath } = await import("./server/driveApi");
+          const url = new URL(req.originalUrl || req.url || "", "http://localhost");
+          const r = await handleDriveApi({
+            method: req.method || "GET",
+            pathname: normalizeDrivePath(req.originalUrl || req.url || ""),
+            token: (req.headers["x-sync-token"] as string) || null,
+            query: url.searchParams,
+            origin: `${req.headers["x-forwarded-proto"] || "http"}://${req.headers.host}`,
+          });
+          if (r.html) {
+            res.statusCode = r.status;
+            res.setHeader("Content-Type", "text/html; charset=utf-8");
+            res.end(r.html);
+            return;
+          }
+          res.statusCode = r.status;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify(r.json));
+        } catch (e) {
+          res.statusCode = 500;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: String((e as Error).message || e) }));
+        }
+      });
+    },
+  };
+}
+
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), refreshApiPlugin(), syncApiPlugin(), driveApiPlugin()];
 
 export default defineConfig({
   plugins,

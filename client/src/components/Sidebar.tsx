@@ -51,6 +51,7 @@ import { SamplePickerDialog } from "@/components/SamplePickerDialog";
 import { DriveBackupDialog } from "@/components/DriveBackupDialog";
 import { SyncSettingsDialog } from "@/components/SyncSettingsDialog";
 import { useSync } from "@/contexts/SyncContext";
+import { DriveServerLinkRow } from "@/components/DriveServerLinkRow";
 import { ShareTemplateDialog } from "@/components/ShareTemplateDialog";
 import { TIMETABLE_FILE_EXT } from "@/lib/timetableFile";
 import { useSidebarStyle, type SidebarStyle } from "@/hooks/useSidebarStyle";
@@ -454,6 +455,8 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
             <Cloud size={9} />
             Google Drive
           </p>
+
+          <DriveServerLinkRow />
 
           {isRestoringLogin ? (
             /* サイレントログイン復元中 */

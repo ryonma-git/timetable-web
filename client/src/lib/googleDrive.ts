@@ -94,7 +94,7 @@ try {
   // localStorage 不可の環境では従来通りメモリのみ
 }
 
-function persistToken(token: string, expiresAt: number): void {
+export function persistToken(token: string, expiresAt: number): void {
   accessToken = token;
   tokenExpiresAt = expiresAt;
   try {
@@ -174,6 +174,21 @@ function flushTokenWaiters(ok: boolean): void {
  */
 export async function ensureFreshToken(timeoutMs = 15000): Promise<boolean> {
   if (isTokenValid()) return true;
+
+  // ★都度ログイン解消: サーバーがリフレッシュトークンを保持していれば、
+  // ポップアップなしで新しいトークンを得られる。使えない環境では null が返り、
+  // 下の従来どおりのGISポップアップにフォールバックする。
+  try {
+    const { getServerManagedToken } = await import("./driveServerAuth");
+    const server = await getServerManagedToken();
+    if (server) {
+      persistToken(server.token, server.expiresAt);
+      return true;
+    }
+  } catch {
+    /* フォールバックへ */
+  }
+
   if (!tokenClient) return false;
   const wasLoggedIn = (() => {
     try {
