@@ -24,7 +24,7 @@ const stateLabel: Record<string, string> = {
   synced: "同期済み",
   offline: "未接続",
   error: "エラー",
-  conflict: "競合",
+  conflict: "未送信あり",
 };
 
 export function SyncSettingsDialog({ open, onClose }: Props) {
@@ -145,7 +145,12 @@ export function SyncSettingsDialog({ open, onClose }: Props) {
               {sync.message && <div className="text-xs text-muted-foreground mt-0.5">{sync.message}</div>}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="gap-1" onClick={() => sync.pushNow()}>
+              <Button
+                variant={sync.state === "conflict" ? "default" : "outline"}
+                size="sm"
+                className="gap-1"
+                onClick={() => sync.pushNow()}
+              >
                 <Upload className="h-4 w-4" /> 送信
               </Button>
               <Button variant="outline" size="sm" className="gap-1" onClick={() => sync.pullNow()}>
