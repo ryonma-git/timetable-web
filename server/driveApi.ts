@@ -64,6 +64,28 @@ export interface DriveResponse {
   html?: string;
 }
 
+/**
+ * OAuthのredirect_uriに使うoriginを決める。
+ *
+ * Googleはリダイレクト先のホスト名に「.」を含む正規ドメインを要求し、
+ * TailscaleのMagicDNS短縮名（例 ryon-book-m5pro）のような単一ラベルは拒否する
+ * （実際に Google Cloud Console で確認済みのエラー）。
+ * また、アクセスした時のホスト名をそのまま使うと、短縮名/FQDN/localhost の
+ * どれで開いたかによって redirect_uri がズレて「redirect_uri_mismatch」になる。
+ *
+ * そのため環境変数 PUBLIC_HOST（例 "ryon-book-m5pro.taild0302f.ts.net:3000"）が
+ * 設定されていれば常にそれを使い、Google Console にはこの1つだけを登録すればよい形にする。
+ * 未設定時は従来どおりアクセス時のoriginを使う（このMac自身でのlocalhost開発用）。
+ */
+function driveOrigin(req: DriveRequest): string {
+  const host = process.env.PUBLIC_HOST;
+  if (host) {
+    const proto = host.startsWith("localhost") ? "http" : "http"; // Tailscale内はhttpでよい
+    return `${proto}://${host}`;
+  }
+  return req.origin;
+}
+
 function requireAuth(req: DriveRequest): DriveResponse | null {
   const t = syncToken();
   if (!t || !req.token || !timingSafeEqual(req.token, t)) {
@@ -86,7 +108,7 @@ export async function handleDriveApi(req: DriveRequest): Promise<DriveResponse> 
     const denied = requireAuth(req);
     if (denied) return denied;
     if (!driveAuthConfigured()) return { status: 503, json: { error: "not_configured" } };
-    const redirectUri = `${req.origin}/api/drive/callback`;
+    const redirectUri = `${driveOrigin(req)}/api/drive/callback`;
     const { url } = buildAuthUrl(redirectUri);
     return { status: 200, json: { url } };
   }
@@ -97,7 +119,7 @@ export async function handleDriveApi(req: DriveRequest): Promise<DriveResponse> 
     if (!code || !state) {
       return { status: 400, html: page("エラー", "code または state がありません。") };
     }
-    const redirectUri = `${req.origin}/api/drive/callback`;
+    const redirectUri = `${driveOrigin(req)}/api/drive/callback`;
     const r = await handleCallback(code, state, redirectUri);
     if (!r.ok) return { status: 400, html: page("連携に失敗しました", r.error) };
     return {
