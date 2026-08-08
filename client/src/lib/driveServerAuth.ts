@@ -30,15 +30,33 @@ export async function fetchDriveServerStatus(): Promise<DriveServerStatus> {
   }
 }
 
-/** 連携用の同意画面URLを取得し、そのタブへ遷移する（別タブで開くのが安全）。 */
+/**
+ * 連携用の同意画面URLを取得し、そのタブへ遷移する。
+ *
+ * ★重要: window.open は「ユーザー操作のクリックハンドラ内で同期的に呼ぶ」必要がある。
+ * fetch の await を挟んでから呼ぶと、Safari/iOS はポップアップブロックとして無視する
+ * （エラーも出ず、何も起きないように見える。実機で発生した不具合の原因）。
+ * そのため先に空タブを同期的に開いておき、後から場所を差し替える。
+ */
 export async function startDriveServerLink(): Promise<{ ok: boolean; error?: string }> {
+  // クリック直後・同期的に開く（この時点ではURLがまだ無いので about:blank）
+  const tab = window.open("", "_blank", "noopener,noreferrer");
   try {
     const res = await fetch("/api/drive/auth-url", { headers: authHeaders(), cache: "no-store" });
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    if (!res.ok) {
+      tab?.close();
+      return { ok: false, error: `HTTP ${res.status}` };
+    }
     const { url } = (await res.json()) as { url: string };
-    window.open(url, "_blank", "noopener,noreferrer");
+    if (tab) {
+      tab.location.href = url;
+    } else {
+      // ポップアップブロックで tab が取れなかった場合は同一タブで遷移する
+      window.location.href = url;
+    }
     return { ok: true };
   } catch (e) {
+    tab?.close();
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
