@@ -80,7 +80,10 @@ export interface DriveResponse {
 function driveOrigin(req: DriveRequest): string {
   const host = process.env.PUBLIC_HOST;
   if (host) {
-    const proto = host.startsWith("localhost") ? "http" : "http"; // Tailscale内はhttpでよい
+    // Googleは機微スコープのredirect_uriにHTTPS必須（localhost以外）。
+    // `tailscale serve` が https://<FQDN> → http://127.0.0.1:PORT を中継してくれるため、
+    // PUBLIC_HOSTはポート無しのFQDNのみを想定する（例 ryon-book-m5pro.taild0302f.ts.net）。
+    const proto = host.startsWith("localhost") ? "http" : "https";
     return `${proto}://${host}`;
   }
   return req.origin;
