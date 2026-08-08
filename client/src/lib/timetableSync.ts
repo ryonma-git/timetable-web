@@ -86,19 +86,25 @@ export async function syncHealth(): Promise<SyncHealth> {
   }
 }
 
-/** localhost(=Mac)のみ: サーバからトークンを自動取得して保存。成功=true。 */
-export async function bootstrapToken(): Promise<boolean> {
+/**
+ * localhost(=Mac)のみ: サーバからトークンを自動取得して保存する。
+ * 取得した値をそのまま返す（呼び出し側で即使えるようにするため）。
+ * ★以前は boolean のみ返し、呼び出し側が Reactコンテキストの config.token を
+ * await後に読み直していたが、setState の反映が非同期なため直後は古い値のままで、
+ * 何度もボタンを押してようやく反映されたように見える不具合があった。
+ */
+export async function bootstrapToken(): Promise<string | null> {
   try {
     const res = await fetch(`${base()}/api/sync/bootstrap-token`, { cache: "no-store" });
-    if (!res.ok) return false;
+    if (!res.ok) return null;
     const { token } = (await res.json()) as { token?: string };
     if (token) {
       setSyncConfig({ token });
-      return true;
+      return token;
     }
-    return false;
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 

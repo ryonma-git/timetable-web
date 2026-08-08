@@ -12,6 +12,22 @@ function authHeaders(): Record<string, string> {
   return token ? { "x-sync-token": token } : {};
 }
 
+/**
+ * 同期トークンが未設定なら、このMac＝サーバー同居のときだけ自動取得して保存する。
+ * ★「スマホ連動」設定を開いて『このMacから』を押す、という操作自体をユーザーに
+ * させないための自動化（この手順を人力でやらせるのは難しいという指摘への対応）。
+ * サーバー同居でない（=リモート/スマホ）場合は何もしない（そこは別端末のトークン入力が必要）。
+ */
+async function ensureAuthToken(): Promise<void> {
+  if (localStorage.getItem("sync.token")) return;
+  try {
+    const { bootstrapToken } = await import("./timetableSync");
+    await bootstrapToken(); // ローカル以外からは 403 で失敗するだけ（無害）
+  } catch {
+    /* ignore */
+  }
+}
+
 export interface DriveServerStatus {
   configured: boolean;
   linked: boolean;
@@ -43,10 +59,12 @@ export async function startDriveServerLink(
   tab: Window | null
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    await ensureAuthToken(); // 未設定ならこの場で自動取得（サーバー同居時のみ）
     const res = await fetch("/api/drive/auth-url", { headers: authHeaders(), cache: "no-store" });
     if (!res.ok) {
       tab?.close();
-      return { ok: false, error: `auth-url取得に失敗 (HTTP ${res.status})` };
+      const hint = res.status === 401 ? "。スマホ連動のトークンを確認してください" : "";
+      return { ok: false, error: `auth-url取得に失敗 (HTTP ${res.status})${hint}` };
     }
     const { url } = (await res.json()) as { url: string };
     if (tab && !tab.closed) {

@@ -32,7 +32,7 @@ interface SyncContextValue {
   message: string;
   reachable: boolean | null;
   updateConfig: (patch: Partial<SyncConfig>) => void;
-  autoConfigureFromLocal: () => Promise<boolean>; // Macからトークン自動取得
+  autoConfigureFromLocal: () => Promise<string | null>; // Macからトークン自動取得。取得できたトークンをそのまま返す
   checkHealth: () => Promise<void>;
   pullNow: () => Promise<void>;
   pushNow: () => Promise<void>;
@@ -92,9 +92,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const autoConfigureFromLocal = useCallback(async () => {
-    const ok = await bootstrapToken();
-    if (ok) setConfig(getSyncConfig());
-    return ok;
+    const token = await bootstrapToken();
+    if (token) setConfig(getSyncConfig());
+    return token;
   }, []);
 
   const checkHealth = useCallback(async () => {

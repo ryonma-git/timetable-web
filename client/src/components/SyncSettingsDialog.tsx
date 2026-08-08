@@ -49,10 +49,12 @@ export function SyncSettingsDialog({ open, onClose }: Props) {
   const onAutoConfigure = async () => {
     setBusy(true);
     saveField();
-    const ok = await sync.autoConfigureFromLocal();
+    // ★戻り値のトークンをそのまま使う（sync.config.token を読み直すと、Reactの
+    // 状態更新が非同期なため直後は古い値のままで、何度も押さないと反映されない不具合があった）
+    const token = await sync.autoConfigureFromLocal();
     setBusy(false);
-    if (ok) {
-      setToken(sync.config.token || "");
+    if (token) {
+      setToken(token);
       toast.success("このMacからトークンを取得しました");
       await sync.checkHealth();
     } else {
