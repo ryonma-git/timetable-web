@@ -31,27 +31,28 @@ export async function fetchDriveServerStatus(): Promise<DriveServerStatus> {
 }
 
 /**
- * 連携用の同意画面URLを取得し、そのタブへ遷移する。
+ * 連携用の同意画面URLを取得し、既に開いてあるタブへ遷移させる。
  *
- * ★重要: window.open は「ユーザー操作のクリックハンドラ内で同期的に呼ぶ」必要がある。
- * fetch の await を挟んでから呼ぶと、Safari/iOS はポップアップブロックとして無視する
- * （エラーも出ず、何も起きないように見える。実機で発生した不具合の原因）。
- * そのため先に空タブを同期的に開いておき、後から場所を差し替える。
+ * ★重要: window.open は「ユーザー操作のクリックハンドラ内で同期的に」呼ぶ必要があり、
+ * かつ noopener を付けると返り値の Window が操作不能（null 相当）になることがある
+ * （tab.location への書き込みが効かず、空タブのまま残る不具合の原因だった）。
+ * そのため window.open はこの関数の外＝onClick の最上位で同期的に呼び、
+ * ここでは既に開いた Window への書き込みだけを行う。
  */
-export async function startDriveServerLink(): Promise<{ ok: boolean; error?: string }> {
-  // クリック直後・同期的に開く（この時点ではURLがまだ無いので about:blank）
-  const tab = window.open("", "_blank", "noopener,noreferrer");
+export async function startDriveServerLink(
+  tab: Window | null
+): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch("/api/drive/auth-url", { headers: authHeaders(), cache: "no-store" });
     if (!res.ok) {
       tab?.close();
-      return { ok: false, error: `HTTP ${res.status}` };
+      return { ok: false, error: `auth-url取得に失敗 (HTTP ${res.status})` };
     }
     const { url } = (await res.json()) as { url: string };
-    if (tab) {
+    if (tab && !tab.closed) {
       tab.location.href = url;
     } else {
-      // ポップアップブロックで tab が取れなかった場合は同一タブで遷移する
+      // ポップアップブロックでタブが取れなかった場合は同一タブで遷移する
       window.location.href = url;
     }
     return { ok: true };

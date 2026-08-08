@@ -68,6 +68,7 @@ async function startServer() {
 
   // Google Drive サーバー経由ログイン（都度ログイン解消。任意・GOOGLE_CLIENT_SECRET未設定なら404扱い）
   app.get("/api/drive/*", async (req, res) => {
+    console.log(`[drive] ${new Date().toISOString()} GET ${req.path} ip=${req.socket.remoteAddress}`);
     const r = await handleDriveApi({
       method: req.method,
       pathname: normalizeDrivePath(req.originalUrl),
@@ -82,6 +83,7 @@ async function startServer() {
     res.status(r.status).json(r.json);
   });
   app.post("/api/drive/*", async (req, res) => {
+    console.log(`[drive] ${new Date().toISOString()} POST ${req.path} ip=${req.socket.remoteAddress}`);
     const r = await handleDriveApi({
       method: req.method,
       pathname: normalizeDrivePath(req.originalUrl),
