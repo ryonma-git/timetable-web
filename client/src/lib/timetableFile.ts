@@ -211,6 +211,13 @@ export interface SemesterData {
   base: TimetableEntry[];
   /** オーバーライド操作リスト */
   ops: OverrideOp[];
+  /**
+   * この学期の指導計画（学年×教科単位）。
+   * 単元内の通し番号(unitPeriod)はこの学期の中だけで完結する。
+   * 年間を通した進捗などを見たい場合は、全学期分をランタイムでマージして計算する
+   * （保存データとしては学期ごとに独立させる）。
+   */
+  teachingPlans?: GradeSubjectPlan[];
 }
 
 export interface TimetableFile {

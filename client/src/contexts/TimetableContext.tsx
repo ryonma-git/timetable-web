@@ -823,31 +823,72 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
   }, [currentFile, activeSemesterIndex]);
 
   // ─── Teaching Plan CRUD ──────────────────────────────────────
-  const teachingPlans: GradeSubjectPlan[] = currentFile?.teachingPlans ?? [];
+  // v108: 指導計画は学期ごとに独立させる（base/opsと同じ扱い）。
+  // 単元内の通し番号(unitPeriod)は学期内で完結し、2学期から使い始めても
+  // 1学期分の授業数でズレることはない。年間を通した進捗を見たい場合は、
+  // 全学期分をランタイムでマージして計算する（保存データは分けたまま）。
+  //
+  // 移行: 旧バージョンではファイル全体で1つのteachingPlans配列を共有していた。
+  // まだどの学期にも指導計画が振り分けられていないファイルを開いた場合のみ、
+  // 旧データを「学期0（先頭の学期）」に割り当てて表示する。一度でも編集すると
+  // その学期のteachingPlansとして確定し、以降トップレベルの値は参照しない。
+  const getSemesterTeachingPlans = useCallback((file: TimetableFile, idx: number): GradeSubjectPlan[] => {
+    if (!file.semesters || file.semesters.length === 0) {
+      return file.teachingPlans ?? [];
+    }
+    const sem = file.semesters[idx];
+    if (sem?.teachingPlans) return sem.teachingPlans;
+    // 学期0（先頭学期）自身がまだ一度もteachingPlansを持ったことがない場合だけ、
+    // 旧トップレベルデータをフォールバック表示する。
+    // 注意: 他の学期の状態は無関係。「ファイル全体でどこかが移行済みか」で
+    // 判定すると、2学期側で何か新規追加しただけで1学期側のフォールバックが
+    // 無効化され、1学期のデータが消えたように見えるバグになるため、
+    // 必ず idx===0 自身の状態だけを見る。
+    if (idx === 0) return file.teachingPlans ?? [];
+    return [];
+  }, []);
+
+  const teachingPlans: GradeSubjectPlan[] = currentFile
+    ? getSemesterTeachingPlans(currentFile, activeSemesterIndex)
+    : [];
+
+  // 指導計画を更新する共通ヘルパー。学期配列があればその学期のteachingPlansへ、
+  // なければ（単一学期ファイル）トップレベルへ書き込む。
+  const withUpdatedTeachingPlans = useCallback((
+    file: TimetableFile,
+    idx: number,
+    updater: (plans: GradeSubjectPlan[]) => GradeSubjectPlan[]
+  ): TimetableFile => {
+    if (file.semesters && file.semesters.length > 0) {
+      const current = getSemesterTeachingPlans(file, idx);
+      const next = updater(current);
+      const semesters = file.semesters.map((s, i) => i === idx ? { ...s, teachingPlans: next } : s);
+      return { ...file, semesters };
+    }
+    const next = updater(file.teachingPlans ?? []);
+    return { ...file, teachingPlans: next };
+  }, [getSemesterTeachingPlans]);
 
   const upsertTeachingPlan = useCallback((plan: GradeSubjectPlan) => {
     // 関数型更新: ループで連続呼び出ししても古いstateを上書きせず正しく蓄積する
     setCurrentFile(prev => {
       if (!prev) return prev;
-      const existing = prev.teachingPlans ?? [];
-      const idx = existing.findIndex(p => p.id === plan.id);
-      const next = idx >= 0
-        ? existing.map((p, i) => i === idx ? plan : p)
-        : [...existing, plan];
-      return { ...prev, teachingPlans: next, meta: { ...prev.meta, updatedAt: new Date().toISOString() } };
+      return withUpdatedTeachingPlans(prev, activeSemesterIndex, existing => {
+        const idx = existing.findIndex(p => p.id === plan.id);
+        return idx >= 0
+          ? existing.map((p, i) => i === idx ? plan : p)
+          : [...existing, plan];
+      });
     });
     setIsDirty(true);
-  }, []);
+  }, [activeSemesterIndex, withUpdatedTeachingPlans]);
 
   const removeTeachingPlan = useCallback((id: string) => {
     if (!currentFile) return;
-    setCurrentFile({
-      ...currentFile,
-      teachingPlans: (currentFile.teachingPlans ?? []).filter(p => p.id !== id),
-      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
-    });
+    const updated = withUpdatedTeachingPlans(currentFile, activeSemesterIndex, existing => existing.filter(p => p.id !== id));
+    setCurrentFile({ ...updated, meta: { ...updated.meta, updatedAt: new Date().toISOString() } });
     setIsDirty(true);
-  }, [currentFile]);
+  }, [currentFile, activeSemesterIndex, withUpdatedTeachingPlans]);
 
   // v105 Phase C: 指導計画の教科非表示トグル（教科名単位、ファイル保存）
   const teachingPlanHiddenSubjects: string[] = currentFile?.teachingPlanHiddenSubjects ?? [];
@@ -881,23 +922,21 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
 
   const updateTeachingPlanLessons = useCallback((planId: string, lessons: LessonPlanEntry[]) => {
     if (!currentFile) return;
-    setCurrentFile({
-      ...currentFile,
-      teachingPlans: (currentFile.teachingPlans ?? []).map(p => p.id === planId ? { ...p, lessons } : p),
-      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
-    });
+    const updated = withUpdatedTeachingPlans(currentFile, activeSemesterIndex, existing =>
+      existing.map(p => p.id === planId ? { ...p, lessons } : p)
+    );
+    setCurrentFile({ ...updated, meta: { ...updated.meta, updatedAt: new Date().toISOString() } });
     setIsDirty(true);
-  }, [currentFile]);
+  }, [currentFile, activeSemesterIndex, withUpdatedTeachingPlans]);
 
   const updateTeachingPlanUnits = useCallback((planId: string, units: TeachingUnit[]) => {
     if (!currentFile) return;
-    setCurrentFile({
-      ...currentFile,
-      teachingPlans: (currentFile.teachingPlans ?? []).map(p => p.id === planId ? { ...p, units } : p),
-      meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
-    });
+    const updated = withUpdatedTeachingPlans(currentFile, activeSemesterIndex, existing =>
+      existing.map(p => p.id === planId ? { ...p, units } : p)
+    );
+    setCurrentFile({ ...updated, meta: { ...updated.meta, updatedAt: new Date().toISOString() } });
     setIsDirty(true);
-  }, [currentFile]);
+  }, [currentFile, activeSemesterIndex, withUpdatedTeachingPlans]);
 
   return (
     <TimetableContext.Provider value={{
