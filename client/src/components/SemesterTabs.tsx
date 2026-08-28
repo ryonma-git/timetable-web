@@ -45,10 +45,13 @@ function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemeste
   const { language, t } = useLanguage();
   const system = currentSemester?.semesterSystem ?? "trimester";
   const maxSemesters = system === "semester" ? 2 : 3;
+  const hasWeekRotation = (currentSemester?.baseSchedules?.length ?? 0) > 1;
+  const weekLabels = [t("wiz.weekA"), t("wiz.weekB"), t("wiz.weekC"), t("wiz.weekD")];
 
   const [semesterNumber, setSemesterNumber] = useState<string>("2");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [weekStartIdx, setWeekStartIdx] = useState(0);
 
   const semesterOptions = system === "semester"
     ? [{ value: "1", label: t("weekGrid.firstTerm") }, { value: "2", label: t("weekGrid.secondTerm") }]
@@ -58,20 +61,44 @@ function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemeste
         { value: "3", label: language === "ja" ? `3${t("weekGrid.termSuffix")}` : `${t("weekGrid.termSuffix")} 3` },
       ];
 
+  const mondayOf = (dateStr: string): Date => {
+    const d = new Date(dateStr + "T00:00:00");
+    const dow = d.getDay();
+    const diff = dow === 0 ? -6 : 1 - dow;
+    const mon = new Date(d);
+    mon.setDate(mon.getDate() + diff);
+    mon.setHours(0, 0, 0, 0);
+    return mon;
+  };
+
   const handleAdd = () => {
     if (!startDate || !endDate) return;
     const semNum = parseInt(semesterNumber) as 1 | 2 | 3;
+    // 新学期がweekStartIdxで選んだ週パターンから始まるよう、weekCycleStartを
+    // 新学期の開始日基準で計算し直す（元の学期のweekCycleStartをそのまま
+    // 使うと、新学期の開始曜日次第でA/Bがずれてしまうため）。
+    let weekCycleStart = currentSemester?.weekCycleStart;
+    if (hasWeekRotation) {
+      const startMon = mondayOf(startDate);
+      const shifted = new Date(startMon);
+      shifted.setDate(shifted.getDate() - weekStartIdx * 7);
+      weekCycleStart = `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, "0")}-${String(shifted.getDate()).padStart(2, "0")}`;
+    }
     const newSemester: SemesterMeta = {
       ...currentSemester!,
       semesterNumber: semNum,
       startDate,
       endDate,
       holidays: [],
+      weekCycleStart,
     };
     const base = generateBaseEntries(startDate, endDate, {
       hasSaturday: newSemester.hasSaturday,
       hasSunday: newSemester.hasSunday,
       baseSchedule: newSemester.baseSchedule,
+      subjectSchedule: newSemester.subjectSchedule,
+      baseSchedules: newSemester.baseSchedules,
+      weekCycleStart: newSemester.weekCycleStart,
     });
     const data: SemesterData = { semester: newSemester, base, ops: [] };
     onAdd(data);
@@ -118,6 +145,29 @@ function AddSemesterDialog({ open, onClose, onAdd, currentSemester }: AddSemeste
               className="h-8 text-xs"
             />
           </div>
+          {hasWeekRotation && (
+            <div className="space-y-1">
+              <Label className="text-xs">{t("set.weekStartLabel")}</Label>
+              <p className="text-[11px] text-muted-foreground">{t("set.weekStartDesc")}</p>
+              <div className="flex gap-1 pt-0.5">
+                {weekLabels.slice(0, currentSemester?.baseSchedules?.length ?? 0).map((label, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setWeekStartIdx(i)}
+                    className={cn(
+                      "text-xs px-2.5 py-1.5 rounded border font-semibold transition-colors",
+                      weekStartIdx === i
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             {t("semester.copyNotice")}
           </p>
