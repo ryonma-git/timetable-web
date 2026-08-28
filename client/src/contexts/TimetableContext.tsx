@@ -631,7 +631,13 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
 
   const switchToSemester = useCallback((idx: number) => {
     if (!currentFile?.semesters || idx < 0 || idx >= currentFile.semesters.length) return;
-    const semData = currentFile.semesters[idx];
+    // 切り替え前に、今アクティブな学期のライブ編集（allOps。currentFile.ops は
+    // 明示保存時にしか更新されないため、ここで確実に反映しておかないと
+    // 未保存の変更が失われる）を配列に書き戻してから切り替える。
+    const flushedSemesters = currentFile.semesters.map((s, i) =>
+      i === activeSemesterIndex ? { ...s, base: baseEntries, ops: allOps } : s
+    );
+    const semData = flushedSemesters[idx];
     const { effective, audit } = applyOverrides(semData.base, semData.ops ?? []);
     setBaseEntries(semData.base);
     setEffectiveEntries(effective);
@@ -641,24 +647,42 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setUndoStack([]);
     setRedoStack([]);
     setActiveSemesterIndexState(idx);
-    // currentFile.semesterをアクティブ学期のデータに同期させる
-    setCurrentFile(prev => prev ? { ...prev, semester: semData.semester } : prev);
+    // currentFile.semester/base/ops をアクティブ学期のデータに同期させる
+    setCurrentFile(prev => prev ? {
+      ...prev,
+      semesters: flushedSemesters,
+      semester: semData.semester,
+      base: semData.base,
+      ops: semData.ops,
+    } : prev);
     // Navigate to start of new semester
     if (semData.semester.startDate) {
       setCurrentWeekMonday(getMondayOfWeek(new Date(semData.semester.startDate + 'T00:00:00')));
     }
-  }, [currentFile]);
+  }, [currentFile, activeSemesterIndex, baseEntries, allOps]);
 
   const addSemester = useCallback((data: SemesterData) => {
     if (!currentFile) return;
-    const existingSemesters = currentFile.semesters ?? (currentFile.semester ? [{
-      semester: currentFile.semester,
-      base: currentFile.base,
-      ops: currentFile.ops,
-    }] : []);
+    // semesters が [](空配列)のこともある（例: Drive同期時の不具合で書き込まれた
+    // 場合など）。空配列は「複数学期化されていない」旧形式ファイルと同じ扱いにし、
+    // トップレベルの semester/base/ops から1学期分を復元する。
+    // また、現在アクティブな学期のライブ編集（allOps）もここで反映する
+    // （currentFile.ops は明示保存時にしか更新されないため）。
+    const hasExistingSemesters = !!currentFile.semesters && currentFile.semesters.length > 0;
+    const activeMeta = hasExistingSemesters
+      ? currentFile.semesters![activeSemesterIndex]?.semester
+      : currentFile.semester;
+    const existingSemesters: SemesterData[] = hasExistingSemesters
+      ? currentFile.semesters!.map((s, i) =>
+          i === activeSemesterIndex && activeMeta ? { semester: activeMeta, base: baseEntries, ops: allOps } : s
+        )
+      : (activeMeta ? [{ semester: activeMeta, base: baseEntries, ops: allOps }] : []);
     const newSemesters = [...existingSemesters, data];
     const updatedFile: TimetableFile = {
       ...currentFile,
+      semester: data.semester,
+      base: data.base,
+      ops: data.ops,
       semesters: newSemesters,
       activeSemesterIndex: newSemesters.length - 1,
       meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
@@ -675,12 +699,15 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
     setUndoStack([]);
     setRedoStack([]);
     setActiveSemesterIndexState(newSemesters.length - 1);
-  }, [currentFile]);
+  }, [currentFile, activeSemesterIndex, baseEntries, allOps]);
 
   const removeSemester = useCallback((idx: number) => {
     if (!currentFile?.semesters || currentFile.semesters.length <= 1) return;
     const newSemesters = currentFile.semesters.filter((_, i) => i !== idx);
-    const newIdx = Math.min(activeSemesterIndex, newSemesters.length - 1);
+    // アクティブな学期より前の要素を削除した場合、配列内の位置が1つ前にずれる
+    const newIdx = idx < activeSemesterIndex
+      ? activeSemesterIndex - 1
+      : Math.min(activeSemesterIndex, newSemesters.length - 1);
     const updatedFile: TimetableFile = {
       ...currentFile,
       semesters: newSemesters,

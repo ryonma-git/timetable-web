@@ -73,6 +73,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     semester,
     mode,
     allOps,
+    activeSemesterIndex,
   } = useTimetable();
 
   const {
@@ -174,11 +175,11 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     const wasJustSaved = prevIsDirtyRef.current === true && isDirty === false;
     prevIsDirtyRef.current = isDirty;
     if (wasJustSaved && isLoggedIn && isLoaded && currentFile) {
-      syncToDrive(currentFile, allOps).catch(() => {
+      syncToDrive(currentFile, allOps, activeSemesterIndex).catch(() => {
         // エラーはsyncStatusに反映されるのでここでは何もしない
       });
     }
-  }, [isDirty, isLoggedIn, isLoaded, currentFile, allOps, syncToDrive]);
+  }, [isDirty, isLoggedIn, isLoaded, currentFile, allOps, activeSemesterIndex, syncToDrive]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -241,7 +242,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     if (!currentFile) return;
     setDriveLoading(true);
     try {
-      await syncToDrive(currentFile, allOps);
+      await syncToDrive(currentFile, allOps, activeSemesterIndex);
       toast.success(t("toast.driveSaved"));
     } catch {
       toast.error(t("toast.driveSaveFailed"));
@@ -254,7 +255,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
     if (!currentFile) return;
     setDriveLoading(true);
     try {
-      const result = await backupToMyDrive(currentFile, allOps);
+      const result = await backupToMyDrive(currentFile, allOps, activeSemesterIndex);
       if (result) {
         toast.success(
           <div>

@@ -32,6 +32,31 @@ import {
 import { serializeTimetableFile, deserializeTimetableFile } from "@/lib/timetableFile";
 import { toast } from "sonner";
 import type { TimetableFile } from "@/lib/timetableFile";
+import type { OverrideOp } from "@/lib/timetable";
+
+// currentFile + 生の allOps（未保存の編集含む）から、Driveアップロード用の
+// 最新スナップショットを組み立てる。
+// 複数学期ファイルの場合、semestersが未設定/空配列でも [] へ強制しない
+// （旧形式の単一学期ファイルを壊さないため）。activeSemesterIndex に該当する
+// 学期のみ ops を最新化し、他の学期のデータには触れない。
+function buildFileWithFreshOps(
+  file: TimetableFile,
+  allOps: unknown[],
+  activeSemesterIndex: number
+): TimetableFile {
+  const ops = allOps as OverrideOp[];
+  return {
+    ...file,
+    ops,
+    ...(file.semesters && file.semesters.length > 0
+      ? {
+          semesters: file.semesters.map((s, i) =>
+            i === activeSemesterIndex ? { ...s, ops } : s
+          ),
+        }
+      : {}),
+  };
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -71,9 +96,9 @@ export interface GoogleDriveContextValue {
   requestCookieAccess: () => Promise<boolean>;
   logout: () => void;
   /** 【自動同期】appDataFolderへアップロード */
-  syncToDrive: (file: TimetableFile, allOps: unknown[]) => Promise<void>;
+  syncToDrive: (file: TimetableFile, allOps: unknown[], activeSemesterIndex?: number) => Promise<void>;
   /** 【手動バックアップ】マイドライブ/時間割管理/に日付付きファイルを作成 */
-  backupToMyDrive: (file: TimetableFile, allOps: unknown[]) => Promise<{ fileName: string; folderName: string } | null>;
+  backupToMyDrive: (file: TimetableFile, allOps: unknown[], activeSemesterIndex?: number) => Promise<{ fileName: string; folderName: string } | null>;
   /** appDataFolderからダウンロードして復元 */
   loadFromDrive: () => Promise<{ file: TimetableFile; warnings: string[] } | null>;
   /** バックアップファイル一覧を取得 */
@@ -298,7 +323,7 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const syncToDrive = useCallback(
-    async (file: TimetableFile, allOps: unknown[]) => {
+    async (file: TimetableFile, allOps: unknown[], activeSemesterIndex = 0) => {
       if (!isTokenValid()) {
         setSyncError("ログインが必要です");
         return;
@@ -306,8 +331,8 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       setSyncStatus("syncing");
       setSyncError(null);
       try {
-        const fileWithOps = { ...file, semesters: file.semesters?.map((s, i) => i === 0 ? { ...s, allOps } : s) ?? [] };
-        const content = serializeTimetableFile(fileWithOps as TimetableFile);
+        const fileWithOps = buildFileWithFreshOps(file, allOps, activeSemesterIndex);
+        const content = serializeTimetableFile(fileWithOps);
         await uploadToDrive(content);
         setSyncStatus("synced");
         setLastSyncedAt(new Date());
@@ -353,7 +378,8 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
   const backupToMyDrive = useCallback(
     async (
       file: TimetableFile,
-      allOps: unknown[]
+      allOps: unknown[],
+      activeSemesterIndex = 0
     ): Promise<{ fileName: string; folderName: string } | null> => {
       if (!isTokenValid()) {
         setBackupError("ログインが必要です");
@@ -362,13 +388,8 @@ export function GoogleDriveProvider({ children }: { children: ReactNode }) {
       setBackupStatus("backing_up");
       setBackupError(null);
       try {
-        const fileWithOps = {
-          ...file,
-          semesters: file.semesters?.map((s, i) =>
-            i === 0 ? { ...s, allOps } : s
-          ) ?? [],
-        };
-        const content = serializeTimetableFile(fileWithOps as TimetableFile);
+        const fileWithOps = buildFileWithFreshOps(file, allOps, activeSemesterIndex);
+        const content = serializeTimetableFile(fileWithOps);
         const titleHint = file.meta?.title ?? "時間割";
         const result = await backupToDrive(content, titleHint);
         setBackupStatus("done");
