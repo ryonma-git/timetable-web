@@ -102,6 +102,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
   const { language, setLanguage, t } = useLanguage();
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsInitialStep, setSettingsInitialStep] = useState<1 | 2 | 3 | 4 | undefined>(undefined);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const { config: syncConfig } = useSync();
   const syncEnabled = syncConfig.enabled;
@@ -158,7 +159,8 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
         case "file:open": fileInputRef.current?.click(); break;
         case "file:save": if (isLoaded) saveFile(); break;
         case "file:samples": setShowSamplePicker(true); break;
-        case "dialog:settings": setShowSettings(true); break;
+        case "dialog:settings": setSettingsInitialStep(undefined); setShowSettings(true); break;
+        case "dialog:settings:grid": setSettingsInitialStep(3); setShowSettings(true); break;
         case "dialog:subjects": setShowSubjectSettings(true); break;
         case "dialog:holidays": setShowHolidaySettings(true); break;
         case "dialog:shareTemplate": setShowShareTemplate(true); break;
@@ -922,7 +924,7 @@ export function Sidebar({ onClose, isBottomSheet }: { onClose?: () => void; isBo
       {/* New File Wizard */}
       <NewFileWizard open={showNewDialog} onClose={() => setShowNewDialog(false)} />
       {/* Settings Dialog */}
-      <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} />
+      <SettingsDialog open={showSettings} onClose={() => setShowSettings(false)} initialStep={settingsInitialStep} />
       {/* Holiday Settings Dialog */}
       <HolidaySettingsDialog open={showHolidaySettings} onOpenChange={setShowHolidaySettings} />
       {/* Subject Settings Dialog */}

@@ -47,6 +47,8 @@ function wf(t: (k: TranslationKey) => string, key: TranslationKey, vars: Record<
 interface Props {
   open: boolean;
   onClose: () => void;
+  /** ダイアログを開いた直後に表示するステップ（省略時は常にStep1） */
+  initialStep?: 1 | 2 | 3 | 4;
 }
 
 const WEEKDAY_KEYS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
@@ -116,7 +118,7 @@ function TabNav({ current, onSelect }: { current: number; onSelect: (n: number) 
   );
 }
 
-export function SettingsDialog({ open, onClose }: Props) {
+export function SettingsDialog({ open, onClose, initialStep }: Props) {
   const { t } = useLanguage();
   const { currentFile, semester: semesterFromCtx, updateSettings, setWeekCycleOnly, isLoaded, mode, setMode, classList, subjects, activeSemesterIndex } = useTimetable();
   // semesters配列形式の場合はアクティブ学期のデータを使用（単一学期の場合はレガシーフィールドを使用）
@@ -295,12 +297,12 @@ export function SettingsDialog({ open, onClose }: Props) {
         });
         setSubjectScheduleArr([ss]);
       }
-      setStep(1);
+      setStep(initialStep ?? 1);
       setApplyMode("all");
       setKeepOps(true);
       setApplyFromDate(semester.startDate);
     }
-  }, [open, semester, currentFile, activeSemesterIndex]);
+  }, [open, semester, currentFile, activeSemesterIndex, initialStep]);
 
   const handleSchoolTypeChange = (type: SchoolType) => {
     const info = SCHOOL_TYPES.find(s => s.value === type)!;
@@ -365,6 +367,26 @@ export function SettingsDialog({ open, onClose }: Props) {
   const filledCells = Object.values(baseSchedule).reduce(
     (sum, day) => sum + Object.values(day).filter(c => c !== null).length, 0
   );
+
+  // 学期開始日の月曜を基準に、現在の基準日設定で学期がどのパターン(A週/B週...)から
+  // 始まることになるかを計算する（「この学期の最初の週」ボタンの選択状態表示に使用）
+  const mondayOf = (dateStr: string): Date => {
+    const d = new Date(dateStr + "T00:00:00");
+    const dow = d.getDay();
+    const diff = dow === 0 ? -6 : 1 - dow;
+    const mon = new Date(d);
+    mon.setDate(mon.getDate() + diff);
+    mon.setHours(0, 0, 0, 0);
+    return mon;
+  };
+  const currentStartWeekIndex = (() => {
+    if (!startDate || weekCount <= 1) return 0;
+    const ref = weekCycleStartInput || startDate;
+    const startMon = mondayOf(startDate);
+    const refMon = mondayOf(ref);
+    const weeksDiff = Math.round((startMon.getTime() - refMon.getTime()) / (7 * 24 * 60 * 60 * 1000));
+    return ((weeksDiff % weekCount) + weekCount) % weekCount;
+  })();
 
   const semesterLabel = (() => {
     if (semesterSystem === "semester") {
@@ -435,6 +457,19 @@ export function SettingsDialog({ open, onClose }: Props) {
       homeroomClass: selectedMode === 'homeroom' ? (homeroomClass || undefined) : undefined,
     };
     const from = applyMode === "from" ? applyFromDate : undefined;
+
+    // 安全ガード: この保存によって既存のA週/B週（複数週）設定が消えてしまう場合は
+    // 事前に警告する。ダイアログを開いた時点のスナップショットが古く、実際には
+    // まだ週サイクル設定が生きているのに気づかず1週モードで上書きしてしまう、
+    // という実際に起きた不具合の再発を防ぐためのフェイルセーフ。
+    const freshSemester = currentFile?.semesters?.[activeSemesterIndex]?.semester ?? currentFile?.semester;
+    const willLoseRotation =
+      (freshSemester?.baseSchedules?.length ?? 0) > 1 &&
+      (!newSemester.baseSchedules || newSemester.baseSchedules.length <= 1);
+    if (willLoseRotation && !window.confirm(t("set.weekRotationLossWarning"))) {
+      return;
+    }
+
     // modeをupdateSettingsに渡してmeta.modeも同時に更新（競合防止）。keepOpsで個別変更の保持を制御
     updateSettings(newSemester, from, selectedMode, keepOps);
     toast.success(t("set.toastApplied"));
@@ -812,6 +847,38 @@ export function SettingsDialog({ open, onClose }: Props) {
                       {t("set.resetToAutoBtn")}
                     </button>
                   )}
+                </div>
+
+                {/* この学期の最初の週をA週/B週などから直接選ぶ */}
+                <div className="flex items-center gap-3 pt-3 border-t border-blue-200/70">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-blue-800 mb-0.5">{t("set.weekStartLabel")}</p>
+                    <p className="text-[11px] text-blue-600/80">{t("set.weekStartDesc")}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    {WEEK_LABELS_S.slice(0, weekCount).map((label, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (!startDate) return;
+                          const startMon = mondayOf(startDate);
+                          const shifted = new Date(startMon);
+                          shifted.setDate(shifted.getDate() - i * 7);
+                          setWeekCycleStartInput(
+                            `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, "0")}-${String(shifted.getDate()).padStart(2, "0")}`
+                          );
+                        }}
+                        className={cn(
+                          "text-xs px-2.5 py-1.5 rounded border font-semibold transition-colors",
+                          currentStartWeekIndex === i
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "border-blue-300 text-blue-700 bg-white hover:bg-blue-100"
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* 内包: 週ラベルのみ設定（時間割を変えない） */}

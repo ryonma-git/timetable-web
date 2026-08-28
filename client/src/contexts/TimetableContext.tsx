@@ -778,35 +778,49 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
 
   // ─── Update week pattern override ──────────────────────────
   const updateWeekPatternOverride = useCallback((mondayStr: string, idx: number | null) => {
-    if (!currentFile || !currentFile.semester) return;
-    const overrides = { ...(currentFile.semester.weekPatternOverrides ?? {}) };
+    if (!currentFile) return;
+    const sem = currentFile.semester ?? currentFile.semesters?.[activeSemesterIndex]?.semester;
+    if (!sem) return;
+    const overrides = { ...(sem.weekPatternOverrides ?? {}) };
     if (idx === null) {
       delete overrides[mondayStr];
     } else {
       overrides[mondayStr] = idx;
     }
-    const updatedSemester: SemesterMeta = { ...currentFile.semester, weekPatternOverrides: overrides };
+    const updatedSemester: SemesterMeta = { ...sem, weekPatternOverrides: overrides };
+    // semesters配列も同期させる（トップレベルとの二重管理によるデータ食い違いを防ぐ）
+    const updatedSemesters = currentFile.semesters && currentFile.semesters.length > 0
+      ? currentFile.semesters.map((s, i) => i === activeSemesterIndex ? { ...s, semester: updatedSemester } : s)
+      : currentFile.semesters;
     const updatedFile: TimetableFile = {
       ...currentFile,
       semester: updatedSemester,
+      ...(updatedSemesters ? { semesters: updatedSemesters } : {}),
       meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
     };
     setCurrentFile(updatedFile);
     setIsDirty(true);
-  }, [currentFile]);
+  }, [currentFile, activeSemesterIndex]);
 
   // ─── Update holidays ──────────────────────────────────────
   const updateHolidays = useCallback((newHolidays: import("@/lib/timetableFile").HolidayEntry[]) => {
     if (!currentFile) return;
-    const updatedSemester: SemesterMeta = { ...currentFile.semester!, holidays: newHolidays };
+    const sem = currentFile.semester ?? currentFile.semesters?.[activeSemesterIndex]?.semester;
+    if (!sem) return;
+    const updatedSemester: SemesterMeta = { ...sem, holidays: newHolidays };
+    // semesters配列も同期させる（トップレベルとの二重管理によるデータ食い違いを防ぐ）
+    const updatedSemesters = currentFile.semesters && currentFile.semesters.length > 0
+      ? currentFile.semesters.map((s, i) => i === activeSemesterIndex ? { ...s, semester: updatedSemester } : s)
+      : currentFile.semesters;
     const updatedFile: TimetableFile = {
       ...currentFile,
       semester: updatedSemester,
+      ...(updatedSemesters ? { semesters: updatedSemesters } : {}),
       meta: { ...currentFile.meta, updatedAt: new Date().toISOString() },
     };
     setCurrentFile(updatedFile);
     setIsDirty(true);
-  }, [currentFile]);
+  }, [currentFile, activeSemesterIndex]);
 
   // ─── Teaching Plan CRUD ──────────────────────────────────────
   const teachingPlans: GradeSubjectPlan[] = currentFile?.teachingPlans ?? [];

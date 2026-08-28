@@ -14,7 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { buildSwapOps, formatDate, getWeekDates, PeriodSlot, TimetableEntry, todayISO } from "@/lib/timetable";
 import { getClassColor, getSubjectColor } from "@/lib/gradeColors";
 import { cn } from "@/lib/utils";
-import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays, Clock, Bot, FileJson, RotateCcw, CheckSquare } from "lucide-react";
+import { Filter, X, CalendarPlus, BookOpen, Users, ChevronLeft, ChevronRight, CalendarDays, Clock, Bot, FileJson, RotateCcw, CheckSquare, Settings2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -529,6 +529,13 @@ export function WeekGrid() {
                         {t("weekGrid.resetAuto")}
                       </button>
                     )}
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent("app:menu", { detail: "dialog:settings:grid" }))}
+                      className="mt-2 pt-2 border-t border-border w-full text-left flex items-center gap-1 text-xs text-primary hover:underline transition-colors"
+                    >
+                      <Settings2 className="w-3 h-3" />
+                      {t("weekGrid.weekPatternEditLink")}
+                    </button>
                   </PopoverContent>
                 </Popover>
               )}
