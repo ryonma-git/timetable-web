@@ -28,6 +28,7 @@ import {
 } from "@/lib/llmImport";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { applyOverrides } from "@/lib/timetable";
 import type { OverrideOp, DailyEvent } from "@/lib/timetable";
 import { nanoid } from "nanoid";
 import { useLanguage, type TranslationKey } from "@/contexts/LanguageContext";
@@ -152,6 +153,16 @@ function isDuplicateTitle(a: string, b: string): boolean {
   return na.includes(nb) || nb.includes(na);
 }
 
+// applyOps() は「今回のimport分だけ」ではなく累積ops全体に対するauditを返すため、
+// 末尾から submittedCount 件を「今回渡したopsに対応する結果」とみなして判定する。
+// （applyOverridesは渡されたopsを順番に処理してauditに積むため、末尾が今回分になる。
+//   date not foundやclear_period_classは必ず1件のaudit entryを積むため、通常のケースでは
+//   この対応関係は正確に成立する）
+function countFailedOps(audit: { level: "info" | "warn" | "error" }[], submittedCount: number): number {
+  if (submittedCount === 0) return 0;
+  return audit.slice(-submittedCount).filter(a => a.level === "warn" || a.level === "error").length;
+}
+
 type ScheduleScope = "events_only" | "with_ops";
 type ScheduleMode = "append" | "overwrite";
 
@@ -160,19 +171,24 @@ interface DupCandidate {
   newEvent: DailyEvent;
   existingTitle: string;
   accept: boolean; // true=追加する / false=スキップ
+  semesterIdx: number;
 }
 
 interface PendingPlan {
   dups: DupCandidate[];
-  autoEventOps: OverrideOp[];   // 重複なしで自動追加するadd_day_event
-  removeOps: OverrideOp[];      // 上書き時の既存削除
-  classOps: OverrideOp[];       // コマ削除等（scopeがwith_opsのとき）
+  autoEventOpsBySem: Record<number, OverrideOp[]>; // 重複なしで自動追加するadd_day_event（学期別）
+  classOpsBySem: Record<number, OverrideOp[]>;      // コマ削除等（学期別・scopeがwith_opsのとき）
   eventsTotal: number;
   opsTotal: number;
 }
 
+type ApplyTargetScope = "active" | "all";
+
 export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMImportDialogProps) {
-  const { semester, updateSettings, applyOps, effectiveEntries } = useTimetable();
+  const {
+    semester, updateSettings, applyOps, effectiveEntries,
+    currentFile, activeSemesterIndex, applyOpsToSemester, findSemesterIndexForDate,
+  } = useTimetable();
   const { t } = useLanguage();
   const lf = (key: TranslationKey, vars: Record<string, string | number> = {}) => {
     let s: string = t(key);
@@ -191,6 +207,34 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("append");
   const [overwriteAll, setOverwriteAll] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<PendingPlan | null>(null);
+  // v109: 複数学期ファイルのとき、年間予定表の反映先を「この学期のみ」か「年度丸ごと」から選べる
+  const [applyTargetScope, setApplyTargetScope] = useState<ApplyTargetScope>("active");
+  const hasMultipleSemesters = (currentFile?.semesters?.length ?? 0) > 1;
+
+  // 指定学期の「既存の日次イベント」を取得する（重複チェック・上書き範囲クリア用）。
+  // アクティブ学期はライブのeffectiveEntriesを使い、それ以外はbase/opsから都度計算する。
+  const getExistingEventsForSemester = useCallback((semIdx: number): Array<{ date: string; id: string; title: string }> => {
+    const out: Array<{ date: string; id: string; title: string }> = [];
+    const collect = (entries: typeof effectiveEntries) => {
+      for (const e of entries) {
+        for (const ev of e.dayEvents ?? []) out.push({ date: e.date, id: ev.id, title: ev.title });
+      }
+    };
+    if (!currentFile?.semesters || semIdx === activeSemesterIndex || !currentFile.semesters[semIdx]) {
+      collect(effectiveEntries);
+      return out;
+    }
+    const sem = currentFile.semesters[semIdx];
+    const { effective } = applyOverrides(sem.base, sem.ops ?? []);
+    collect(effective);
+    return out;
+  }, [currentFile, activeSemesterIndex, effectiveEntries]);
+
+  // scope="active"なら常にアクティブ学期、"all"なら日付から所属学期を判定する
+  const resolveSemIdx = useCallback((dateStr: string): number => {
+    if (applyTargetScope === "active" || !hasMultipleSemesters) return activeSemesterIndex;
+    return findSemesterIndexForDate(dateStr);
+  }, [applyTargetScope, hasMultipleSemesters, activeSemesterIndex, findSemesterIndexForDate]);
 
   // ダイアログが開くたびにmodeに合わせてactiveModeをリセット
   useEffect(() => {
@@ -287,7 +331,7 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
       setImportSuccess(true);
       setImportJson("");
     } else {
-      // schedule mode (v106 Phase D: スコープ/モード/重複チェック)
+      // schedule mode (v106 Phase D: スコープ/モード/重複チェック, v109: 学期別グルーピング)
       const parsed = parseScheduleJSON(importJson);
       if (!parsed) {
         setParseError(t("llm.errScheduleFormat"));
@@ -295,105 +339,168 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
       }
 
       // スコープ: 予定欄だけ → コマ削除ops(parsed.ops)は無視
-      const classOps: OverrideOp[] = scheduleScope === "with_ops" ? parsed.ops : [];
+      const classOpsAll: OverrideOp[] = scheduleScope === "with_ops" ? parsed.ops : [];
 
-      // 既存の日次イベント（重複チェック・上書き範囲クリア用）
-      const existing: Array<{ date: string; id: string; title: string }> = [];
-      for (const e of effectiveEntries) {
-        for (const ev of e.dayEvents ?? []) {
-          existing.push({ date: e.date, id: ev.id, title: ev.title });
-        }
-      }
-
-      if (parsed.events.length === 0 && classOps.length === 0) {
+      if (parsed.events.length === 0 && classOpsAll.length === 0) {
         setParseError(t("llm.errNothingToApply"));
         return;
       }
 
+      // 反映先の学期一覧（"この学期のみ"なら1つ、"年度丸ごと"ならファイル内の全学期）
+      const targetSemIndices = applyTargetScope === "all" && hasMultipleSemesters
+        ? currentFile!.semesters!.map((_, i) => i)
+        : [activeSemesterIndex];
+
       if (scheduleMode === "overwrite") {
-        // 上書き: 全クリア or 取込日付範囲のみクリア
-        let targets = existing;
-        if (!overwriteAll && parsed.events.length > 0) {
-          const dates = parsed.events.map(e => e.date).sort();
-          const minD = dates[0], maxD = dates[dates.length - 1];
-          targets = existing.filter(x => x.date >= minD && x.date <= maxD);
+        // 上書き: 学期ごとに「全クリア」または「取込日付範囲のみクリア」してから入れ替え
+        let totalReplaced = 0, totalRemoved = 0, totalClassOk = 0, totalClassFail = 0;
+        for (const semIdx of targetSemIndices) {
+          const existing = getExistingEventsForSemester(semIdx);
+          const eventsForSem = parsed.events.filter(e => resolveSemIdx(e.date) === semIdx);
+          const classOpsForSem = classOpsAll.filter(op => resolveSemIdx(op.date) === semIdx);
+          let targets = existing;
+          if (!overwriteAll) {
+            if (eventsForSem.length === 0) {
+              targets = [];
+            } else {
+              const dates = eventsForSem.map(e => e.date).sort();
+              const minD = dates[0], maxD = dates[dates.length - 1];
+              targets = existing.filter(x => x.date >= minD && x.date <= maxD);
+            }
+          }
+          if (eventsForSem.length === 0 && classOpsForSem.length === 0 && targets.length === 0) continue;
+          const removeOps: OverrideOp[] = targets.map(x => ({
+            id: nanoid(8), op: "remove_day_event" as const, date: x.date, event_id: x.id,
+          }));
+          const addOps: OverrideOp[] = eventsForSem.map(({ date, event }) => ({
+            id: nanoid(8), op: "add_day_event" as const, date, event,
+          }));
+          const audit = applyOpsToSemester(semIdx, [...removeOps, ...addOps, ...classOpsForSem], "年間予定表LLMインポート（上書き）");
+          const fail = countFailedOps(audit, classOpsForSem.length);
+          totalReplaced += eventsForSem.length;
+          totalRemoved += removeOps.length;
+          totalClassOk += classOpsForSem.length - fail;
+          totalClassFail += fail;
         }
-        const removeOps: OverrideOp[] = targets.map(x => ({
-          id: nanoid(8), op: "remove_day_event" as const, date: x.date, event_id: x.id,
-        }));
-        const addOps: OverrideOp[] = parsed.events.map(({ date, event }) => ({
-          id: nanoid(8), op: "add_day_event" as const, date, event,
-        }));
-        applyOps([...removeOps, ...addOps, ...classOps], "年間予定表LLMインポート（上書き）");
         const msgs: string[] = [];
-        if (parsed.events.length > 0) msgs.push(lf("llm.replacedWithEvents", { n: parsed.events.length }));
-        if (removeOps.length > 0) msgs.push(lf("llm.removedOld", { n: removeOps.length }));
-        if (classOps.length > 0) msgs.push(lf("llm.classChanges", { n: classOps.length }));
-        toast.success(msgs.join(" · "));
+        if (totalReplaced > 0) msgs.push(lf("llm.replacedWithEvents", { n: totalReplaced }));
+        if (totalRemoved > 0) msgs.push(lf("llm.removedOld", { n: totalRemoved }));
+        if (totalClassOk > 0) msgs.push(lf("llm.classChanges", { n: totalClassOk }));
+        if (totalClassFail > 0) {
+          toast.warning(`${msgs.join(" · ")}${lf("llm.classChangesFailed", { n: totalClassFail })}`);
+        } else {
+          toast.success(msgs.join(" · "));
+        }
         setImportSuccess(true);
         setImportJson("");
         return;
       }
 
-      // 追記: 重複チェック（同一日付・正規化部分一致）
+      // 追記: 学期ごとに重複チェック（同一日付・正規化部分一致）
       const dups: DupCandidate[] = [];
-      const autoEventOps: OverrideOp[] = [];
-      for (const { date, event } of parsed.events) {
-        const hit = existing.find(x => x.date === date && isDuplicateTitle(x.title, event.title));
-        if (hit) {
-          dups.push({ date, newEvent: event, existingTitle: hit.title, accept: false });
-        } else {
-          autoEventOps.push({ id: nanoid(8), op: "add_day_event", date, event });
+      const autoEventOpsBySem: Record<number, OverrideOp[]> = {};
+      const classOpsBySem: Record<number, OverrideOp[]> = {};
+      for (const semIdx of targetSemIndices) {
+        const existing = getExistingEventsForSemester(semIdx);
+        const eventsForSem = parsed.events.filter(e => resolveSemIdx(e.date) === semIdx);
+        const auto: OverrideOp[] = [];
+        for (const { date, event } of eventsForSem) {
+          const hit = existing.find(x => x.date === date && isDuplicateTitle(x.title, event.title));
+          if (hit) {
+            dups.push({ date, newEvent: event, existingTitle: hit.title, accept: false, semesterIdx: semIdx });
+          } else {
+            auto.push({ id: nanoid(8), op: "add_day_event", date, event });
+          }
         }
+        if (auto.length > 0) autoEventOpsBySem[semIdx] = auto;
+        const classOpsForSem = classOpsAll.filter(op => resolveSemIdx(op.date) === semIdx);
+        if (classOpsForSem.length > 0) classOpsBySem[semIdx] = classOpsForSem;
       }
 
       if (dups.length > 0) {
         // 確認ダイアログで個別選択
         setPendingPlan({
-          dups, autoEventOps, removeOps: [], classOps,
-          eventsTotal: parsed.events.length, opsTotal: classOps.length,
+          dups, autoEventOpsBySem, classOpsBySem,
+          eventsTotal: parsed.events.length, opsTotal: classOpsAll.length,
         });
         return;
       }
 
-      // 重複なし → そのまま適用
-      const allOps = [...autoEventOps, ...classOps];
-      applyOps(allOps, "年間予定表LLMインポート（追記）");
-      const msgs: string[] = [];
-      if (autoEventOps.length > 0) msgs.push(lf("llm.eventsAppended", { n: autoEventOps.length }));
-      if (classOps.length > 0) msgs.push(lf("llm.classChanges", { n: classOps.length }));
-      toast.success(msgs.join(" · ") || t("llm.applied"));
+      // 重複なし → 学期ごとにそのまま適用
+      let totalAppended = 0, totalClassOk2 = 0, totalClassFail2 = 0;
+      for (const semIdx of targetSemIndices) {
+        const auto = autoEventOpsBySem[semIdx] ?? [];
+        const cls = classOpsBySem[semIdx] ?? [];
+        if (auto.length === 0 && cls.length === 0) continue;
+        const audit = applyOpsToSemester(semIdx, [...auto, ...cls], "年間予定表LLMインポート（追記）");
+        const fail = countFailedOps(audit, cls.length);
+        totalAppended += auto.length;
+        totalClassOk2 += cls.length - fail;
+        totalClassFail2 += fail;
+      }
+      const msgs2: string[] = [];
+      if (totalAppended > 0) msgs2.push(lf("llm.eventsAppended", { n: totalAppended }));
+      if (totalClassOk2 > 0) msgs2.push(lf("llm.classChanges", { n: totalClassOk2 }));
+      if (totalClassFail2 > 0) {
+        toast.warning(`${msgs2.join(" · ") || t("llm.applied")}${lf("llm.classChangesFailed", { n: totalClassFail2 })}`);
+      } else {
+        toast.success(msgs2.join(" · ") || t("llm.applied"));
+      }
       setImportSuccess(true);
       setImportJson("");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeMode, importJson, semester, updateSettings, applyOps, effectiveEntries, scheduleScope, scheduleMode, overwriteAll, t]);
+  }, [activeMode, importJson, semester, updateSettings, applyOps, applyOpsToSemester, effectiveEntries, scheduleScope, scheduleMode, overwriteAll, t, applyTargetScope, hasMultipleSemesters, currentFile, activeSemesterIndex, getExistingEventsForSemester, resolveSemIdx]);
 
-  // v106 Phase D: 重複確認ダイアログから最終適用
+  // v106 Phase D: 重複確認ダイアログから最終適用（v109: 学期別に適用）
   const applyPendingPlan = useCallback(() => {
     if (!pendingPlan) return;
-    const dupAddOps: OverrideOp[] = pendingPlan.dups
-      .filter(d => d.accept)
-      .map(d => ({ id: nanoid(8), op: "add_day_event" as const, date: d.date, event: d.newEvent }));
-    const all = [...pendingPlan.autoEventOps, ...dupAddOps, ...pendingPlan.classOps];
-    if (all.length === 0) {
+    const dupAddOpsBySem: Record<number, OverrideOp[]> = {};
+    let dupAddedCount = 0;
+    for (const d of pendingPlan.dups) {
+      if (!d.accept) continue;
+      const op: OverrideOp = { id: nanoid(8), op: "add_day_event" as const, date: d.date, event: d.newEvent };
+      (dupAddOpsBySem[d.semesterIdx] ??= []).push(op);
+      dupAddedCount++;
+    }
+    const semIndices = Array.from(new Set([
+      ...Object.keys(pendingPlan.autoEventOpsBySem).map(Number),
+      ...Object.keys(pendingPlan.classOpsBySem).map(Number),
+      ...Object.keys(dupAddOpsBySem).map(Number),
+    ]));
+    let totalAdded = 0, totalClassOk = 0, totalClassFail = 0;
+    for (const semIdx of semIndices) {
+      const auto = pendingPlan.autoEventOpsBySem[semIdx] ?? [];
+      const dupAdd = dupAddOpsBySem[semIdx] ?? [];
+      const cls = pendingPlan.classOpsBySem[semIdx] ?? [];
+      const all = [...auto, ...dupAdd, ...cls];
+      if (all.length === 0) continue;
+      const audit = applyOpsToSemester(semIdx, all, "年間予定表LLMインポート（追記・重複確認済み）");
+      const fail = countFailedOps(audit, cls.length);
+      totalAdded += auto.length + dupAdd.length;
+      totalClassOk += cls.length - fail;
+      totalClassFail += fail;
+    }
+    if (totalAdded === 0 && totalClassOk === 0 && totalClassFail === 0) {
       toast.info(t("llm.infoNothingToAdd"));
       setPendingPlan(null);
       return;
     }
-    applyOps(all, "年間予定表LLMインポート（追記・重複確認済み）");
-    const added = pendingPlan.autoEventOps.length + dupAddOps.length;
-    const skipped = pendingPlan.dups.length - dupAddOps.length;
-    toast.success(
-      lf("llm.appendSummary", { added })
+    const skipped = pendingPlan.dups.length - dupAddedCount;
+    const summary =
+      lf("llm.appendSummary", { added: totalAdded })
       + (skipped > 0 ? lf("llm.skippedSuffix", { n: skipped }) : "")
-      + (pendingPlan.classOps.length > 0 ? lf("llm.classChangesSuffix", { n: pendingPlan.classOps.length }) : "")
-    );
+      + (totalClassOk > 0 ? lf("llm.classChangesSuffix", { n: totalClassOk }) : "");
+    if (totalClassFail > 0) {
+      toast.warning(`${summary}${lf("llm.classChangesFailed", { n: totalClassFail })}`);
+    } else {
+      toast.success(summary);
+    }
     setPendingPlan(null);
     setImportSuccess(true);
     setImportJson("");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingPlan, applyOps, t]);
+  }, [pendingPlan, applyOpsToSemester, t]);
 
   const modeConfig = {
     timetable: {
@@ -498,6 +605,24 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
                 ))}
               </div>
             </div>
+            {hasMultipleSemesters && (
+              <div>
+                <p className="text-xs font-medium mb-1">{t("llm.applyTargetLabel")}</p>
+                <div className="flex gap-2">
+                  {([["active", t("llm.applyTargetActive"), t("llm.applyTargetActiveDesc")], ["all", t("llm.applyTargetAll"), t("llm.applyTargetAllDesc")]] as [ApplyTargetScope, string, string][]).map(([v, label, desc]) => (
+                    <button key={v} onClick={() => setApplyTargetScope(v)}
+                      title={desc}
+                      className={cn(
+                        "flex-1 text-left px-2.5 py-1.5 rounded-md border text-xs transition-colors",
+                        applyTargetScope === v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/40",
+                      )}>
+                      <div className="font-medium">{label}</div>
+                      <div className="text-[10px] opacity-70 mt-0.5">{desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {scheduleMode === "overwrite" && (
               <label className="flex items-center gap-2 text-xs cursor-pointer pt-0.5">
                 <input type="checkbox" checked={overwriteAll}
@@ -671,7 +796,7 @@ export function LLMImportDialog({ open, onOpenChange, mode = "timetable" }: LLMI
                     </Button>
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    {lf("llm.dupAutoAdd", { n: pendingPlan.autoEventOps.length })}
+                    {lf("llm.dupAutoAdd", { n: Object.values(pendingPlan.autoEventOpsBySem).reduce((s, a) => s + a.length, 0) })}
                   </p>
                 </div>
               ) : (

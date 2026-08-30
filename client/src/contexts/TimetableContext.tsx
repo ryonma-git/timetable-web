@@ -130,6 +130,10 @@ interface TimetableContextValue {
 
   // Data Actions
   applyOps: (ops: OverrideOp[], description: string) => AuditEntry[];
+  /** 指定した学期（アクティブでなくてもよい）に直接opsを適用する */
+  applyOpsToSemester: (semesterIdx: number, ops: OverrideOp[], description: string) => AuditEntry[];
+  /** 日付からその日が属する学期のindexを判定する */
+  findSemesterIndexForDate: (dateStr: string) => number;
 
   // Export
   exportEffective: () => void;
@@ -390,6 +394,55 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
 
     return audit;
   }, [allOps, baseEntries]);
+
+  // ─── Apply Ops to a specific semester（アクティブでない学期にも直接適用） ──
+  // 年間予定表LLM取込などで「年度丸ごと」に反映したい場合、日付から所属する学期を
+  // 判定し、その学期のops/baseに直接書き込む。アクティブ学期の場合はapplyOpsと
+  // 同じ経路（allOps等のライブstateも同期）を通す。
+  const applyOpsToSemester = useCallback((semesterIdx: number, ops: OverrideOp[], description: string): AuditEntry[] => {
+    if (!currentFile?.semesters || !currentFile.semesters[semesterIdx]) return [];
+    if (semesterIdx === activeSemesterIndex) {
+      // アクティブ学期はapplyOpsと同じロジックを使う（stateの二重管理を避ける）
+      const newAllOps = [...allOps, ...ops];
+      const { effective, audit } = applyOverrides(baseEntries, newAllOps);
+      const histEntry: HistoryEntry = { ops, description, timestamp: new Date().toISOString() };
+      setAllOps(newAllOps);
+      setPendingOps(prev => [...prev, ...ops]);
+      setEffectiveEntries(effective);
+      setAuditLog(prev => [...prev, ...audit]);
+      setUndoStack(prev => [...prev, histEntry]);
+      setRedoStack([]);
+      setIsDirty(true);
+      // semesters配列側も同期
+      setCurrentFile(prev => {
+        if (!prev?.semesters) return prev;
+        const semesters = prev.semesters.map((s, i) => i === semesterIdx ? { ...s, ops: newAllOps } : s);
+        return { ...prev, semesters, meta: { ...prev.meta, updatedAt: new Date().toISOString() } };
+      });
+      return audit;
+    }
+    // 非アクティブな学期: その学期のbase/opsに直接適用し、ライブstateには触れない
+    const sem = currentFile.semesters[semesterIdx];
+    const newOps = [...(sem.ops ?? []), ...ops];
+    const { audit } = applyOverrides(sem.base, newOps);
+    setCurrentFile(prev => {
+      if (!prev?.semesters) return prev;
+      const semesters = prev.semesters.map((s, i) => i === semesterIdx ? { ...s, ops: newOps } : s);
+      return { ...prev, semesters, meta: { ...prev.meta, updatedAt: new Date().toISOString() } };
+    });
+    setIsDirty(true);
+    return audit;
+  }, [currentFile, activeSemesterIndex, allOps, baseEntries]);
+
+  // 日付がどの学期に属するかを判定する（学期のstartDate〜endDateで判定）
+  const findSemesterIndexForDate = useCallback((dateStr: string): number => {
+    if (!currentFile?.semesters || currentFile.semesters.length === 0) return 0;
+    const idx = currentFile.semesters.findIndex(s =>
+      s.semester.startDate && s.semester.endDate &&
+      dateStr >= s.semester.startDate && dateStr <= s.semester.endDate
+    );
+    return idx >= 0 ? idx : activeSemesterIndex;
+  }, [currentFile, activeSemesterIndex]);
 
   // ─── Undo ────────────────────────────────────────────────────
   const undo = useCallback(() => {
@@ -958,6 +1011,8 @@ export function TimetableProvider({ children }: { children: React.ReactNode }) {
       loadTimetableFile, loadFromNativeFile, loadFromZip,
       saveFile, saveFileAs,
       applyOps,
+      applyOpsToSemester,
+      findSemesterIndexForDate,
       exportEffective, exportOverride, exportCSV,
       updateSettings,
       setWeekCycleOnly,

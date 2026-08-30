@@ -192,8 +192,8 @@ export function generateScheduleTemplate(semester: SemesterMeta): ScheduleImport
       "【Step 1】events配列 → 年間予定表に書かれているすべての予定（始業式・運動会・職員会議・避難訓練など）を、授業への影響の有無に関わらずすべて列挙してください。",
       "【Step 2】ops配列 → user_rules に基づき、授業を実際にカット・変更すべきものだけをOverrideOp形式で記述してください。",
       "events.category: ceremony(式典: 始業式・卒業式) / event(行事: 運動会・遠足・参観日) / work(業務: 職員会議・研修) / student(学級: 懇談・避難訓練・健康診断) / holiday(休日) / other",
-      "ops.op: 'clear_period_class' → 特定コマを休講にする / 'set_day_reason' → 日全体に理由 / 'set_period_reason' → 特定コマに理由",
-      "ops.period: 1〜6、または全コマ休講の場合は clear_all_classes: true を使う",
+      "ops.op: 'clear_period_class' → コマを休講にする / 'set_day_reason' → 日全体に理由 / 'set_period_reason' → 特定コマに理由",
+      "【重要】1日まるごと（全コマ）休講にする場合は、periodフィールドを付けず省略し、clear_all_classes: true だけを設定してください（period: 1 のように指定すると『1限だけ』休講になってしまいます）。特定のコマだけ休講にする場合はperiodに1〜6を指定してください。",
       "date: YYYY-MM-DD形式 / target_class: nullの場合は全クラス対象",
     ].join(" / "),
     _available_classes: semester.classList ?? [],
@@ -207,11 +207,20 @@ export function generateScheduleTemplate(semester: SemesterMeta): ScheduleImport
     ],
     ops: [
       {
+        // 例1: 1日まるごと休講（始業式など）→ periodを省略する
+        op: "clear_period_class",
+        date: "YYYY-MM-DD",
+        target_class: null,
+        reason: "始業式",
+        clear_all_classes: true,
+      },
+      {
+        // 例2: 特定コマだけ休講（校外学習の午前中のみ、など）→ periodを指定する
         op: "clear_period_class",
         date: "YYYY-MM-DD",
         period: 1,
         target_class: null,
-        reason: "運動会",
+        reason: "校外学習",
         clear_all_classes: true,
       },
       {
@@ -256,8 +265,9 @@ ${rulesSection}
 【Step 2: ops配列を埋める】
 **コマ削除ルール**に該当する行事のみ、OverrideOp形式で記述してください。
 - ルール未指定または影響なしの行事はopsに含めません。
-- 全クラス全コマ休講: clear_all_classes: true
-- 特定コマ休講: period指定 (1〜6)
+- 【重要】1日まるごと（全コマ）休講にする場合: periodフィールドを付けず省略し、clear_all_classes: true だけを設定する。
+  ※ period: 1 のように書いてしまうと「1限だけ」休講になり、2〜6限が授業のまま残ってしまいます。絶対にperiodを付けないでください。
+- 特定コマだけ休講にする場合: period指定 (1〜6) + clear_all_classes: true
 - 特定クラスのみ: target_class指定
 - 日全体に理由を残したい: op: 'set_day_reason'
 

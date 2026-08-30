@@ -286,7 +286,8 @@ export function applyOverrides(
 
     switch (op.op) {
       case "clear_period_class": {
-        if (op.period === undefined) {
+        // period未指定、または "all"（LLM出力のゆれに対する防御）は「1日まるごと」を意味する
+        if (op.period === undefined || (op.period as unknown) === "all") {
           // period未指定 + clear_all_classes: true → その日の全コマを全クラス休講
           if (op.clear_all_classes) {
             entries[idx].periods.forEach(p => {
@@ -296,6 +297,14 @@ export function applyOverrides(
             });
             audit.push({
               id: nanoid(), level: "info", message: "clear_period_class+clear_all (all periods)",
+              date: op.date, opType: op.op,
+            });
+          } else {
+            // periodもclear_all_classesも無い場合は何もできないため、
+            // 黙って捨てずに警告を残す（成功と誤認されるのを防ぐ）
+            audit.push({
+              id: nanoid(), level: "warn",
+              message: "clear_period_class: period/clear_all_classesのどちらも指定がなく何も削除できませんでした",
               date: op.date, opType: op.op,
             });
           }
